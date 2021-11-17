@@ -1,7 +1,6 @@
 """Backend supported: tensorflow.compat.v1, tensorflow, pytorch"""
 import deepxde as dde
 import numpy as np
-import tensorflow as tf
 
 '''
 This script is used to create the PINN model of cantiliver beam
@@ -16,7 +15,9 @@ def dddy(x, y):
     return dde.grad.jacobian(ddy(x, y), x)
 
 # p = lambda x: x
-L = 1
+L = 1.0
+q = 1.0
+EI = 1.0
 
 def p(x):
     return x
@@ -38,8 +39,7 @@ def boundary_r(x, on_boundary):
     return on_boundary and np.isclose(x[0], 1)
 
 def func(x):
-    return -x**2/(120)*(20*L**3 - 10*L**2 + x**2)
-
+   return -q*x**2/(120*EI)*(20*L**3 - 10*L**2*x + x**3)
 
 
 geom = dde.geometry.Interval(0, L)
