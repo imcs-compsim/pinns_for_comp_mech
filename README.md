@@ -1,6 +1,6 @@
 # PINNsWithDXDE
 
-Collection of scripts for out PINN examples with deepXDE
+Collection of scripts for our PINN examples with deepXDE
 
 ## Installation of the DeepXDE package
 
@@ -24,7 +24,7 @@ Collection of scripts for out PINN examples with deepXDE
 
 For more info: [deepxde website](https://deepxde.readthedocs.io/en/latest/user/installation.html)
 
-NOTe: DeepXDE needs one of the following packages for the backend-calculation. Read the website for more info. 
+Note: DeepXDE needs one of the following packages for the backend-calculation. Read the website for more info. 
 
 - Tensorflow
 - Pytorch
