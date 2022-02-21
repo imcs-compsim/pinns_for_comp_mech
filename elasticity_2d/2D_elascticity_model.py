@@ -6,6 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.interpolate
 import os
+import matplotlib.tri as tri
+from pyevtk.hl import unstructuredGridToVTK 
 
 '''
 This script is used to create the PINN model of 2D Elasticity example. The example is taken from 
@@ -131,6 +133,12 @@ losshistory, train_state = model.train(epochs=40000, display_every=1000)
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
 X = geom.random_points(10000)
+
+# if the uniform boundary points are possible (for some geometries not possible),
+# otherwise comment to next two lines
+boun = geom.uniform_boundary_points(100) # comment this
+X = np.vstack((X,boun)) # comment this
+
 output = model.predict(X)
 
 u_anal = np.cos(2*np.pi*X[:,0:1])*np.sin(np.pi*X[:,1:2])
@@ -150,6 +158,28 @@ residum_u = np.hstack([X[:,0].reshape(-1,1),X[:,1].reshape(-1,1),residum_u])
 
 residum_v = (v_pred.reshape(-1,1) - v_anal.reshape(-1,1))
 residum_v = np.hstack([X[:,0].reshape(-1,1),X[:,1].reshape(-1,1),residum_v])
+
+############################# VTK FILE (3D and 2D) ##################################
+# since the problem is 2D, z values are set to 0
+x = X[:,0].flatten()
+y = X[:,1].flatten()
+z = np.zeros(y.shape)
+triang = tri.Triangulation(x, y)
+
+# if dommain has a hole, you have to substract the inner domain 
+# condition = np.isclose(np.sqrt((x[triang.triangles]**2+y[triang.triangles]**2)),np.array([1, 1, 1]))
+# condition = ~np.all(condition, axis=1)
+# dol_triangles = triang.triangles[condition]
+
+filename = os.path.join(os.getcwd(),"2d_elastictiy")
+offset = np.arange(3,triang.triangles.shape[0]*triang.triangles.shape[1]+1,triang.triangles.shape[1])
+cell_types = np.ones(triang.triangles.shape[0])*5
+zero_z = np.zeros(v_pred.shape[0])
+combined_disp = tuple(np.vstack((np.array(u_pred.tolist()),np.array(v_pred.tolist()),zero_z)))
+unstructuredGridToVTK(filename, x, y, z, triang.triangles.flatten(), offset, cell_types, pointData = { "displacement" : combined_disp}) #pointData = {"disp" : u_pred}
+
+# The rest is time taking, so use exit()
+exit() 
 
 #------------------------------------------------------------------------------------
 #####################################################################################
