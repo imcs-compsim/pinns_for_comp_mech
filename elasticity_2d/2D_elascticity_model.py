@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import scipy.interpolate
 import os
 import matplotlib.tri as tri
-from pyevtk.hl import unstructuredGridToVTK 
+from .. post_processing.post_processing import elasticity_post_processing
 
 '''
 This script is used to create the PINN model of 2D Elasticity example. The example is taken from 
@@ -128,6 +128,20 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, metrics=["l2 relative error"])
 losshistory, train_state = model.train(epochs=40000, display_every=1000)
+
+
+############################# Post processing for VTK FILE (3D and 2D) ##################################
+# generate random points
+X = geom.random_points(1000)
+
+# if the uniform boundary points are possible (for some geometries not possible), otherwise comment to next two lines
+boun = geom.uniform_boundary_points(100) # comment this
+X = np.vstack((X,boun)) # comment this
+
+elasticity_post_processing(X, model, calculate_stress=True)
+
+# The rest is time taking, so use exit()
+exit() 
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
