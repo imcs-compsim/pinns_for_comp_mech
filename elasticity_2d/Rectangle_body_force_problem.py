@@ -8,22 +8,13 @@ import scipy.interpolate
 import os
 from pyevtk.hl import unstructuredGridToVTK
 import matplotlib.tri as tri
-from .. utils.deep_utils import stress_plane_strain, problem_parameters
+from .. utils.elasticity_utils import stress_plane_strain, problem_parameters
 
 '''
 This script is used to create the PINN model of 2D Elasticity example. The example is taken from 
 A physics-informed deep learning framework for inversion and surrogate modeling in solid mechanics with the following link   
 https://www.semanticscholar.org/paper/A-physics-informed-deep-learning-framework-for-and-Haghighat-Raissi/e420b8cd519909b4298b16d1a46fbd015c86fc4e 
 '''
-
-def strain(x,y):
-    '''
-    From displacement strain is obtained using automatic differentiation
-    '''
-    eps_xx = dde.grad.jacobian(y, x, i=0, j=0)
-    eps_yy = dde.grad.jacobian(y, x, i=1, j=1)
-    eps_xy = 1/2*(dde.grad.jacobian(y, x, i=1, j=0)+dde.grad.jacobian(y, x, i=0, j=1))
-    return eps_xx, eps_yy, eps_xy
 
 def pde(x, y):    
 

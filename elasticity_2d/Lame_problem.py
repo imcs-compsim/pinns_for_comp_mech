@@ -4,26 +4,11 @@ import numpy as np
 # Import tf if using backend tensorflow.compat.v1 or tensorflow
 from deepxde.backend import tf
 import matplotlib.tri as tri
-from deepxde import utils
 from pyevtk.hl import unstructuredGridToVTK
+import matplotlib.pyplot as plt
 
-from .. utils.deep_utils import stress_plane_strain, calculate_boundary_normals, polar_transformation_2d
-
-def pde(x, y):    
-    # calculate strain terms (kinematics, small strain theory)
-
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
-
-    # governing equation
-    sigma_xx_x = dde.grad.jacobian(sigma_xx, x, i=0, j=0)
-    sigma_yy_y = dde.grad.jacobian(sigma_yy, x, i=0, j=1)
-    sigma_xy_x = dde.grad.jacobian(sigma_xy, x, i=0, j=0)
-    sigma_xy_y = dde.grad.jacobian(sigma_xy, x, i=0, j=1)
-
-    momentum_x = sigma_xx_x + sigma_xy_y
-    momentum_y = sigma_yy_y + sigma_xy_x
-
-    return [momentum_x, momentum_y]
+from .. utils.elasticity_utils import stress_plane_strain, momentum_2d 
+from .. utils.geometry_utils import calculate_boundary_normals, polar_transformation_2d
 
 radius_inner = 1
 center_inner = [0,0]
@@ -94,12 +79,12 @@ bc4 = dde.OperatorBC(geom, pressure_outer_y, boundary_outer)
 
 data = dde.data.PDE(
     geom,
-    pde,
+    momentum_2d,
     [bc1, bc2, bc3, bc4],
-    num_domain=600,
-    num_boundary=120,
+    num_domain=800,
+    num_boundary=160,
     num_test=120,
-    train_distribution = "uniform"
+    train_distribution = "Sobol"
 )
 
 # two inputs x and y, output is ux and uy 
@@ -111,7 +96,7 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001)
 
-losshistory, train_state = model.train(epochs=1, display_every=1000)
+losshistory, train_state = model.train(epochs=10000, display_every=1000)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
@@ -122,7 +107,7 @@ X = np.vstack((X,boun))
 
 displacement = model.predict(X)
 sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_strain)
-sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, X)
+sigma_rr, sigma_theta, sigma_rtheta, theta_radian = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, X)
 
 combined_disp = tuple(np.vstack((np.array(displacement[:,0].tolist()),np.array(displacement[:,1].tolist()),np.zeros(displacement[:,0].shape[0]))))
 combined_stress = tuple(np.vstack((np.array(sigma_xx.flatten().tolist()),np.array(sigma_yy.flatten().tolist()),np.array(sigma_xy.flatten().tolist()))))
@@ -141,8 +126,30 @@ dol_triangles = triang.triangles[condition]
 offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1])
 cell_types = np.ones(dol_triangles.shape[0])*5
 
-file_path = "/home/a11btasa/git_repos/phd_materials/pinns/Lame_problem/lame_problem_pressure_test"
+file_path = "/home/a11btasa/git_repos/phd_materials/pinns/Lame_problem/lame_problem_pressure_test_sobol"
 
 unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
-                      cell_types, pointData = { "displacement" : combined_disp, "stress" : combined_stress_polar})
+                      cell_types, pointData = { "displacement" : combined_disp,"stress" : combined_stress_polar})
 
+# analytical solution
+r = np.linspace(radius_inner, radius_outer,100)
+y = np.zeros(r.shape[0])
+
+sigma_rr_analytical = radius_inner**2*radius_outer**2*(pressure_outlet - pressure_inlet)/(radius_outer**2 - radius_inner**2)/r**2 + (pressure_inlet*radius_inner**2-pressure_outlet*radius_outer**2)/(radius_outer**2 - radius_inner**2)
+sigma_theta_analytical = -radius_inner**2*radius_outer**2*(pressure_outlet - pressure_inlet)/(radius_outer**2 - radius_inner**2)/r**2 + (pressure_inlet*radius_inner**2-pressure_outlet*radius_outer**2)/(radius_outer**2 - radius_inner**2)
+
+r_x = np.hstack((r.reshape(-1,1),y.reshape(-1,1)))
+sigma_xx, sigma_yy, sigma_xy = model.predict(r_x, operator=stress_plane_strain)
+sigma_rr, sigma_theta, sigma_rtheta, _ = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, r_x)
+
+
+plt.plot(r/radius_inner, sigma_rr_analytical/radius_inner, label = r"Analytical $\sigma_{r}$")
+plt.plot(r/radius_inner, sigma_rr/radius_inner, label = r"Predicted $\sigma_{r}$")
+plt.plot(r/radius_inner, sigma_theta_analytical/radius_inner, label = r"Analytical $\sigma_{\theta}$")
+plt.plot(r/radius_inner, sigma_theta/radius_inner, label = r"Predicted $\sigma_{\theta}$")
+plt.legend()
+plt.xlabel("r/a")
+plt.ylabel("Normalized stress")
+plt.grid()
+
+plt.show()
