@@ -5,6 +5,7 @@ import numpy as np
 from deepxde.backend import tf
 import matplotlib.tri as tri
 from pyevtk.hl import unstructuredGridToVTK
+import os
 
 from .. utils.elasticity_utils import stress_plane_strain, momentum_2d 
 from .. utils.geometry_utils import calculate_boundary_normals, polar_transformation_2d
@@ -101,7 +102,7 @@ dol_triangles = triang.triangles
 offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1])
 cell_types = np.ones(dol_triangles.shape[0])*5
 
-file_path = "/home/a11btasa/git_repos/phd_materials/pinns/Lame_problem/Hertzian_test"
+file_path = os.path.join(os.getcwd(),"Hertzian_pressure")
 
 unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
                       cell_types, pointData = { "displacement" : combined_disp,"stress_polar" : combined_stress_polar, "stress": combined_stress})

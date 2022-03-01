@@ -20,7 +20,7 @@ def pde(x, y):
 
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
 
-    constant,nu,lame,shear,e_modul = problem_parameters()
+    nu,lame,shear,e_modul = problem_parameters()
     Q_param = 4 
 
     # governing equation
@@ -51,7 +51,7 @@ def fun_sigma_xx(x,y,X):
 
 def fun_sigma_yy(x,y,X):
 
-    constant,nu,lame,shear,e_modul = problem_parameters()
+    nu,lame,shear,e_modul = problem_parameters()
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
     
     return sigma_yy - (lame+2*nu)*4*tf.sin(np.pi*x[:,0:1])
@@ -101,7 +101,7 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, metrics=["l2 relative error"])
-losshistory, train_state = model.train(epochs=3000, display_every=1000)
+losshistory, train_state = model.train(epochs=10000, display_every=1000)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
@@ -128,7 +128,7 @@ dol_triangles = triang.triangles
 offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1])
 cell_types = np.ones(dol_triangles.shape[0])*5
 
-file_path = "/home/a11btasa/git_repos/phd_materials/pinns/Lame_problem/2d_elasticity_test"
+file_path = os.path.join(os.getcwd(),"Rectangle_body_force_problem")
 
 unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
                       cell_types, pointData = { "displacement" : combined_disp, "stress" : combined_stress})

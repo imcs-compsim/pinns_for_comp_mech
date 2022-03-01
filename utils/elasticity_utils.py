@@ -47,8 +47,6 @@ def problem_parameters():
 
     Returns
     -------
-        constant: Float
-            Combination of Young's modulus and Poisson's ratio
         nu : Float
             Poisson's ratio
         lame: Float
@@ -63,9 +61,8 @@ def problem_parameters():
 
     e_modul = shear*(3*lame+2*shear)/(lame+shear)
     nu = lame/(2*(lame+shear))
-    constant = e_modul/((1+nu)*(1-2*nu))
     
-    return constant, nu, lame, shear, e_modul
+    return nu, lame, shear, e_modul
 
 
 def stress_plane_strain(x,y):
@@ -86,12 +83,12 @@ def stress_plane_strain(x,y):
     '''
     eps_xx, eps_yy, eps_xy = elastic_strain_2d(x,y)
 
-    constant,nu,lame,shear,e_modul = problem_parameters()
+    nu,lame,shear,e_modul = problem_parameters()
     
     # calculate stress terms (constitutive law - plane strain)
-    sigma_xx = constant*((1-nu)*eps_xx+nu*eps_yy)
-    sigma_yy = constant*(nu*eps_xx+(1-nu)*eps_yy)
-    sigma_xy = constant*((1-2*nu)*eps_xy)
+    sigma_xx = e_modul/((1+nu)*(1-2*nu))*((1-nu)*eps_xx+nu*eps_yy)
+    sigma_yy = e_modul/((1+nu)*(1-2*nu))*(nu*eps_xx+(1-nu)*eps_yy)
+    sigma_xy = e_modul/((1+nu)*(1-2*nu))*((1-2*nu)*eps_xy)
 
     return sigma_xx, sigma_yy, sigma_xy
 
@@ -114,7 +111,7 @@ def stress_plane_stress(x,y):
     '''
     eps_xx, eps_yy, eps_xy = elastic_strain_2d(x,y)
 
-    constant,nu,lame,shear,e_modul = problem_parameters()
+    nu,lame,shear,e_modul = problem_parameters()
 
     sigma_xx = e_modul/(1-nu**2)*(eps_xx+nu*eps_yy)
     sigma_yy = e_modul/(1-nu**2)*(nu*eps_xx+eps_yy)
