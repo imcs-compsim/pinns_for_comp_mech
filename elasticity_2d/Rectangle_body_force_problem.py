@@ -6,8 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.interpolate
 import os
+from pyevtk.hl import unstructuredGridToVTK
 import matplotlib.tri as tri
-from pyevtk.hl import unstructuredGridToVTK 
+from .. utils.elasticity_utils import stress_plane_strain, problem_parameters
 
 '''
 This script is used to create the PINN model of 2D Elasticity example. The example is taken from 
@@ -15,27 +16,12 @@ A physics-informed deep learning framework for inversion and surrogate modeling 
 https://www.semanticscholar.org/paper/A-physics-informed-deep-learning-framework-for-and-Haghighat-Raissi/e420b8cd519909b4298b16d1a46fbd015c86fc4e 
 '''
 
-def strain(x,y):
-    '''
-    From displacement strain is obtained using automatic differentiation
-    '''
-    eps_xx = dde.grad.jacobian(y, x, i=0, j=0)
-    eps_yy = dde.grad.jacobian(y, x, i=1, j=1)
-    eps_xy = 1/2*(dde.grad.jacobian(y, x, i=1, j=0)+dde.grad.jacobian(y, x, i=0, j=1))
-    return eps_xx, eps_yy, eps_xy
-
 def pde(x, y):    
-    # calculate strain terms (kinematics, small strain theory)
-    eps_xx, eps_yy, eps_xy = strain(x,y)
 
-    # 
-    constant,nu,lame,shear = problem_parameters()
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
+
+    constant,nu,lame,shear,e_modul = problem_parameters()
     Q_param = 4 
-    
-    # calculate stress terms (constitutive law - plane strain)
-    sigma_xx = constant*((1-nu)*eps_xx+nu*eps_yy)
-    sigma_yy = constant*(nu*eps_xx+(1-nu)*eps_yy)
-    sigma_xy = constant*((1-2*nu)*eps_xy)
 
     # governing equation
     sigma_xx_x = dde.grad.jacobian(sigma_xx, x, i=0, j=0)
@@ -56,29 +42,17 @@ def pde(x, y):
 
     return [momentum_x, momentum_y]
 
-def problem_parameters():
-    lame = 1
-    shear = 0.5
-    e_modul = shear*(3*lame+2*shear)/(lame+shear)
-    nu = lame/(2*(lame+shear))
-    constant = e_modul/((1+nu)*(1-2*nu))
-    return constant,nu,lame,shear
 
 def fun_sigma_xx(x,y,X):
-    eps_xx, eps_yy, _ = strain(x,y)
 
-    # stress terms (constitutive law)
-    constant,nu,_,_ = problem_parameters()
-    
-    sigma_xx = constant*((1-nu)*eps_xx+nu*eps_yy)
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
+
     return sigma_xx
 
 def fun_sigma_yy(x,y,X):
-    eps_xx, eps_yy, _ = strain(x,y)
 
-    # stress terms (constitutive law)
-    constant,nu,lame,_= problem_parameters()
-    sigma_yy = constant*(nu*eps_xx+(1-nu)*eps_yy)
+    constant,nu,lame,shear,e_modul = problem_parameters()
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
     
     return sigma_yy - (lame+2*nu)*4*tf.sin(np.pi*x[:,0:1])
 
@@ -127,17 +101,44 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, metrics=["l2 relative error"])
-losshistory, train_state = model.train(epochs=40000, display_every=1000)
+losshistory, train_state = model.train(epochs=3000, display_every=1000)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
-X = geom.random_points(10000)
 
+X = geom.random_points(10000)
 # if the uniform boundary points are possible (for some geometries not possible),
 # otherwise comment to next two lines
 boun = geom.uniform_boundary_points(100) # comment this
 X = np.vstack((X,boun)) # comment this
+
+displacement = model.predict(X)
+sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_strain)
+
+combined_disp = tuple(np.vstack((np.array(displacement[:,0].tolist()),np.array(displacement[:,1].tolist()),np.zeros(displacement[:,0].shape[0]))))
+combined_stress = tuple(np.vstack((np.array(sigma_xx.flatten().tolist()),np.array(sigma_yy.flatten().tolist()),np.array(sigma_xy.flatten().tolist()))))
+
+x = X[:,0].flatten()
+y = X[:,1].flatten()
+z = np.zeros(y.shape)
+
+triang = tri.Triangulation(x, y)
+dol_triangles = triang.triangles
+offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1])
+cell_types = np.ones(dol_triangles.shape[0])*5
+
+file_path = "/home/a11btasa/git_repos/phd_materials/pinns/Lame_problem/2d_elasticity_test"
+
+unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
+                      cell_types, pointData = { "displacement" : combined_disp, "stress" : combined_stress})
+
+# The rest is time taking, so use exit()
+exit() 
+
+###################################################################################
+############################## VISUALIZATION PARTS ################################
+###################################################################################
 
 output = model.predict(X)
 
@@ -158,28 +159,6 @@ residum_u = np.hstack([X[:,0].reshape(-1,1),X[:,1].reshape(-1,1),residum_u])
 
 residum_v = (v_pred.reshape(-1,1) - v_anal.reshape(-1,1))
 residum_v = np.hstack([X[:,0].reshape(-1,1),X[:,1].reshape(-1,1),residum_v])
-
-############################# VTK FILE (3D and 2D) ##################################
-# since the problem is 2D, z values are set to 0
-x = X[:,0].flatten()
-y = X[:,1].flatten()
-z = np.zeros(y.shape)
-triang = tri.Triangulation(x, y)
-
-# if dommain has a hole, you have to substract the inner domain 
-# condition = np.isclose(np.sqrt((x[triang.triangles]**2+y[triang.triangles]**2)),np.array([1, 1, 1]))
-# condition = ~np.all(condition, axis=1)
-# dol_triangles = triang.triangles[condition]
-
-filename = os.path.join(os.getcwd(),"2d_elastictiy")
-offset = np.arange(3,triang.triangles.shape[0]*triang.triangles.shape[1]+1,triang.triangles.shape[1])
-cell_types = np.ones(triang.triangles.shape[0])*5
-zero_z = np.zeros(v_pred.shape[0])
-combined_disp = tuple(np.vstack((np.array(u_pred.tolist()),np.array(v_pred.tolist()),zero_z)))
-unstructuredGridToVTK(filename, x, y, z, triang.triangles.flatten(), offset, cell_types, pointData = { "displacement" : combined_disp}) #pointData = {"disp" : u_pred}
-
-# The rest is time taking, so use exit()
-exit() 
 
 #------------------------------------------------------------------------------------
 #####################################################################################
