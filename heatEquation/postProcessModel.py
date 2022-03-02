@@ -13,23 +13,25 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Plotting
-def plotSideBySide(xx, yy, usol, y_pred):
+def plotSideBySide(xx, yy, uLeft, uRight):
     """
-    Evaluates the boundary condition.
+    Plots two solution fields side by side.
 
     Parameters
     ----------
-    x : x passed to this function by the dde.pde is the NN input. Therefore,
-        we must first extract the time coordinate.
+    xx : x-coordinates generated with meshgrid
+    yy : y-coordinates generated with meshgrid
+    uLeft: solution field to be displayed on the left
+    uRight: solution field to be displayed on the right
     """
     
     fig, (ax1, ax2) = plt.subplots(1, 2, subplot_kw=dict(projection="3d"))
 
     # Analytical solution
-    ax1.scatter(xx, yy, usol)
+    ax1.scatter(xx, yy, uLeft)
     
     # Model prediction
-    ax2.scatter(xx, yy, y_pred)
+    ax2.scatter(xx, yy, uRight)
     
     plt.show()
     
@@ -39,8 +41,8 @@ def compareModelPredictionAndAnalyticalSolution(model, analytical_solution):
 
     Parameters
     ----------
-    x : x passed to this function by the dde.pde is the NN input. Therefore,
-        we must first extract the time coordinate.
+    model : trained dde model
+    analytical_solution : function to retrieve analaytical solution
     """
 
     # Retrieve geometry information from model
