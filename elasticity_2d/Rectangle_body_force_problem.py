@@ -125,7 +125,7 @@ z = np.zeros(y.shape)
 
 triang = tri.Triangulation(x, y)
 dol_triangles = triang.triangles
-offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1])
+offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
 cell_types = np.ones(dol_triangles.shape[0])*5
 
 file_path = os.path.join(os.getcwd(),"Rectangle_body_force_problem")
