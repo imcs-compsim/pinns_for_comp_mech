@@ -7,8 +7,14 @@ import matplotlib.tri as tri
 from pyevtk.hl import unstructuredGridToVTK
 import os
 
-from .. utils.elasticity_utils import stress_plane_strain, momentum_2d 
-from .. utils.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+import sys
+from pathlib import Path
+# add utils folder to the system path
+path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
+sys.path.append(path_utils)
+
+from elasticity_utils import stress_plane_strain, momentum_2d 
+from geometry_utils import calculate_boundary_normals, polar_transformation_2d
 
 geom_rectangle = dde.geometry.Rectangle(xmin=[0, 0], xmax=[2, 1])
 geom_disk = dde.geometry.Disk([1, 1], 1)

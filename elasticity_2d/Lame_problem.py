@@ -7,9 +7,14 @@ import matplotlib.tri as tri
 from pyevtk.hl import unstructuredGridToVTK
 import matplotlib.pyplot as plt
 import os
+import sys
+from pathlib import Path
+# add utils folder to the system path
+path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
+sys.path.append(path_utils)
 
-from .. utils.elasticity_utils import stress_plane_strain, momentum_2d 
-from .. utils.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from elasticity_utils import stress_plane_strain, momentum_2d 
+from geometry_utils import calculate_boundary_normals, polar_transformation_2d
 
 radius_inner = 1
 center_inner = [0,0]
