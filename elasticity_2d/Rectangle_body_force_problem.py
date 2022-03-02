@@ -8,7 +8,13 @@ import scipy.interpolate
 import os
 from pyevtk.hl import unstructuredGridToVTK
 import matplotlib.tri as tri
-from .. utils.elasticity_utils import stress_plane_strain, problem_parameters
+import sys
+from pathlib import Path
+# add utilies to the system path
+path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
+sys.path.append(path_utils)
+
+from elasticity_utils import stress_plane_strain, problem_parameters
 
 '''
 This script is used to create the PINN model of 2D Elasticity example. The example is taken from 

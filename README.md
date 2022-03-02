@@ -2,25 +2,11 @@
 
 Collection of scripts for our PINN examples with deepXDE
 
-## Installation of the DeepXDE package
+## Installation of the DeepXDE package and required libraries
 
-- Install the stable version with pip:
-
-   ```bash
-   $ pip install deepxde
+ ```bash
+   $ pip install -r requirements.txt
    ```
-
-- Install the stable version with conda:
-
-    ```bash
-    $ conda install -c conda-forge deepxde
-    ```
-
-- For developers, you should clone the folder to your local machine and put it along with your project scripts:
-
-    ```bash
-    $ git clone https://github.com/lululxvi/deepxde.git
-    ```
 
 For more info: [deepxde website](https://deepxde.readthedocs.io/en/latest/user/installation.html)
 
