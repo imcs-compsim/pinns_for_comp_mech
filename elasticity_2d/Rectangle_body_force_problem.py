@@ -14,28 +14,23 @@ from pathlib import Path
 path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
 sys.path.append(path_utils)
 
-from elasticity_utils import stress_plane_strain, problem_parameters
+from elasticity_utils import stress_plane_strain, problem_parameters, momentum_2d
 
 '''
-This script is used to create the PINN model of 2D Elasticity example. The example is taken from 
-A physics-informed deep learning framework for inversion and surrogate modeling in solid mechanics with the following link   
-https://www.semanticscholar.org/paper/A-physics-informed-deep-learning-framework-for-and-Haghighat-Raissi/e420b8cd519909b4298b16d1a46fbd015c86fc4e 
+This script is used to create the PINN model of 2D Elasticity example. The example is taken from
+A physics-informed deep learning framework for inversion and surrogate modeling in solid mechanics with the following link
+https://www.semanticscholar.org/paper/A-physics-informed-deep-learning-framework-for-and-Haghighat-Raissi/e420b8cd519909b4298b16d1a46fbd015c86fc4e
 '''
 
-def pde(x, y):    
+def pde(x, y):
 
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
+    # Use common linear elasticity momentum equation
+    [mom_x, mom_y] = momentum_2d(x, y)
 
     nu,lame,shear,e_modul = problem_parameters()
-    Q_param = 4 
+    Q_param = 4
 
-    # governing equation
-    sigma_xx_x = dde.grad.jacobian(sigma_xx, x, i=0, j=0)
-    sigma_yy_y = dde.grad.jacobian(sigma_yy, x, i=0, j=1)
-    sigma_xy_x = dde.grad.jacobian(sigma_xy, x, i=0, j=0)
-    sigma_xy_y = dde.grad.jacobian(sigma_xy, x, i=0, j=1)
-
-    # inputs x and y
+    # Extract spatial coordinates x_s and y_s from the network inputs x
     x_s = x[:,0:1]
     y_s = x[:,1:2]
 
@@ -43,8 +38,8 @@ def pde(x, y):
     f_x = lame*(4*np.pi**2*tf.cos(2*np.pi*x_s)*tf.sin(np.pi*y_s)-np.pi*tf.cos(np.pi*x_s)*Q_param*y_s**3) + shear*(9*np.pi**2*tf.cos(2*np.pi*x_s)*tf.sin(np.pi*y_s)-np.pi*tf.cos(np.pi*x_s)*Q_param*y_s**3)
     f_y = lame*(-3*tf.sin(np.pi*x_s)*Q_param*y_s**2+2*np.pi**2*tf.sin(2*np.pi*x_s)*tf.cos(np.pi*y_s)) + shear*(-6*tf.sin(np.pi*x_s)*Q_param*y_s**2+2*np.pi**2*tf.sin(2*np.pi*x_s)*tf.cos(np.pi*y_s)+np.pi**2*tf.sin(np.pi*x_s)*Q_param*y_s**4/4)
 
-    momentum_x = sigma_xx_x + sigma_xy_y + f_x
-    momentum_y = sigma_yy_y + sigma_xy_x + f_y
+    momentum_x = mom_x + f_x
+    momentum_y = mom_y + f_y
 
     return [momentum_x, momentum_y]
 
@@ -59,7 +54,7 @@ def fun_sigma_yy(x,y,X):
 
     nu,lame,shear,e_modul = problem_parameters()
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
-    
+
     return sigma_yy - (lame+2*nu)*4*tf.sin(np.pi*x[:,0:1])
 
 def boundary_l(x, on_boundary):
@@ -99,7 +94,7 @@ data = dde.data.PDE(
     solution=func,
     num_test=100,
 )
-# two inputs x and y, output is ux and uy 
+# two inputs x and y, output is ux and uy
 layer_size = [2] + [50] * 5 + [2]
 activation = "tanh"
 initializer = "Glorot uniform"
@@ -136,11 +131,11 @@ cell_types = np.ones(dol_triangles.shape[0])*5
 
 file_path = os.path.join(os.getcwd(),"Rectangle_body_force_problem")
 
-unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
+unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset,
                       cell_types, pointData = { "displacement" : combined_disp, "stress" : combined_stress})
 
 # The rest is time taking, so use exit()
-exit() 
+exit()
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
