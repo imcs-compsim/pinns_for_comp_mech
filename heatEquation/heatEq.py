@@ -75,6 +75,34 @@ def analytical_solution(x, t, k):
 
     return np.exp(-k*np.pi**2*t) * np.cos(np.pi*x)
 
+def postProcess(model):
+    '''
+    Performs heat equation specific post-processing of a trained model.
+
+    Parameters
+    ----------
+    X : trained deepxde model
+
+    '''
+    import os, sys
+    from pathlib import Path
+    path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
+    sys.path.append(path_utils)
+    from exportVtk import meshGeometry, solutionFieldOnMeshToVtk
+
+    geom = model.data.geom
+
+    X, triangles = meshGeometry(geom, numberOfPointsOnBoundary=20)
+
+    temperature = model.predict(X)
+
+    pointData = { "temperature" : temperature.flatten()}
+
+    file_path = os.path.join(os.getcwd(),"heatEquation2D")
+
+    solutionFieldOnMeshToVtk(X, triangles, pointData, file_path)
+
+
 # Computational domain
 xmin = -1
 xmax = 1
@@ -115,6 +143,10 @@ losshistory, train_state = model.train(epochs=5000)
 
 # Plot/print the results
 dde.saveplot(losshistory, train_state, issave=True, isplot=True)
+
+
+postProcess(model)
+
 
 # Define some query points on our compuational domain.
 # Number of points in each dimension:

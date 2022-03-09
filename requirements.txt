@@ -1,2 +1,3 @@
 deepxde
 pyevtk
+triangle

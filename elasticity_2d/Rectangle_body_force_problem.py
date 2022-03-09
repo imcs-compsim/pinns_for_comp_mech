@@ -2,19 +2,16 @@
 import deepxde as dde
 import numpy as np
 import tensorflow as tf
-import numpy as np
 import matplotlib.pyplot as plt
 import scipy.interpolate
-import os
-from pyevtk.hl import unstructuredGridToVTK
-import matplotlib.tri as tri
-import sys
+import os, sys
 from pathlib import Path
 # add utilies to the system path
 path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
 sys.path.append(path_utils)
 
 from elasticity_utils import stress_plane_strain, problem_parameters, momentum_2d
+from elasticity_postprocessing import postProcess
 
 '''
 This script is used to create the PINN model of 2D Elasticity example. The example is taken from
@@ -108,31 +105,7 @@ losshistory, train_state = model.train(epochs=10000, display_every=1000)
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
 
-X = geom.random_points(10000)
-# if the uniform boundary points are possible (for some geometries not possible),
-# otherwise comment to next two lines
-boun = geom.uniform_boundary_points(100) # comment this
-X = np.vstack((X,boun)) # comment this
-
-displacement = model.predict(X)
-sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_strain)
-
-combined_disp = tuple(np.vstack((np.array(displacement[:,0].tolist()),np.array(displacement[:,1].tolist()),np.zeros(displacement[:,0].shape[0]))))
-combined_stress = tuple(np.vstack((np.array(sigma_xx.flatten().tolist()),np.array(sigma_yy.flatten().tolist()),np.array(sigma_xy.flatten().tolist()))))
-
-x = X[:,0].flatten()
-y = X[:,1].flatten()
-z = np.zeros(y.shape)
-
-triang = tri.Triangulation(x, y)
-dol_triangles = triang.triangles
-offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
-cell_types = np.ones(dol_triangles.shape[0])*5
-
-file_path = os.path.join(os.getcwd(),"Rectangle_body_force_problem")
-
-unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset,
-                      cell_types, pointData = { "displacement" : combined_disp, "stress" : combined_stress})
+postProcess(model)
 
 # The rest is time taking, so use exit()
 exit()
@@ -140,6 +113,12 @@ exit()
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
+
+X = geom.random_points(10000)
+# if the uniform boundary points are possible (for some geometries not possible),
+# otherwise comment to next two lines
+boun = geom.uniform_boundary_points(100) # comment this
+X = np.vstack((X,boun)) # comment this
 
 output = model.predict(X)
 
