@@ -89,7 +89,7 @@ data = dde.data.PDE(
     [bc1, bc2, bc3, bc4],
     num_domain=800,
     num_boundary=160,
-    num_test=120,
+    num_test=160,
     train_distribution = "Sobol"
 )
 
@@ -102,18 +102,18 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001)
 
-losshistory, train_state = model.train(epochs=10000, display_every=1000)
+losshistory, train_state = model.train(epochs=6000, display_every=1000)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
 X = geom.random_points(600, random="Sobol")
-boun = geom.uniform_boundary_points(100)
+boun = geom.random_boundary_points(100)
 X = np.vstack((X,boun))
 
 displacement = model.predict(X)
 sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_strain)
-sigma_rr, sigma_theta, sigma_rtheta, theta_radian = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, X)
+sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, X)
 
 combined_disp = tuple(np.vstack((np.array(displacement[:,0].tolist()),np.array(displacement[:,1].tolist()),np.zeros(displacement[:,0].shape[0]))))
 combined_stress = tuple(np.vstack((np.array(sigma_xx.flatten().tolist()),np.array(sigma_yy.flatten().tolist()),np.array(sigma_xy.flatten().tolist()))))
@@ -129,7 +129,7 @@ condition = np.isclose(np.sqrt((x[triang.triangles]**2+y[triang.triangles]**2)),
 condition = ~np.all(condition, axis=1)
 
 dol_triangles = triang.triangles[condition]
-offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1])
+offset = np.arange(3, dol_triangles.shape[0]*dol_triangles.shape[1]+1, dol_triangles.shape[1], dtype=dol_triangles.dtype)
 cell_types = np.ones(dol_triangles.shape[0])*5
 
 file_path = os.path.join(os.getcwd(),"Lame_problem")
@@ -146,8 +146,7 @@ sigma_theta_analytical = -radius_inner**2*radius_outer**2*(pressure_outlet - pre
 
 r_x = np.hstack((r.reshape(-1,1),y.reshape(-1,1)))
 sigma_xx, sigma_yy, sigma_xy = model.predict(r_x, operator=stress_plane_strain)
-sigma_rr, sigma_theta, sigma_rtheta, _ = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, r_x)
-
+sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, r_x)
 
 plt.plot(r/radius_inner, sigma_rr_analytical/radius_inner, label = r"Analytical $\sigma_{r}$")
 plt.plot(r/radius_inner, sigma_rr/radius_inner, label = r"Predicted $\sigma_{r}$")
