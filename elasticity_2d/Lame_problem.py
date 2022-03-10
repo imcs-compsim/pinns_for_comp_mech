@@ -28,6 +28,35 @@ geom = dde.geometry.csg.CSGDifference(geom1=geom_disk_2, geom2=geom_disk_1)
 pressure_inlet = 1
 pressure_outlet = 2
 
+def compareModelPredictionAndAnalyticalSolution(model):
+    
+    r = np.linspace(radius_inner, radius_outer,100)
+    y = np.zeros(r.shape[0])
+
+    rr2 = radius_inner**2 * radius_outer**2
+    dr2 = radius_outer**2 - radius_inner**2
+    dpdr2 = (pressure_outlet - pressure_inlet) / dr2
+    dpr2dr2 = (pressure_inlet * radius_inner**2 - pressure_outlet * radius_outer**2) / dr2
+
+    sigma_rr_analytical = rr2 * dpdr2/r**2 + dpr2dr2
+    sigma_theta_analytical = - rr2 * dpdr2/r**2 + dpr2dr2
+
+    r_x = np.hstack((r.reshape(-1,1),y.reshape(-1,1)))
+    sigma_xx, sigma_yy, sigma_xy = model.predict(r_x, operator=stress_plane_strain)
+    sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, r_x)
+
+    plt.plot(r/radius_inner, sigma_rr_analytical/radius_inner, label = r"Analytical $\sigma_{r}$")
+    plt.plot(r/radius_inner, sigma_rr/radius_inner, label = r"Predicted $\sigma_{r}$")
+    plt.plot(r/radius_inner, sigma_theta_analytical/radius_inner, label = r"Analytical $\sigma_{\theta}$")
+    plt.plot(r/radius_inner, sigma_theta/radius_inner, label = r"Predicted $\sigma_{\theta}$")
+    plt.legend()
+    plt.xlabel("r/a")
+    plt.ylabel("Normalized stress")
+    plt.grid()
+
+    plt.show()
+    
+
 def pressure_inner_x(x, y, X):    
     
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
@@ -137,24 +166,4 @@ file_path = os.path.join(os.getcwd(),"Lame_problem")
 unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
                       cell_types, pointData = { "displacement" : combined_disp,"stress" : combined_stress_polar})
 
-# analytical solution
-r = np.linspace(radius_inner, radius_outer,100)
-y = np.zeros(r.shape[0])
-
-sigma_rr_analytical = radius_inner**2*radius_outer**2*(pressure_outlet - pressure_inlet)/(radius_outer**2 - radius_inner**2)/r**2 + (pressure_inlet*radius_inner**2-pressure_outlet*radius_outer**2)/(radius_outer**2 - radius_inner**2)
-sigma_theta_analytical = -radius_inner**2*radius_outer**2*(pressure_outlet - pressure_inlet)/(radius_outer**2 - radius_inner**2)/r**2 + (pressure_inlet*radius_inner**2-pressure_outlet*radius_outer**2)/(radius_outer**2 - radius_inner**2)
-
-r_x = np.hstack((r.reshape(-1,1),y.reshape(-1,1)))
-sigma_xx, sigma_yy, sigma_xy = model.predict(r_x, operator=stress_plane_strain)
-sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, r_x)
-
-plt.plot(r/radius_inner, sigma_rr_analytical/radius_inner, label = r"Analytical $\sigma_{r}$")
-plt.plot(r/radius_inner, sigma_rr/radius_inner, label = r"Predicted $\sigma_{r}$")
-plt.plot(r/radius_inner, sigma_theta_analytical/radius_inner, label = r"Analytical $\sigma_{\theta}$")
-plt.plot(r/radius_inner, sigma_theta/radius_inner, label = r"Predicted $\sigma_{\theta}$")
-plt.legend()
-plt.xlabel("r/a")
-plt.ylabel("Normalized stress")
-plt.grid()
-
-plt.show()
+compareModelPredictionAndAnalyticalSolution(model)
