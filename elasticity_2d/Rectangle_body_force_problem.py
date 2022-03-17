@@ -11,7 +11,7 @@ path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
 sys.path.append(path_utils)
 
 from elasticity_utils import stress_plane_strain, problem_parameters, momentum_2d
-from elasticity_postprocessing import postProcess
+from elasticity_postprocessing import meshGeometry, postProcess
 
 '''
 This script is used to create the PINN model of 2D Elasticity example. The example is taken from
@@ -99,13 +99,15 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, metrics=["l2 relative error"])
-losshistory, train_state = model.train(epochs=10000, display_every=1000)
+losshistory, train_state = model.train(epochs=1, display_every=1000)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
 
-postProcess(model)
+X, triangles = meshGeometry(geom, n_boundary=100, max_mesh_area=0.01, boundary_distribution="uniform")
+
+postProcess(model, X, triangles, output_name="displacement", operator=stress_plane_strain, operator_name="stress")
 
 # The rest is time taking, so use exit()
 exit()
