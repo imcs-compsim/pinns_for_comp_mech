@@ -1,11 +1,9 @@
 import numpy as np
 import os
-import sys
 import warnings
 
 import triangle as tr
 
-from elasticity_utils import stress_plane_strain
 from geometry_utils import polar_transformation_2d
 from deepxde.geometry.csg import CSGUnion, CSGDifference, CSGIntersection
 
@@ -15,7 +13,23 @@ def meshGeometry(geom, n_boundary=100, holes=None, max_mesh_area=None, boundary_
     
     Parameters
     ----------
-    geom : trained deepxde model
+    geom : Class object
+        contains the geometry object
+    n_boundary: int
+        represents the number of points on boundary
+    holes: np.array
+        center location of the holes
+    max_mesh_area: float
+        max area of elements
+    boundary_distribution
+        the distribution of points on boundary, available options: pseudo, uniform, Sobol, LHS, Halton, Hammersley
+
+    Returns
+    -------
+    vertices: numpy array
+        The location of vertices
+    triangles: numpy array
+        Mesh as triangle
     '''
 
     if isinstance(geom,(CSGUnion, CSGDifference, CSGIntersection)) and holes:
@@ -64,12 +78,26 @@ def meshGeometry(geom, n_boundary=100, holes=None, max_mesh_area=None, boundary_
 
 def postProcess(model, X, triangles, output_name="displacement", operator=None, operator_name="stress", polar_transf = False, file_path=None):
     '''
-    Performs test case specific post-processing of a trained model.
+    Generates the vtu file to visualize results.
 
     Parameters
     ----------
-    model : trained deepxde model
-
+    model : Class object
+        Trained model
+    X: numpy array
+        The location of vertices
+    triangles: numpy array
+        Mesh as triangle
+    output_name: str
+        Name of the output quantity
+    operator: function
+        The operator function which will be used to predict function quantity 
+    operator_name: str
+        Name of the function output quantity
+    polar_transf: booelan
+        Activates if polar transformation will be done
+    file_path: str
+        The full file path to store the results
     '''
     output = model.predict(X)
 
@@ -111,6 +139,20 @@ def postProcess(model, X, triangles, output_name="displacement", operator=None, 
     solutionFieldOnMeshToVtk(X, triangles, pointData, file_path)
 
 def solutionFieldOnMeshToVtk(X, triangles, pointData, file_path):
+    '''
+    Creates the vtu file.
+
+    Parameters
+    ----------
+    X: numpy array
+        The location of vertices
+    triangles: numpy array
+        Mesh as triangle
+    point_data: numpy array
+        Visualized the result as a point cloud 
+    file_path: str
+        The full file path to store the results
+    '''
     
     from pyevtk.hl import unstructuredGridToVTK
     
