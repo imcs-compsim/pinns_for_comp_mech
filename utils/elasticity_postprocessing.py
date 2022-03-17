@@ -4,6 +4,8 @@ import warnings
 
 import triangle as tr
 
+from pyevtk.hl import unstructuredGridToVTK
+
 from geometry_utils import polar_transformation_2d
 from deepxde.geometry.csg import CSGUnion, CSGDifference, CSGIntersection
 
@@ -153,9 +155,7 @@ def solutionFieldOnMeshToVtk(X, triangles, pointData, file_path):
     file_path: str
         The full file path to store the results
     '''
-    
-    from pyevtk.hl import unstructuredGridToVTK
-    
+     
     x = X[:,0].flatten()
     y = X[:,1].flatten()
     z = np.zeros(y.shape)
