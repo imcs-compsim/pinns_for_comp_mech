@@ -1,10 +1,8 @@
 """Backend supported: tensorflow.compat.v1, tensorflow, pytorch"""
 import deepxde as dde
 import numpy as np
+# Import tf if using backend tensorflow.compat.v1 or tensorflow
 from deepxde.backend import tf
-import matplotlib.tri as tri
-from pyevtk.hl import unstructuredGridToVTK 
-import os
 
 import sys
 from pathlib import Path
@@ -12,8 +10,8 @@ from pathlib import Path
 path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
 sys.path.append(path_utils)
 
-from elasticity_utils import stress_plane_strain, momentum_2d 
-from geometry_utils import polar_transformation_2d
+from elasticity_utils import momentum_2d 
+from elasticity_postprocessing import meshGeometry, postProcess
 
 geom_rectangle = dde.geometry.Rectangle(xmin=[0, 0], xmax=[2, 1])
 geom_disk = dde.geometry.Disk([1, 1], 1)
@@ -55,33 +53,12 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001)
-losshistory, train_state = model.train(epochs=3000, display_every=1000)
+losshistory, train_state = model.train(epochs=1, display_every=1000)
 
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
-X = geom.random_points(600, random="Sobol")
-boun = geom.uniform_boundary_points(100)
-X = np.vstack((X,boun))
+X, triangles = meshGeometry(geom, n_boundary=130, max_mesh_area=0.01, boundary_distribution="Sobol")
 
-displacement = model.predict(X)
-sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_strain)
-sigma_rr, sigma_theta, sigma_rtheta, theta_radian = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, X)
-
-combined_disp = tuple(np.vstack((np.array(displacement[:,0].tolist()),np.array(displacement[:,1].tolist()),np.zeros(displacement[:,0].shape[0]))))
-combined_stress = tuple(np.vstack((np.array(sigma_xx.flatten().tolist()),np.array(sigma_yy.flatten().tolist()),np.array(sigma_xy.flatten().tolist()))))
-combined_stress_polar = tuple(np.vstack((np.array(sigma_rr.tolist()),np.array(sigma_theta.tolist()),np.array(sigma_rtheta.tolist()))))
-
-x = X[:,0].flatten()
-y = X[:,1].flatten()
-z = np.zeros(y.shape)
-triang = tri.Triangulation(x, y)
-dol_triangles = triang.triangles
-offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1])
-cell_types = np.ones(dol_triangles.shape[0])*5
-
-file_path = os.path.join(os.getcwd(),"Hertzian_dirichlet")
-
-unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
-                      cell_types, pointData = { "displacement" : combined_disp,"stress_polar" : combined_stress_polar, "stress": combined_stress})
+postProcess(model, X, triangles, output_name="displacement")
