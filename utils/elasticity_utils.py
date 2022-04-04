@@ -2,10 +2,30 @@ import deepxde as dde
 import numpy as np
 from deepxde import utils
 
+# global variables
+lame = 1
+shear = 0.5
+
 def momentum_2d(x, y):    
     # calculate strain terms (kinematics, small strain theory)
 
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
+
+    # governing equation
+    sigma_xx_x = dde.grad.jacobian(sigma_xx, x, i=0, j=0)
+    sigma_yy_y = dde.grad.jacobian(sigma_yy, x, i=0, j=1)
+    sigma_xy_x = dde.grad.jacobian(sigma_xy, x, i=0, j=0)
+    sigma_xy_y = dde.grad.jacobian(sigma_xy, x, i=0, j=1)
+
+    momentum_x = sigma_xx_x + sigma_xy_y
+    momentum_y = sigma_yy_y + sigma_xy_x
+
+    return [momentum_x, momentum_y]
+
+def momentum_2d_plane_stress(x, y):    
+    # calculate strain terms (kinematics, small strain theory)
+
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
 
     # governing equation
     sigma_xx_x = dde.grad.jacobian(sigma_xx, x, i=0, j=0)
@@ -56,9 +76,6 @@ def problem_parameters():
         e_modul: Float
             Young's modulus
     '''
-    lame = 1
-    shear = 0.5
-
     e_modul = shear*(3*lame+2*shear)/(lame+shear)
     nu = lame/(2*(lame+shear))
     
