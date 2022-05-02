@@ -20,12 +20,7 @@ class GmshGeometry2D(Geometry):
         node_tag, node_coords_all, parametricCoord  = self.gmsh_model.mesh.getNodes(2, -1, includeBoundary=True)
         node_tag_inside = self.gmsh_model.mesh.getNodes(2, -1, includeBoundary=False)[0]
 
-        node_tag -= 1 # gmsh node numbering start with 1 but we need 0
-        node_tag_inside -= 1 # gmsh node numbering start with 1 but we need 0
-
-        node_coords_xyz = node_coords_all.reshape(-1,3)
-        node_coords_xy = node_coords_xyz[node_tag.argsort()][:,0:2]
-        node_coords_xy_inside = node_coords_xy[node_tag_inside]
+        node_tag, node_tag_boundary, node_tag_inside, node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords_all, node_tag, node_tag_inside)
 
         return np.all(np.isin(x, node_coords_xy_inside), axis=1)
 
@@ -36,12 +31,7 @@ class GmshGeometry2D(Geometry):
         node_tag_inside = self.gmsh_model.mesh.getNodes(2, -1, includeBoundary=False)[0]
         node_tag_boundary = np.setdiff1d(node_tag, node_tag_inside)
 
-        node_tag -= 1 # gmsh node numbering start with 1 but we need 0
-        node_tag_boundary -= 1 # gmsh node numbering start with 1 but we need 0
-
-        node_coords_xyz = node_coords_all.reshape(-1,3)
-        node_coords_xy = node_coords_xyz[node_tag.argsort()][:,0:2]
-        node_coords_xy_boundary = node_coords_xy[node_tag_boundary]
+        node_tag, node_tag_boundary, node_tag_inside, node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords_all, node_tag, node_tag_boundary, node_tag_inside)
         
         return np.all(np.isin(x, node_coords_xy_boundary), axis=1)
     
@@ -166,10 +156,7 @@ class GmshGeometry2D(Geometry):
 
         node_tag, node_coords, _  = self.gmsh_model.mesh.getNodes(2, -1, includeBoundary=False)
 
-        node_tag -= 1 # gmsh node numbering start with 1 but we need 0
-        
-        node_coords_xyz = node_coords.reshape(-1,3)
-        node_coords_xy = node_coords_xyz[node_tag.argsort()][:,0:2]
+        node_tag, node_tag_boundary, node_tag_inside, node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords, node_tag)
 
         return node_coords_xy
     
@@ -178,10 +165,7 @@ class GmshGeometry2D(Geometry):
 
         node_tag, node_coords, _  = self.gmsh_model.mesh.getNodes(2, -1, includeBoundary=True)
 
-        node_tag -= 1 # gmsh node numbering start with 1 but we need 0
-        
-        node_coords_xyz = node_coords.reshape(-1,3)
-        node_coords_xy = node_coords_xyz[node_tag.argsort()][:,0:2]
+        node_tag, node_tag_boundary, node_tag_inside, node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords, node_tag)
 
         element_types, element_tags, node_tags = self.gmsh_model.mesh.getElements(2,-1)
 
@@ -200,10 +184,26 @@ class GmshGeometry2D(Geometry):
         node_tag_inside = self.gmsh_model.mesh.getNodes(2, -1, includeBoundary=False)[0]
         node_tag_boundary = np.setdiff1d(node_tag, node_tag_inside)
 
-        node_tag -= 1 # gmsh node numbering start with 1 but we need 0
-        node_tag_boundary -= 1 # gmsh node numbering start with 1 but we need 0
-        
-        node_coords_xyz = node_coords.reshape(-1,3)
-        nodeCoords_xy = node_coords_xyz[node_tag.argsort()][:,0:2]
+        node_tag, node_tag_boundary, node_tag_inside, node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords, node_tag, node_tag_boundary, node_tag_inside)
 
-        return nodeCoords_xy[node_tag_boundary]
+        return node_coords_xy_boundary
+    
+    def order_coordinates(self, node_coords, node_tag, node_tag_boundary=None, node_tag_inside=None):
+        '''Get sorted coordinates and node tags'''
+
+        node_tag -= 1 # gmsh node numbering start with 1 but we need 0         
+
+        node_coords_xyz = node_coords.reshape(-1,3)
+        node_coords_xy = node_coords_xyz[node_tag.argsort()][:,0:2]
+        
+        node_coords_xy_boundary = None
+        node_coords_xy_inside = None
+
+        if node_tag_boundary is not None:
+            node_tag_boundary -= 1
+            node_coords_xy_boundary = node_coords_xy[node_tag_boundary]
+        if node_tag_inside is not None:
+            node_tag_inside -= 1 
+            node_coords_xy_inside = node_coords_xy[node_tag_inside]
+
+        return node_tag, node_tag_boundary, node_tag_inside, node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside

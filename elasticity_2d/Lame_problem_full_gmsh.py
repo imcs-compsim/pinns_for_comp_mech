@@ -182,7 +182,7 @@ def compareModelPredictionAndAnalyticalSolution(model):
     plt.savefig("Lame_quarter_gmsh")
     plt.show()
 
-X, offset, cell_types, dol_triangles = geom.get_mesh(600, random="Sobol")
+X, offset, cell_types, dol_triangles = geom.get_mesh()
 
 displacement = model.predict(X)
 sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_stress)
