@@ -17,7 +17,7 @@ from gmsh_models import QuarterCirclewithHole
 
 
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
-quarter_circle_with_hole = QuarterCirclewithHole(center=[0,0,0], inner_radius=1, outer_radius=2, mesh_size=0.05, gmsh_options=gmsh_options)
+quarter_circle_with_hole = QuarterCirclewithHole(center=[0,0,0], inner_radius=1, outer_radius=2, mesh_size=0.1, gmsh_options=gmsh_options)
 
 gmsh_model = quarter_circle_with_hole.generateGmshModel()
 
@@ -111,13 +111,14 @@ bc4 = dde.DirichletBC(geom, lambda _: 0.0, boundary_bottom, component=1)
 bc5 = dde.OperatorBC(geom, traction_outer_x, boundary_outer)
 bc6 = dde.OperatorBC(geom, traction_outer_y, boundary_outer)
 
+n_dummy = 1
 data = dde.data.PDE(
     geom,
     momentum_2d_plane_stress,
     [bc1, bc2, bc3, bc4, bc5, bc6],
-    num_domain=1500,
-    num_boundary=500,
-    num_test=500,
+    num_domain=n_dummy,
+    num_boundary=n_dummy,
+    num_test=n_dummy,
     train_distribution = "Sobol"
 )
 
