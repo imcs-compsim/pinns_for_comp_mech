@@ -1,10 +1,12 @@
 import deepxde as dde
 import numpy as np
 from deepxde import utils
+from geometry_utils import calculate_boundary_normals
 
 # global variables
 lame = 1
 shear = 0.5
+geom = None
 
 def momentum_2d(x, y):    
     # calculate strain terms (kinematics, small strain theory)
@@ -135,3 +137,115 @@ def stress_plane_stress(x,y):
     sigma_xy = e_modul/(1-nu**2)*((1-nu)*eps_xy)
 
     return sigma_xx, sigma_yy, sigma_xy
+
+def zero_neumman_plane_stress_x(x, y, X):
+    '''
+    Calculates x component of the homogeneous Neumann BC
+    
+    Parameters
+    ----------
+    x : tensor
+        the input arguments (coordinates x and y)
+    y: tensor
+        the network output (predicted displacement in x and y direction)
+    X: np.array
+        the input arguments as an array (coordinates x and y)
+
+    Returns
+    -------
+    sigma_xx_n_x + sigma_xy_n_y: tensor
+        x component of the homogeneous Neumann BC
+    '''
+    
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
+
+    normals, cond = calculate_boundary_normals(X, geom)
+
+    sigma_xx_n_x = sigma_xx[cond]*normals[:,0:1]
+    sigma_xy_n_y = sigma_xy[cond]*normals[:,1:2]
+
+    return sigma_xx_n_x + sigma_xy_n_y
+
+def zero_neumman_plane_stress_y(x, y, X):
+    '''
+    Calculates y component of the homogeneous Neumann BC
+
+    Parameters
+    ----------
+    x : tensor
+        the input arguments (coordinates x and y)
+    y: tensor
+        the network output (predicted displacement in x and y direction)
+    X: np.array
+        the input arguments as an array (coordinates x and y)
+
+    Returns
+    -------
+    sigma_yx_n_x + sigma_yy_n_y: tensor
+        y component of the homogeneous Neumann BC
+    '''
+
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
+
+    normals, cond = calculate_boundary_normals(X,geom)
+
+    sigma_yx_n_x = sigma_xy[cond]*normals[:,0:1]
+    sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
+
+    return sigma_yx_n_x + sigma_yy_n_y
+
+def zero_neumman_plane_strain_x(x, y, X):
+    '''
+    Calculates x component of the homogeneous Neumann BC
+    
+    Parameters
+    ----------
+    x : tensor
+        the input arguments (coordinates x and y)
+    y: tensor
+        the network output (predicted displacement in x and y direction)
+    X: np.array
+        the input arguments as an array (coordinates x and y)
+
+    Returns
+    -------
+    sigma_xx_n_x + sigma_xy_n_y: tensor
+        x component of the homogeneous Neumann BC
+    '''
+    
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
+
+    normals, cond = calculate_boundary_normals(X, geom)
+
+    sigma_xx_n_x = sigma_xx[cond]*normals[:,0:1]
+    sigma_xy_n_y = sigma_xy[cond]*normals[:,1:2]
+
+    return sigma_xx_n_x + sigma_xy_n_y
+
+def zero_neumman_plane_strain_y(x, y, X):
+    '''
+    Calculates y component of the homogeneous Neumann BC
+
+    Parameters
+    ----------
+    x : tensor
+        the input arguments (coordinates x and y)
+    y: tensor
+        the network output (predicted displacement in x and y direction)
+    X: np.array
+        the input arguments as an array (coordinates x and y)
+
+    Returns
+    -------
+    sigma_yx_n_x + sigma_yy_n_y: tensor
+        y component of the homogeneous Neumann BC
+    '''
+
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
+
+    normals, cond = calculate_boundary_normals(X,geom)
+
+    sigma_yx_n_x = sigma_xy[cond]*normals[:,0:1]
+    sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
+
+    return sigma_yx_n_x + sigma_yy_n_y
