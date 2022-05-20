@@ -215,4 +215,75 @@ class Block_2D(object):
                 gmsh.fltk.run()
 
         return gmsh_model
+
+class Block_3D(object):
+    def __init__(self, coord_left_corner, coord_right_corner, mesh_size=0.15, gmsh_options=None):
+        self.coord_left_corner = coord_left_corner
+        self.coord_right_corner = coord_right_corner
+        self.mesh_size = mesh_size
+        self.gmsh_options = gmsh_options
+
+    def generateGmshModel(self, visualize_mesh=False):
+        '''
+        Generates a 3D block.
+
+        Parameters
+        ----------
+        visualize_mesh : boolean
+            a booelan value to show the mesh using Gmsh or not
+        Returns 
+        -------
+        gmsh_model: Object
+            gmsh model 
+        '''
+
+        # Parameters
+        x0 = self.coord_left_corner[0]
+        y0 = self.coord_left_corner[1]
+        z0 = self.coord_left_corner[2]
+        x1 = self.coord_right_corner[0]
+        y1 = self.coord_right_corner[1]
+        z1 = self.coord_right_corner[2]
+        assert(x1>x0)
+        assert(y1>y0)
+        assert(z1>z0)
+        l = x1 - x0
+        h = y1 - y0
+        w = z1 - z0 
+        # Mesh size.
+        lcar = self.mesh_size * min(h,l,w)
+
+        # create gmsh model instance
+        gmsh_model = gmsh.model
+        factory = gmsh_model.occ
+
+        # initialize gmsh
+        gmsh.initialize(sys.argv)
+
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMin", lcar)
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMax", lcar)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if type(value).__name__ == 'str':
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+        
+        #gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
+
+        gmsh_model.add("Box")
+
+        factory.addBox(x0, y0, z0, l, h, w)
+
+        gmsh_model.occ.synchronize()
+
+        # generate mesh
+        gmsh_model.mesh.generate(3)
+
+        if visualize_mesh:
+            if '-nopopup' not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model
         
