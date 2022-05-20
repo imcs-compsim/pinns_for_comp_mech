@@ -6,9 +6,13 @@ import matplotlib.pyplot as plt
 import os
 
 class GmshGeometry2D(Geometry):
-    def __init__(self, gmsh_model):
+    def __init__(self, gmsh_model, external_dim_size=None, borders=None):
         self.gmsh_model = gmsh_model
         self.boundary_normal_global = self.fun_boundary_normal_global()
+        self.external_dim_size = external_dim_size
+        self.borders=borders
+        if external_dim_size:
+            self.external_dim = np.linspace(self.borders[0],self.borders[1],self.external_dim_size).reshape(-1,1).astype(np.dtype('f8'))
         self.bbox = (np.array([self.boundary_normal_global[1][:,0].min(),self.boundary_normal_global[1][:,1].min()]), np.array([self.boundary_normal_global[1][:,0].max(),self.boundary_normal_global[1][:,1].max()]))
         super(GmshGeometry2D, self).__init__(
             2, self.bbox, 1
@@ -20,7 +24,10 @@ class GmshGeometry2D(Geometry):
         node_tag, node_coords_all, parametricCoord  = self.gmsh_model.mesh.getNodes(2, -1, includeBoundary=True)
         node_tag_inside = self.gmsh_model.mesh.getNodes(2, -1, includeBoundary=False)[0]
 
-        node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords_all, node_tag, node_tag_inside)
+        node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords_all, node_tag, node_tag_inside=node_tag_inside)
+
+        if self.external_dim_size:
+            node_coords_xy_inside = self.add_external_dim(node_coords_xy_inside)
 
         return np.all(np.isin(x, node_coords_xy_inside), axis=1)
 
@@ -32,6 +39,9 @@ class GmshGeometry2D(Geometry):
         node_tag_boundary = np.setdiff1d(node_tag, node_tag_inside)
 
         node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords_all, node_tag, node_tag_boundary, node_tag_inside)
+
+        if self.external_dim_size:
+            node_coords_xy_boundary = self.add_external_dim(node_coords_xy_boundary)
         
         return np.all(np.isin(x, node_coords_xy_boundary), axis=1)
     
@@ -39,6 +49,9 @@ class GmshGeometry2D(Geometry):
         """Slice the unit normal at x for Neumann or Robin boundary conditions."""
 
         n, uniq = self.boundary_normal_global
+
+        if self.external_dim_size:
+            x = np.delete(x, -1, 1)
 
         mask = []
         for x_i in x:
@@ -158,6 +171,9 @@ class GmshGeometry2D(Geometry):
 
         node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords, node_tag)
 
+        if self.external_dim_size:
+            node_coords_xy = self.add_external_dim(node_coords_xy)
+
         return node_coords_xy
     
     def get_mesh(self):
@@ -174,6 +190,9 @@ class GmshGeometry2D(Geometry):
 
             offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1, dol_triangles.shape[1])
             cell_types = np.ones(dol_triangles.shape[0])*5
+        
+        if self.external_dim_size:
+            node_coords_xy = self.add_external_dim(node_coords_xy)
 
         return node_coords_xy, offset, cell_types, dol_triangles
 
@@ -185,6 +204,9 @@ class GmshGeometry2D(Geometry):
         node_tag_boundary = np.setdiff1d(node_tag, node_tag_inside)
 
         node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords, node_tag, node_tag_boundary, node_tag_inside)
+
+        if self.external_dim_size:
+            node_coords_xy_boundary = self.add_external_dim(node_coords_xy_boundary)
 
         return node_coords_xy_boundary
     
@@ -207,3 +229,11 @@ class GmshGeometry2D(Geometry):
             node_coords_xy_inside = node_coords_xy[node_tag_inside]
 
         return node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside
+    
+    def add_external_dim(self, node_coords_xy):
+
+        node_coords_xy_rp = np.tile(node_coords_xy,(self.external_dim_size,1))
+        external_dim_rp = np.repeat(self.external_dim,node_coords_xy.shape[0],axis=0)
+        node_coords_xy = np.hstack((node_coords_xy_rp,external_dim_rp))
+
+        return node_coords_xy
