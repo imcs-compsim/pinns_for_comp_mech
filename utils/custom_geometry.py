@@ -6,8 +6,10 @@ import matplotlib.pyplot as plt
 import os
 
 class GmshGeometry2D(Geometry):
-    def __init__(self, gmsh_model, external_dim_size=None, borders=None):
+    def __init__(self, gmsh_model, external_dim_size=None, borders=None, revert_curve_list=None, revert_normal_dir_list=None):
         self.gmsh_model = gmsh_model
+        self.revert_curve_list = revert_curve_list
+        self.revert_normal_dir_list = revert_normal_dir_list
         self.boundary_normal_global = self.fun_boundary_normal_global()
         self.external_dim_size = external_dim_size
         self.borders=borders
@@ -118,8 +120,12 @@ class GmshGeometry2D(Geometry):
         fig = plt.figure(figsize=(8, 8), dpi=80)
 
         # ask user if the normal direction is correct
-        print(f"Check the plot normal directions.png in {os.getcwd()} \n")
-        curve_list = list(map(str, input("If the reverting of direction is desired, give the curve/s name with space , e.g curve_1 curve_2: ").split()))
+        print(f"Check the plot normal directions.png in {os.getcwd()}")
+        if self.revert_curve_list is not None:
+            curve_list = self.revert_curve_list
+        else:
+            curve_list = list(map(str, input("If the reverting of direction is desired, give the curve/s name with space , e.g curve_1 curve_2: ").split()))
+            print("\n")
 
         # if the user gives any curve id, revert the normal direction
         for curve in curve_list:
@@ -139,12 +145,19 @@ class GmshGeometry2D(Geometry):
         n = np.hstack((n_x_boundary.reshape(-1,1),n_y_boundary.reshape(-1,1)))
 
         # eleminate one of the normals by asking user
+        count = 0
         for node in repeated_node_tag:
             location = coords_xy[node_tag_boundary == node]
             assert(np.all(location[0] == location[1]))
             normals = n[node_tag_boundary == node]
-            print(f"At location {location[0]} for node {node}, two normals exist such as {normals[0]} and {normals[1]} \n")
-            desired_normal_id = int(input("Please indicate the correct normal: 1 or 2 --> "))
+            print(f"At location {location[0]} for node {node}, two normals exist such as {normals[0]} and {normals[1]}")
+            if self.revert_normal_dir_list:
+                desired_normal_id = self.revert_normal_dir_list[count]
+                count += 1
+            else:
+                desired_normal_id = int(input("Please indicate the correct normal: 1 or 2 --> "))
+            print(f"At location {location[0]} for node {node} corrected normal is: {normals[desired_normal_id-1]}")
+            print("\n")
             if (desired_normal_id == 1) or (desired_normal_id == 2):
                 n[node_tag_boundary == node] = normals[desired_normal_id - 1]
             else:

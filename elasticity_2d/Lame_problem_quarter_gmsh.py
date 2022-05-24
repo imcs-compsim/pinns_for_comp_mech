@@ -15,13 +15,24 @@ from geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from custom_geometry import GmshGeometry2D
 from gmsh_models import QuarterCirclewithHole
 
+'''
+Solves a hollow quarter cylinder under internal pressure (Lame problem)
+
+Reference solution:
+https://onlinelibrary.wiley.com/doi/epdf/10.1002/nme.6132
+
+@author: tsahin
+'''
+
 
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 quarter_circle_with_hole = QuarterCirclewithHole(center=[0,0,0], inner_radius=1, outer_radius=2, mesh_size=0.1, gmsh_options=gmsh_options)
 
 gmsh_model = quarter_circle_with_hole.generateGmshModel()
 
-geom = GmshGeometry2D(gmsh_model)
+revert_curve_list = ["curve_2"]
+revert_normal_dir_list = [2,2,1,2]
+geom = GmshGeometry2D(gmsh_model, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
 
 radius_inner = quarter_circle_with_hole.inner_radius
 center_inner = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.center[1]]

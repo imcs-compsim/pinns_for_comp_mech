@@ -22,6 +22,8 @@ The correct order for the normals --> 1 2 1 1
 
 Reference solution:
 https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.504.4507&rep=rep1&type=pdf
+
+@author: tsahin
 '''
 
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
@@ -29,7 +31,9 @@ block_2d = Block_2D(coord_left_corner=[0,-0.5], coord_right_corner=[4,0.5], mesh
 
 gmsh_model = block_2d.generateGmshModel(visualize_mesh=False)
 
-geom = GmshGeometry2D(gmsh_model)
+revert_curve_list = []
+revert_normal_dir_list = [1,2,1,1]
+geom = GmshGeometry2D(gmsh_model, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
 
 l = block_2d.coord_right_corner[0] -block_2d.coord_left_corner[0]
 h = block_2d.coord_right_corner[1] -block_2d.coord_left_corner[1]
