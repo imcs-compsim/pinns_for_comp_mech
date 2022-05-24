@@ -10,6 +10,15 @@ from pyevtk.hl import unstructuredGridToVTK
 path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
 sys.path.append(path_utils)
 
+'''
+Solves a hollow cylinder under internal and external pressure (Lame problem)
+
+Reference solution (page 7):
+https://engineering.purdue.edu/~ce597m/Handouts/Theory%20of%20elasticity%20by%20Timoshenko%20and%20Goodier.pdf
+
+@author: tsahin
+'''
+
 from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters
 from geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from custom_geometry import GmshGeometry2D
@@ -21,7 +30,9 @@ quarter_circle_with_hole = CirclewithHole(center=[0,0,0], inner_radius=1, outer_
 
 gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=True)
 
-geom = GmshGeometry2D(gmsh_model)
+revert_curve_list = []
+revert_normal_dir_list = [1,1]
+geom = GmshGeometry2D(gmsh_model, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
 
 radius_inner = quarter_circle_with_hole.inner_radius
 center_inner = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.center[1]]

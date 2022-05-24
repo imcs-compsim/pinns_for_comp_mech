@@ -38,7 +38,10 @@ gmsh_model = block_2d.generateGmshModel(visualize_mesh=False)
 # generate the geometry (load is added as third dimension)
 # only 3 different load cases considered: 0.1, 0.2, 0.3
 external_dim_size = 3
-geom = GmshGeometry2D(gmsh_model,external_dim_size=external_dim_size, borders=[0.1,0.3])
+borders = [0.1,0.3]
+revert_curve_list = []
+revert_normal_dir_list = [1,2,1,1]
+geom = GmshGeometry2D(gmsh_model,external_dim_size=external_dim_size, borders=borders, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
 
 # get the length (l) and height (h) of the block
 l = block_2d.coord_right_corner[0] -block_2d.coord_left_corner[0]
