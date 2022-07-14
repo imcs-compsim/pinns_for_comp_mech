@@ -400,4 +400,122 @@ class Rectangle_4PointBending(object):
                 gmsh.fltk.run()
 
         return gmsh_model
+
+class Rectangle_4PointBendingCentered(object):
+    def __init__(self, coord_left_corner, coord_right_corner, region_size_dict, mesh_size=0.15, refine_factor=12, gmsh_options=None):
+        self.coord_left_corner = coord_left_corner
+        self.coord_right_corner = coord_right_corner
+        self.region_size_dict = region_size_dict
+        self.mesh_size = mesh_size
+        self.gmsh_options = gmsh_options
+        self.refine_factor = refine_factor
+
+    def generateGmshModel(self, visualize_mesh=False):
+        '''
+        Generates a rectangle with partitioned mesh.
+
+        Parameters
+        ----------
+        visualize_mesh : boolean
+            a booelan value to show the mesh using Gmsh or not
+        Returns 
+        -------
+        gmsh_model: Object
+            gmsh model 
+        '''
+
+        # Mesh size.
+        lc = self.mesh_size #* min(self.l_beam,self.h_beam)
+
+        # create gmsh model instance
+        gmsh_model = gmsh.model
+
+        # initialize gmsh
+        gmsh.initialize(sys.argv)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if type(value).__name__ == 'str':
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+
+        gmsh_model.add("Beam with partitioned mesh")
         
+        x0 = self.coord_left_corner[0]
+        y0 = self.coord_left_corner[1]
+        x1 = self.coord_right_corner[0]
+        y1 = self.coord_right_corner[1]    
+
+        #  corner points
+        c1 = gmsh_model.geo.addPoint(x0, y0, 0, lc) # left bottom, origin
+        c2 = gmsh_model.geo.addPoint(x1, y0, 0, lc) # right bottom
+        c3 = gmsh_model.geo.addPoint(x1, y1, 0, lc) # right top
+        c4 = gmsh_model.geo.addPoint(x0, y1, 0, lc) # left top 
+ 
+        # location points
+        p1 = gmsh_model.geo.addPoint(self.region_size_dict["r1"]["center"]-self.region_size_dict["r1"]["deviation"], y0, 0, lc) # p1
+        p2 = gmsh_model.geo.addPoint(self.region_size_dict["r1"]["center"]+self.region_size_dict["r1"]["deviation"], y0, 0, lc) # p2
+        p3 = gmsh_model.geo.addPoint(self.region_size_dict["r2"]["center"]-self.region_size_dict["r2"]["deviation"], y0, 0, lc) # p3
+        p4 = gmsh_model.geo.addPoint(self.region_size_dict["r2"]["center"]+self.region_size_dict["r2"]["deviation"], y0, 0, lc) # p4
+        p5 = gmsh_model.geo.addPoint(self.region_size_dict["r3"]["center"]-self.region_size_dict["r3"]["deviation"], y1, 0, lc) # p5
+        p6 = gmsh_model.geo.addPoint(self.region_size_dict["r3"]["center"]+self.region_size_dict["r3"]["deviation"], y1, 0, lc) # p6
+        p7 = gmsh_model.geo.addPoint(self.region_size_dict["r4"]["center"]-self.region_size_dict["r4"]["deviation"], y1, 0, lc) # p7  
+        p8 = gmsh_model.geo.addPoint(self.region_size_dict["r4"]["center"]+self.region_size_dict["r4"]["deviation"], y1, 0, lc) # p8
+
+        # generate lines (use counter-clockwise direction)
+        gmsh_model.geo.addLine(c1, p1)
+        gmsh_model.geo.addLine(p1, p2)
+        gmsh_model.geo.addLine(p2, p3)
+        gmsh_model.geo.addLine(p3, p4)
+        gmsh_model.geo.addLine(p4, c2)
+        gmsh_model.geo.addLine(c2, c3)
+        gmsh_model.geo.addLine(c3, p8)
+        gmsh_model.geo.addLine(p8, p7)
+        gmsh_model.geo.addLine(p7, p6)
+        gmsh_model.geo.addLine(p6, p5)
+        gmsh_model.geo.addLine(p5, c4)
+        gmsh_model.geo.addLine(c4, c1)
+
+        # The third elementary entity is the surface. In order to define a simple
+        # rectangular surface from the four curves defined above, a curve loop has first
+        # to be defined.
+        curve_loop =[1,2,3,4,5,6,7,8,9,10,11,12]
+        gmsh_model.geo.addCurveLoop(curve_loop, 1)
+
+        # We can then define the surface as a list of curve loops (only one here,
+        # representing the external contour, since there are no holes--see `t4.py' for
+        # an example of a surface with a hole):
+        gmsh_model.geo.addPlaneSurface([1], 1)
+
+        # Before they can be meshed (and, more generally, before they can be used by API
+        # functions outside of the built-in CAD kernel functions), the CAD entities must
+        # be synchronized with the Gmsh model
+        gmsh_model.geo.synchronize()
+
+
+        if self.refine_factor:
+            gmsh_model.mesh.field.add("Distance", 1)
+            gmsh_model.mesh.field.setNumbers(1, "CurvesList", [2,4,8,10])
+            gmsh_model.mesh.field.setNumber(1, "Sampling", 100)
+
+            gmsh_model.mesh.field.add("Threshold", 2)
+            gmsh_model.mesh.field.setNumber(2, "InField", 1)
+            gmsh_model.mesh.field.setNumber(2, "SizeMin", lc / self.refine_factor)
+            gmsh_model.mesh.field.setNumber(2, "SizeMax", lc)
+            gmsh_model.mesh.field.setNumber(2, "DistMin", 0.01)
+            gmsh_model.mesh.field.setNumber(2, "DistMax", 0.02)
+
+            gmsh_model.mesh.field.add("Min", 3)
+            gmsh_model.mesh.field.setNumbers(3, "FieldsList", [2,3])
+
+            gmsh_model.mesh.field.setAsBackgroundMesh(3)
+
+        # generate mesh
+        gmsh_model.mesh.generate(2)
+
+        if visualize_mesh:
+            if '-nopopup' not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model
