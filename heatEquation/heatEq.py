@@ -13,17 +13,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import deepxde as dde
-from deepxde.backend import tf
+from deepxde.backend import torch
 
 ### Model problem
 # PDE
-def pde(x, y, k):
+# def pde(x, y, k):
+#     """
+#     Expresses the PDE residual of the heat equation.
+#     """
+#     dy_t = dde.grad.jacobian(y, x, i=0, j=1)
+#     dy_xx = dde.grad.hessian(y, x, i=0, j=0)
+#     return dy_t - k * dy_xx
+def pde(x, y):
     """
     Expresses the PDE residual of the heat equation.
     """
     dy_t = dde.grad.jacobian(y, x, i=0, j=1)
     dy_xx = dde.grad.hessian(y, x, i=0, j=0)
-    return dy_t - k * dy_xx
+    return dy_t - 0.1 * dy_xx
 
 def diffusionCoeff(x):
     """
@@ -43,8 +50,9 @@ def initial_condition(x):
     x : x passed to this function by the dde.pde is the NN input. Therefore,
         we must first extract the space coordinate.
     """
-    x_s = x[:,0:1]
-    return tf.cos(np.pi*x_s)
+    x_s = torch.tensor(x[:,0:1])
+    # return tf.cos(np.pi*x_s)
+    return torch.cos(np.pi*x_s)
 
 # Boundary condition
 def boundary_condition(x):
@@ -57,8 +65,11 @@ def boundary_condition(x):
         we must first extract the time coordinate.
     """
     x_t = x[:,1:2]
-    k = diffusionCoeff(x=0)[0]
-    return -tf.exp(-k*(np.pi)**2*x_t)
+    k = torch.tensor(diffusionCoeff(x=0)[0])
+    # return -tf.exp(-k*(np.pi)**2*x_t)
+    # return -torch.exp(-k*(np.pi)**2*x_t)
+    return -torch.exp(-k*(np.pi)**2*x_t)
+
 
 # Analytical solution
 def analytical_solution(x, t, k):
@@ -132,7 +143,8 @@ lw = [1, 100, 100]
 # Define the PDE problem and configurations of the network:
 data = dde.data.TimePDE(spaceTimeDomain, pde, [bc, ic], num_domain=250,
                         num_boundary=32, num_initial=16, num_test=254,
-                        auxiliary_var_function=diffusionCoeff)
+                        # auxiliary_var_function=diffusionCoeff
+                        )
 
 net = dde.nn.FNN([2] + [20] * 3 + [1], "tanh", "Glorot normal")
 model = dde.Model(data, net)
@@ -144,6 +156,11 @@ losshistory, train_state = model.train(epochs=5000)
 # Plot/print the results
 dde.saveplot(losshistory, train_state, issave=True, isplot=True)
 
+
+model.compile("L-BFGS")
+losshistory, train_state = model.train()
+# Plot/print the results
+dde.saveplot(losshistory, train_state, issave=True, isplot=True)
 
 postProcess(model)
 
