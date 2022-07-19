@@ -15,30 +15,16 @@ import numpy as np
 import deepxde as dde
 from deepxde.backend import torch
 
-### Model problem
-# PDE
-# def pde(x, y, k):
-#     """
-#     Expresses the PDE residual of the heat equation.
-#     """
-#     dy_t = dde.grad.jacobian(y, x, i=0, j=1)
-#     dy_xx = dde.grad.hessian(y, x, i=0, j=0)
-#     return dy_t - k * dy_xx
 def pde(x, y):
     """
     Expresses the PDE residual of the heat equation.
     """
+    # Diffusion coefficient 
+    k = 0.1
+    
     dy_t = dde.grad.jacobian(y, x, i=0, j=1)
     dy_xx = dde.grad.hessian(y, x, i=0, j=0)
-    return dy_t - 0.1 * dy_xx
-
-def diffusionCoeff(x):
-    """
-    Provides the scalar diffusion coefficient for the PDE residual of the heat
-    equation. For the dde.pde interface, the scalar is wrapped in a function
-    that returns an numpy array.
-    """
-    return np.array([0.1])
+    return dy_t - k * dy_xx
 
 # Initial condition
 def initial_condition(x):
@@ -51,7 +37,6 @@ def initial_condition(x):
         we must first extract the space coordinate.
     """
     x_s = torch.tensor(x[:,0:1])
-    # return tf.cos(np.pi*x_s)
     return torch.cos(np.pi*x_s)
 
 # Boundary condition
@@ -65,9 +50,8 @@ def boundary_condition(x):
         we must first extract the time coordinate.
     """
     x_t = x[:,1:2]
-    k = torch.tensor(diffusionCoeff(x=0)[0])
-    # return -tf.exp(-k*(np.pi)**2*x_t)
-    # return -torch.exp(-k*(np.pi)**2*x_t)
+    k = torch.tensor(0.1)
+    
     return -torch.exp(-k*(np.pi)**2*x_t)
 
 
@@ -162,7 +146,7 @@ losshistory, train_state = model.train()
 # Plot/print the results
 dde.saveplot(losshistory, train_state, issave=True, isplot=True)
 
-postProcess(model)
+# postProcess(model)
 
 
 # Define some query points on our compuational domain.
@@ -181,7 +165,7 @@ xx, tt = np.meshgrid(x, t)
 X = np.vstack((np.ravel(xx), np.ravel(tt))).T
 
 # Compute and plot the exact solution for these query points
-k = diffusionCoeff(x=0)[0]
+k = 0.1
 usol = analytical_solution(xx, tt, k)
 plt.scatter(xx,tt,c=usol)
 plt.show()
