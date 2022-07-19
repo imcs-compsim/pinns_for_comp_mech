@@ -13,25 +13,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import deepxde as dde
-from deepxde.backend import tf
+from deepxde.backend import torch
 
-### Model problem
-# PDE
-def pde(x, y, k):
+def pde(x, y):
     """
     Expresses the PDE residual of the heat equation.
     """
+    # Diffusion coefficient 
+    k = 0.1
+    
     dy_t = dde.grad.jacobian(y, x, i=0, j=1)
     dy_xx = dde.grad.hessian(y, x, i=0, j=0)
     return dy_t - k * dy_xx
-
-def diffusionCoeff(x):
-    """
-    Provides the scalar diffusion coefficient for the PDE residual of the heat
-    equation. For the dde.pde interface, the scalar is wrapped in a function
-    that returns an numpy array.
-    """
-    return np.array([0.1])
 
 # Initial condition
 def initial_condition(x):
@@ -43,8 +36,8 @@ def initial_condition(x):
     x : x passed to this function by the dde.pde is the NN input. Therefore,
         we must first extract the space coordinate.
     """
-    x_s = x[:,0:1]
-    return tf.cos(np.pi*x_s)
+    x_s = torch.tensor(x[:,0:1])
+    return torch.cos(np.pi*x_s)
 
 # Boundary condition
 def boundary_condition(x):
@@ -57,8 +50,10 @@ def boundary_condition(x):
         we must first extract the time coordinate.
     """
     x_t = x[:,1:2]
-    k = diffusionCoeff(x=0)[0]
-    return -tf.exp(-k*(np.pi)**2*x_t)
+    k = torch.tensor(0.1)
+    
+    return -torch.exp(-k*(np.pi)**2*x_t)
+
 
 # Analytical solution
 def analytical_solution(x, t, k):
@@ -132,7 +127,8 @@ lw = [1, 100, 100]
 # Define the PDE problem and configurations of the network:
 data = dde.data.TimePDE(spaceTimeDomain, pde, [bc, ic], num_domain=250,
                         num_boundary=32, num_initial=16, num_test=254,
-                        auxiliary_var_function=diffusionCoeff)
+                        # auxiliary_var_function=diffusionCoeff
+                        )
 
 net = dde.nn.FNN([2] + [20] * 3 + [1], "tanh", "Glorot normal")
 model = dde.Model(data, net)
@@ -145,7 +141,12 @@ losshistory, train_state = model.train(epochs=5000)
 dde.saveplot(losshistory, train_state, issave=True, isplot=True)
 
 
-postProcess(model)
+model.compile("L-BFGS")
+losshistory, train_state = model.train()
+# Plot/print the results
+dde.saveplot(losshistory, train_state, issave=True, isplot=True)
+
+# postProcess(model)
 
 
 # Define some query points on our compuational domain.
@@ -164,7 +165,7 @@ xx, tt = np.meshgrid(x, t)
 X = np.vstack((np.ravel(xx), np.ravel(tt))).T
 
 # Compute and plot the exact solution for these query points
-k = diffusionCoeff(x=0)[0]
+k = 0.1
 usol = analytical_solution(xx, tt, k)
 plt.scatter(xx,tt,c=usol)
 plt.show()
