@@ -49,8 +49,8 @@ def boundary_condition(x):
     x : x passed to this function by the dde.pde is the NN input. Therefore,
         we must first extract the time coordinate.
     """
-    x_t = x[:,1:2]
-    k = torch.tensor(0.1)
+    x_t = torch.tensor(x[:,1:2])
+    k = 0.1
     
     return -torch.exp(-k*(np.pi)**2*x_t)
 
