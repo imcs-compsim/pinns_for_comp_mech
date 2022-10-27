@@ -249,3 +249,115 @@ def zero_neumman_plane_strain_y(x, y, X):
     sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
 
     return sigma_yx_n_x + sigma_yy_n_y
+
+def lin_iso_elasticity_plane_stress(x,y):
+    '''
+    Calculates the difference between predicted stresses and calculated stresses based on linear isotropic material law and predicted displacements in plane stress condition.
+
+    Parameters
+    ----------
+    x : tensor
+        the input arguments
+    y: tensor
+        the network output
+
+    Returns
+    -------
+    term_x, term_y, term_xy: tensor
+        difference between predicted stresses and calculated stresses in X, Y and XY direction 
+    '''
+    
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
+    
+    term_x = sigma_xx - y[:, 2:3]
+    term_y = sigma_yy - y[:, 3:4]
+    term_xy = sigma_xy - y[:, 4:5]
+    
+    return term_x, term_y, term_xy
+
+def pde_mixed_plane_stress(x,y):
+    '''
+    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane stress
+
+    Parameters
+    ----------
+    x : tensor
+        the input arguments
+    y: tensor
+        the network output
+
+    Returns
+    -------
+    momentum_x, momentum_y, term_x, term_y, term_xy: tensor
+        momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses
+        term_x, term_y, term_xy: difference between predicted stresses and calculated stresses in X, Y and XY direction
+    '''
+    sigma_xx_x = dde.grad.jacobian(y, x, i=2, j=0)
+    sigma_yy_y = dde.grad.jacobian(y, x, i=3, j=1)
+    sigma_xy_x = dde.grad.jacobian(y, x, i=4, j=0)
+    sigma_xy_y = dde.grad.jacobian(y, x, i=4, j=1)
+
+    momentum_x = sigma_xx_x + sigma_xy_y
+    momentum_y = sigma_yy_y + sigma_xy_x
+    
+    # material law
+    term_x, term_y, term_xy = lin_iso_elasticity_plane_stress(x,y)
+
+    return [momentum_x, momentum_y, term_x, term_y, term_xy]
+
+def lin_iso_elasticity_plane_strain(x,y):
+    '''
+    Calculates the difference between predicted stresses and calculated stresses based on linear isotropic material law and predicted displacements in plane strain condition.
+
+    Parameters
+    ----------
+    x : tensor
+        the input arguments
+    y: tensor
+        the network output
+
+    Returns
+    -------
+    term_x, term_y, term_xy: tensor
+        difference between predicted stresses and calculated stresses in X, Y and XY direction 
+    '''
+    
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
+    
+    term_x = sigma_xx - y[:, 2:3]
+    term_y = sigma_yy - y[:, 3:4]
+    term_xy = sigma_xy - y[:, 4:5]
+    
+    return term_x, term_y, term_xy
+
+def pde_mixed_plane_strain(x,y):
+    '''
+    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane strain
+
+    Parameters
+    ----------
+    x : tensor
+        the input arguments
+    y: tensor
+        the network output
+
+    Returns
+    -------
+    momentum_x, momentum_y, term_x, term_y, term_xy: tensor
+        momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses
+        term_x, term_y, term_xy: difference between predicted stresses and calculated stresses in X, Y and XY direction
+    '''
+    # governing equation
+    sigma_xx_x = dde.grad.jacobian(y, x, i=2, j=0)
+    sigma_yy_y = dde.grad.jacobian(y, x, i=3, j=1)
+    sigma_xy_x = dde.grad.jacobian(y, x, i=4, j=0)
+    sigma_xy_y = dde.grad.jacobian(y, x, i=4, j=1)
+
+    momentum_x = sigma_xx_x + sigma_xy_y
+    momentum_y = sigma_yy_y + sigma_xy_x
+    
+    # material law
+    term_x, term_y, term_xy = lin_iso_elasticity_plane_strain(x,y)
+
+    return [momentum_x, momentum_y, term_x, term_y, term_xy]
+
