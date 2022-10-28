@@ -1,5 +1,6 @@
 import gmsh
 import sys
+import numpy as np
 
 class QuarterCirclewithHole(object):
     def __init__(self, center, inner_radius, outer_radius, mesh_size=0.15, gmsh_options=None):
@@ -519,3 +520,99 @@ class Rectangle_4PointBendingCentered(object):
                 gmsh.fltk.run()
 
         return gmsh_model
+    
+class QuarterDisc(object):
+    def __init__(self, radius, center, angle=None, refine_times=None, mesh_size=0.15, gmsh_options=None):
+        self.radius = radius
+        self.center = center
+        if angle:
+            self.angle_rad = np.pi*angle/180
+        else:
+            self.angle_rad = angle
+        self.refine_times = refine_times 
+        self.mesh_size = mesh_size
+        self.gmsh_options = gmsh_options
+
+    def generateGmshModel(self, visualize_mesh=False):
+        '''
+        Generates a quarter disc with partition or without it.
+
+        Parameters
+        ----------
+        visualize_mesh : boolean
+            a booelan value to show the mesh using Gmsh or not
+        Returns 
+        -------
+        gmsh_model: Object
+            gmsh model 
+        '''
+
+        # Mesh size.
+        lcar = self.mesh_size * self.radius
+
+        # create gmsh model instance
+        gmsh_model = gmsh.model
+
+        # initialize gmsh
+        gmsh.initialize(sys.argv)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if type(value).__name__ == 'str':
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+        
+        x_loc_p3 = None
+        y_loc_p3 = None
+
+        gmsh_model.add("Rectangle")
+
+        p0 = gmsh_model.geo.addPoint(self.center[0],self.center[1],0, lcar, 1)
+        p1 = gmsh_model.geo.addPoint(self.center[0]-self.radius,self.center[1],0, lcar, 2)
+        p2 = gmsh_model.geo.addPoint(self.center[0],self.center[1]-self.radius,0, lcar, 3)
+        if self.angle_rad:
+            p3 = gmsh_model.geo.addPoint(self.radius*np.cos(self.angle_rad),self.radius*np.sin(self.angle_rad),0, lcar, 4)
+            x_loc_p3 = self.radius*np.cos(self.angle_rad)
+            y_loc_p3 = self.radius*np.sin(self.angle_rad)
+
+        c1 = gmsh_model.geo.addLine(p0, p1)
+        c2 = gmsh_model.geo.addLine(p2, p0)
+        if self.angle_rad: 
+            c3 = gmsh_model.geo.addCircleArc(p1,p0,p3)
+            c4 = gmsh_model.geo.addCircleArc(p3,p0,p2)
+            
+            gmsh_model.geo.addCurveLoop([c1,c2,c3,c4], 1)
+        else:
+            c3 = gmsh_model.geo.addCircleArc(p1,p0,p2)
+            gmsh_model.geo.addCurveLoop([c1,c2,c3], 1)
+
+        gmsh_model.geo.addPlaneSurface([1], 1)
+        
+        gmsh_model.geo.synchronize()
+
+        if self.refine_times and self.angle_rad:
+            gmsh_model.mesh.field.add("Distance", 1)
+            gmsh_model.mesh.field.setNumbers(1, "CurvesList", [c4])
+            gmsh_model.mesh.field.setNumber(1, "Sampling", 100)
+
+            gmsh_model.mesh.field.add("Threshold", 2)
+            gmsh_model.mesh.field.setNumber(2, "InField", 1)
+            gmsh_model.mesh.field.setNumber(2, "SizeMin", lcar / self.refine_times)
+            gmsh_model.mesh.field.setNumber(2, "SizeMax", lcar)
+            gmsh_model.mesh.field.setNumber(2, "DistMin", 0.01)
+            gmsh_model.mesh.field.setNumber(2, "DistMax", 0.05)
+
+            gmsh_model.mesh.field.add("Min", 3)
+            gmsh_model.mesh.field.setNumbers(3, "FieldsList", [2,3])
+
+            gmsh_model.mesh.field.setAsBackgroundMesh(3)
+
+        # generate mesh
+        gmsh_model.mesh.generate(2)
+
+        if visualize_mesh:
+            if '-nopopup' not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model, x_loc_p3, y_loc_p3
