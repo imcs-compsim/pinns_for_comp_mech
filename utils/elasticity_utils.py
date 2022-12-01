@@ -322,7 +322,7 @@ def lin_iso_elasticity_plane_strain(x,y):
         difference between predicted stresses and calculated stresses in X, Y and XY direction 
     '''
     
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
     
     term_x = sigma_xx - y[:, 2:3]
     term_y = sigma_yy - y[:, 3:4]
