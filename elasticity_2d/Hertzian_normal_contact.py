@@ -173,9 +173,6 @@ def zero_complimentary(x,y,X):
 
     return gn*Pn
 
-# def boundary_circle(x, on_boundary):
-#     return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius)
-
 def boundary_circle_not_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (x[0]<x_loc_partition)
 
@@ -215,19 +212,20 @@ def output_transform(x, y):
             sigma_xy(y=0) = 0
     
     General formulation to enforce BC hardly:
-        g(x) + l(x)*N(x)
+        N'(x) = g(x) + l(x)*N(x)
     
-        where N(x) is the network output, g(x) Non-homogenous part of the BC and 
+        where N'(x) is network output before transformation, N(x) is network output after transformation, g(x) Non-homogenous part of the BC and 
             if x is on the boundary
                 l(x) = 0 
             else
                 l(x) < 0
     
     For instance sigma_yy(y=0) = -ext_traction
+        N'(x) = N(x) = sigma_yy
         g(x) = ext_traction
         l(x) = -y
     so
-        sigma_yy = g(x) + l(x)*N(x)
+        u' = g(x) + l(x)*N(x)
         sigma_yy = ext_traction + -y*sigma_yy
     '''
     u = y[:, 0:1]
@@ -324,7 +322,7 @@ error_polar_stress_y =  abs(np.array(sigma_theta_pred.flatten().tolist()) - sigm
 error_polar_stress_xy =  abs(np.array(sigma_rtheta_pred.flatten().tolist()) - sigma_rtheta_fem.flatten())
 combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
 
-file_path = os.path.join(os.getcwd(), "Hertzian_fem_pinns_final_wo_anchors_2")
+file_path = os.path.join(os.getcwd(), "Hertzian_fem_pinns")
 
 dol_triangles = triangles.triangles
 offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
