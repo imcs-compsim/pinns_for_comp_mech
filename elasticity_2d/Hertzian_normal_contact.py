@@ -72,7 +72,7 @@ def calculate_gap_in_normal_direction(x,y,X):
 
 def calculate_traction_x(x, y, X):
     '''
-    X component of any traction vector using by Cauchy stress tensor, general implementation
+    Calculates x component of any traction vector using by Cauchy stress tensor
     '''
 
     sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
@@ -88,7 +88,7 @@ def calculate_traction_x(x, y, X):
 
 def calculate_traction_y(x, y, X):
     '''
-    Y component of any traction vector using by Cauchy stress tensor, general implementation
+    Calculates y component of any traction vector using by Cauchy stress tensor
     '''
 
     sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
@@ -104,7 +104,7 @@ def calculate_traction_y(x, y, X):
 
 def calculate_normal_traction(x,y,X):
     '''
-    Calculates the normal component of traction vector.
+    Calculates normal component of traction vector.
     '''
     # traction vector has 2 components: Tx and Ty
     Tx = calculate_traction_x(x, y, X)
@@ -120,7 +120,7 @@ def calculate_normal_traction(x,y,X):
 
 def calculate_tangential_traction(x,y,X):
     '''
-    Calculates the tangential component of traction vector.
+    Calculates tangential component of traction vector.
     '''
     
     # traction vector has 2 components: Tx and Ty
@@ -149,7 +149,7 @@ def positive_normal_gap(x, y, X):
 
 def negative_normal_traction(x,y,X):
     '''
-    Enforces contact pressure (Pn) to be positive.
+    Enforces normal part of contact traction (Pn) to be negative.
     '''
     Pn = calculate_normal_traction(x,y,X)
 
