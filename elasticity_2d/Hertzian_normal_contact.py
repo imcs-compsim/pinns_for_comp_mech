@@ -206,14 +206,29 @@ data = dde.data.PDE(
 def output_transform(x, y):
     '''
     Hard BCs:
-    
         Dirichlet terms
             u(x=0)=0
         
         Neumann terms:
-            sigma_yy(y=0) = -ext_traction
+            sigma_yy(y=0) = ext_traction
             sigma_xy(x=0) = 0
             sigma_xy(y=0) = 0
+    
+    General formulation to enforce BC hardly:
+        g(x) + l(x)*N(x)
+    
+        where N(x) is the network output, g(x) Non-homogenous part of the BC and 
+            if x is on the boundary
+                l(x) = 0 
+            else
+                l(x) < 0
+    
+    For instance sigma_yy(y=0) = -ext_traction
+        g(x) = ext_traction
+        l(x) = -y
+    so
+        sigma_yy = g(x) + l(x)*N(x)
+        sigma_yy = ext_traction + -y*sigma_yy
     '''
     u = y[:, 0:1]
     v = y[:, 1:2]
