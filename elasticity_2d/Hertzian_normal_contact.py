@@ -241,7 +241,7 @@ def output_transform(x, y):
     #return tf.concat([u*(-x_loc), ext_dips + v*(-y_loc), sigma_xx, sigma_yy, sigma_xy*(x_loc)*(y_loc)], axis=1)
     return tf.concat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
 
-# two inputs x and y, output is ux and uy
+# 2 inputs: x and y, 5 outputs: ux, uy, sigma_xx, sigma_yy and sigma_xy
 layer_size = [2] + [50] * 5 + [5]
 activation = "tanh"
 initializer = "Glorot uniform"
