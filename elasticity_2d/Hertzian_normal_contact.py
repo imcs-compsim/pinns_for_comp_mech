@@ -242,6 +242,9 @@ def output_transform(x, y):
 # 2 inputs: x and y, 5 outputs: ux, uy, sigma_xx, sigma_yy and sigma_xy
 layer_size = [2] + [50] * 5 + [5]
 activation = "tanh"
+# more inside https://cs230.stanford.edu/section/4/#xavier-initialization
+# The goal of Xavier Initialization is to initialize the weights such that the variance of the activations are the same across every layer. 
+# This constant variance helps prevent the gradient from exploding or vanishing.
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
