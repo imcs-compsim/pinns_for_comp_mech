@@ -40,10 +40,7 @@ center_inner = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.cent
 radius_outer = quarter_circle_with_hole.outer_radius
 center_outer = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.center[1]]
 
-
 # change global variables in elasticity_utils
-#elasticity_utils.lame = 1153.846
-#elasticity_utils.shear = 769.23
 elasticity_utils.geom = geom
 
 # The applied pressure 
@@ -97,24 +94,23 @@ data = dde.data.PDE(
     train_distribution = "Sobol"
 )
 
-def output_transform(x, y):
-    u = y[:, 0:1]
-    v = y[:, 1:2]
-    return tf.concat([ u*x*0.001, v*y*0.001], axis=1)
-
 # two inputs x and y, output is ux and uy
 layer_size = [2] + [50] * 5 + [2]
 activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
-#net.apply_output_transform(output_transform)
+
+model_path = os.path.join(os.getcwd(), "trained_models/lame/lame")
+n_epochs = 3106 # trained model has 3106 iterations
+model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
 
 model = dde.Model(data, net)
+# if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
 model.compile("adam", lr=0.001)
+losshistory, train_state = model.train(epochs=0, display_every=200, model_restore_path=model_restore_path)
 
-losshistory, train_state = model.train(epochs=2000, display_every=200)
-model.compile("L-BFGS")
-model.train()
+#model.compile("L-BFGS")
+#model.train(model_save_path=model_path)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
