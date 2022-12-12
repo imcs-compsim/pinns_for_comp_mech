@@ -15,7 +15,7 @@ sys.path.append(path_utils)
 
 from custom_geometry import GmshGeometry2D
 from gmsh_models import QuarterDisc
-from elasticity_utils import problem_parameters, pde_mixed_plane_strain
+from elasticity_utils import problem_parameters, pde_mixed_plane_strain, stress_to_traction_2d
 from geometry_utils import calculate_boundary_normals, polar_transformation_2d
 import elasticity_utils
 
@@ -70,73 +70,21 @@ def calculate_gap_in_normal_direction(x,y,X):
     
     return gap_n
 
-def calculate_traction_x(x, y, X):
+def calculate_traction(x, y, X):
     '''
     Calculates x component of any traction vector using by Cauchy stress tensor
     '''
 
     sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
-
-    normals, cond = calculate_boundary_normals(X, geom)
-
-    sigma_xx_n_x = sigma_xx[cond]*normals[:,0:1]
-    sigma_xy_n_y = sigma_xy[cond]*normals[:,1:2]
     
-    traction_x = sigma_xx_n_x + sigma_xy_n_y
+    normals, cond = calculate_boundary_normals(X,geom)
 
-    return traction_x
+    Tx, Ty, Tn, Tt = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-def calculate_traction_y(x, y, X):
-    '''
-    Calculates y component of any traction vector using by Cauchy stress tensor
-    '''
-
-    sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
-
-    normals, cond = calculate_boundary_normals(X, geom)
-
-    sigma_yx_n_x = sigma_xy[cond]*normals[:,0:1]
-    sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
-    
-    traction_y = sigma_yx_n_x + sigma_yy_n_y
-
-    return traction_y
-
-def calculate_normal_traction(x,y,X):
-    '''
-    Calculates normal component of traction vector.
-    '''
-    # traction vector has 2 components: Tx and Ty
-    Tx = calculate_traction_x(x, y, X)
-    Ty = calculate_traction_y(x, y, X)
-
-    normals, _ = calculate_boundary_normals(X,geom)
-    nx = normals[:,0:1]
-    ny = normals[:,1:2]
-
-    Pn = Tx*nx+ Ty*ny
-    
-    return Pn
-
-def calculate_tangential_traction(x,y,X):
-    '''
-    Calculates tangential component of traction vector.
-    '''
-    
-    # traction vector has 2 components: Tx and Ty
-    Tx = calculate_traction_x(x, y, X)
-    Ty = calculate_traction_y(x, y, X)
-
-    normals, _ = calculate_boundary_normals(X,geom)
-    nx = normals[:,0:1]
-    ny = normals[:,1:2]
-
-    Tt = -Tx*ny+ Ty*nx
-
-    return Tt
+    return Tx, Ty, Tn, Tt
 
 # Karush-Kuhn-Tucker conditions for frictionless contact
-# gn>=0, Pn<=0, Tt=0 and gn.Pn=0  
+# gn>=0 (positive_normal_gap), Pn<=0 (negative_normal_traction), Tt=0 (zero_tangential_traction) and gn.Pn=0 (zero_complimentary)
 
 def positive_normal_gap(x, y, X):
     '''
@@ -151,7 +99,7 @@ def negative_normal_traction(x,y,X):
     '''
     Enforces normal part of contact traction (Pn) to be negative.
     '''
-    Pn = calculate_normal_traction(x,y,X)
+    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
 
     # If Pn is positive, it will create contributions to overall loss. Aims is to get negative normal traction
     return (1.0+tf.math.sign(Pn))*Pn
@@ -160,7 +108,7 @@ def zero_tangential_traction(x,y,X):
     '''
     Enforces tangential part of contact traction (Tt) to be zero.
     '''
-    Tt = calculate_tangential_traction(x,y,X)
+    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
 
     return Tt
 
@@ -168,10 +116,26 @@ def zero_complimentary(x,y,X):
     '''
     Enforces complimentary term to be zero.
     '''
-    Pn = calculate_normal_traction(x,y,X)
+    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
     gn = calculate_gap_in_normal_direction(x, y, X)
 
     return gn*Pn
+
+def zero_neumann_x(x,y,X):
+    '''
+    Enforces x component of zero Neumann BC to be zero.
+    '''
+    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
+
+    return Tx
+
+def zero_neumann_y(x,y,X):
+    '''
+    Enforces y component of zero Neumann BC to be zero.
+    '''
+    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
+
+    return Ty
 
 def boundary_circle_not_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (x[0]<x_loc_partition)
@@ -180,8 +144,8 @@ def boundary_circle_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (x[0]>=x_loc_partition)
 
 # Neumann BC
-bc_zero_traction_x = dde.OperatorBC(geom, calculate_traction_x, boundary_circle_not_contact)
-bc_zero_traction_y = dde.OperatorBC(geom, calculate_traction_y, boundary_circle_not_contact)
+bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x, boundary_circle_not_contact)
+bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y, boundary_circle_not_contact)
 
 # Contact BC
 bc_positive_normal_gap = dde.OperatorBC(geom, positive_normal_gap, boundary_circle_contact)
