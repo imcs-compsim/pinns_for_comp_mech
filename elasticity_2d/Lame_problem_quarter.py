@@ -56,7 +56,7 @@ from pyevtk.hl import unstructuredGridToVTK
 path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
 sys.path.append(path_utils)
 
-from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
+from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, stress_to_traction_2d
 from geometry_utils import calculate_boundary_normals, polar_transformation_2d
 import elasticity_utils
 
@@ -83,51 +83,23 @@ elasticity_utils.geom = geom
 pressure_inlet = 1
 
 def pressure_inner_x(x, y, X):
-    '''
-    Calculates x component of the inhomogeneous Neumann BC
     
-    Parameters
-    ----------
-    x : tensor
-        the input arguments (coordinates x and y)
-    y: tensor
-        the network output (predicted displacement in x and y direction)
-    X: np.array
-        the input arguments as an array (coordinates x and y)
-
-    Returns
-    -------
-    zero_neumman_plane_stress_x + pressure_inlet*normals[:,0:1]: tensor
-        x component of the inhomogeneous Neumann BC
-    '''
-
-
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
+    
     normals, cond = calculate_boundary_normals(X,geom)
+    Tx, _, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    return zero_neumman_plane_stress_x(x, y, X) + pressure_inlet*normals[:,0:1]
+    return Tx + pressure_inlet*normals[:,0:1]
 
 def pressure_inner_y(x, y, X):
-    '''
-    Calculates y component of the inhomogeneous Neumann BC
 
-    Parameters
-    ----------
-    x : tensor
-        the input arguments (coordinates x and y)
-    y: tensor
-        the network output (predicted displacement in x and y direction)
-    X: np.array
-        the input arguments as an array (coordinates x and y)
-
-    Returns
-    -------
-    zero_neumman_plane_stress_y + pressure_inlet*normals[:,1:2]: tensor
-        y component of the inhomogeneous Neumann BC
-    '''
-
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
+    
     normals, cond = calculate_boundary_normals(X,geom)
+    _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    return zero_neumman_plane_stress_y(x, y, X) + pressure_inlet*normals[:,1:2]
+    return Ty + pressure_inlet*normals[:,1:2]
+
 
 def boundary_outer(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center_outer, axis=-1), radius_outer)
@@ -224,9 +196,10 @@ else:
         loss_weights = [1,1,1,1,1,1,1,1,1,1]
 
 model = dde.Model(data, net)
+# train adam
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
-
 losshistory, train_state = model.train(epochs=4000, display_every=200)
+#train l-bfgs
 model.compile("L-BFGS", loss_weights=loss_weights)
 model.train()
 
