@@ -159,12 +159,10 @@ def zero_neumman_plane_stress_x(x, y, X):
     
     sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
 
-    normals, cond = calculate_boundary_normals(X, geom)
+    normals, cond = calculate_boundary_normals(X,geom)
+    Tx, _, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_xx_n_x = sigma_xx[cond]*normals[:,0:1]
-    sigma_xy_n_y = sigma_xy[cond]*normals[:,1:2]
-
-    return sigma_xx_n_x + sigma_xy_n_y
+    return Tx
 
 def zero_neumman_plane_stress_y(x, y, X):
     '''
@@ -188,11 +186,9 @@ def zero_neumman_plane_stress_y(x, y, X):
     sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
 
     normals, cond = calculate_boundary_normals(X,geom)
+    _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_yx_n_x = sigma_xy[cond]*normals[:,0:1]
-    sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
-
-    return sigma_yx_n_x + sigma_yy_n_y
+    return Ty
 
 def zero_neumman_plane_strain_x(x, y, X):
     '''
@@ -214,13 +210,11 @@ def zero_neumman_plane_strain_x(x, y, X):
     '''
     
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
+    
+    normals, cond = calculate_boundary_normals(X,geom)
+    Tx, _, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    normals, cond = calculate_boundary_normals(X, geom)
-
-    sigma_xx_n_x = sigma_xx[cond]*normals[:,0:1]
-    sigma_xy_n_y = sigma_xy[cond]*normals[:,1:2]
-
-    return sigma_xx_n_x + sigma_xy_n_y
+    return Tx
 
 def zero_neumman_plane_strain_y(x, y, X):
     '''
@@ -244,11 +238,9 @@ def zero_neumman_plane_strain_y(x, y, X):
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
 
     normals, cond = calculate_boundary_normals(X,geom)
+    _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_yx_n_x = sigma_xy[cond]*normals[:,0:1]
-    sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
-
-    return sigma_yx_n_x + sigma_yy_n_y
+    return Ty
 
 def lin_iso_elasticity_plane_stress(x,y):
     '''
@@ -361,3 +353,36 @@ def pde_mixed_plane_strain(x,y):
 
     return [momentum_x, momentum_y, term_x, term_y, term_xy]
 
+def stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond):
+    '''
+    Calculates the traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential)).
+
+    Parameters
+    -----------
+        sigma_xx (any): Stress component in x direction
+        sigma_yy (any): Stress component in y direction
+        sigma_xy (any): Stress component in xy direction (shear)
+        normals (vector): Normal vectors
+        cond (boolean): Dimensions of stresses and and normals have to match. Normals are calculated on the boundary, while stresses are calculated everywhere.
+
+    Returns
+    -------
+        Tx, Ty, Tn, Tt: any
+            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
+    '''
+    
+    nx = normals[:,0:1]
+    ny = normals[:,1:2]
+
+    sigma_xx_n_x = sigma_xx[cond]*nx
+    sigma_xy_n_y = sigma_xy[cond]*ny
+
+    sigma_yx_n_x = sigma_xy[cond]*nx
+    sigma_yy_n_y = sigma_yy[cond]*ny
+    
+    Tx = sigma_xx_n_x + sigma_xy_n_y
+    Ty = sigma_yx_n_x + sigma_yy_n_y
+    Tn = Tx*nx + Ty*ny
+    Tt = -Tx*ny + Ty*nx # Direction is clockwise --> if you go from normal tangetial
+
+    return Tx, Ty, Tn, Tt
