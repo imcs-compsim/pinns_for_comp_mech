@@ -83,7 +83,7 @@ data = dde.data.PDE(
 )
 
 # two inputs x and y, output is ux and uy
-layer_size = [2] + [30] * 3 + [2]
+layer_size = [2] + [50] * 5 + [2]
 activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
