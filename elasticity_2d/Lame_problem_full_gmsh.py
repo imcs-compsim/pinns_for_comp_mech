@@ -19,10 +19,11 @@ https://engineering.purdue.edu/~ce597m/Handouts/Theory%20of%20elasticity%20by%20
 @author: tsahin
 '''
 
-from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters
+from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, stress_to_traction_2d, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
 from geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from custom_geometry import GmshGeometry2D
 from gmsh_models import CirclewithHole
+import elasticity_utils
 
 
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
@@ -33,6 +34,7 @@ gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=True)
 revert_curve_list = []
 revert_normal_dir_list = [1,1]
 geom = GmshGeometry2D(gmsh_model, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
+elasticity_utils.geom = geom
 
 radius_inner = quarter_circle_with_hole.inner_radius
 center_inner = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.center[1]]
@@ -48,60 +50,22 @@ center_outer = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.cent
 pressure_inlet = 1
 
 def pressure_inner_x(x, y, X):
-    '''
-    Represents the x component of the applied pressure
-    '''
-
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
-
-    normals, cond = calculate_boundary_normals(X,geom)
-
-    sigma_xx_n_x = sigma_xx[cond]*normals[:,0:1]
-    sigma_xy_n_y = sigma_xy[cond]*normals[:,1:2]
-
-    return sigma_xx_n_x + sigma_xy_n_y + pressure_inlet*normals[:,0:1]
-
-def pressure_inner_y(x, y, X):
-    '''
-    Represents the y component of the applied pressure
-    '''
-
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
-
-    normals, cond = calculate_boundary_normals(X,geom)
-
-    sigma_yx_n_x = sigma_xy[cond]*normals[:,0:1]
-    sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
-
-    return sigma_yx_n_x + sigma_yy_n_y + pressure_inlet*normals[:,1:2]
-
-def traction_outer_x(x, y, X):
-    '''
-    Represents the x component of the zero traction
-    '''
     
     sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
-
+    
     normals, cond = calculate_boundary_normals(X,geom)
+    Tx, _, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_xx_n_x = sigma_xx[cond]*normals[:,0:1]
-    sigma_xy_n_y = sigma_xy[cond]*normals[:,1:2]
+    return Tx + pressure_inlet*normals[:,0:1]
 
-    return sigma_xx_n_x + sigma_xy_n_y
-
-def traction_outer_y(x, y, X):
-    '''
-    Represents the y component of the zero traction
-    '''
+def pressure_inner_y(x, y, X):
 
     sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
-
+    
     normals, cond = calculate_boundary_normals(X,geom)
+    _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_yx_n_x = sigma_xy[cond]*normals[:,0:1]
-    sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
-
-    return sigma_yx_n_x + sigma_yy_n_y
+    return Ty + pressure_inlet*normals[:,1:2]
 
 def boundary_outer(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center_outer, axis=-1), radius_outer)
@@ -115,8 +79,8 @@ def boundary_two_points(x, on_boundary):
 bc1 = dde.OperatorBC(geom, pressure_inner_x, boundary_inner)
 bc2 = dde.OperatorBC(geom, pressure_inner_y, boundary_inner)
 bc3 = dde.DirichletBC(geom, lambda _: 0.0, boundary_two_points, component=1) # to avoid rotation
-bc5 = dde.OperatorBC(geom, traction_outer_x, boundary_outer)
-bc6 = dde.OperatorBC(geom, traction_outer_y, boundary_outer)
+bc5 = dde.OperatorBC(geom, zero_neumman_plane_stress_x, boundary_outer)
+bc6 = dde.OperatorBC(geom, zero_neumman_plane_stress_y, boundary_outer)
 
 n_dummy = 1
 data = dde.data.PDE(

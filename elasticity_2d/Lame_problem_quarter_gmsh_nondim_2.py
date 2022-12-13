@@ -10,7 +10,7 @@ from pyevtk.hl import unstructuredGridToVTK
 path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
 sys.path.append(path_utils)
 
-from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters
+from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, stress_to_traction_2d
 from geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from custom_geometry import GmshGeometry2D
 from gmsh_models import QuarterCirclewithHole
@@ -57,7 +57,7 @@ pressure_inlet = 1
 # characteristic quantities which are used for non-dimensionalization
 characteristic_nu = shear # characteristic shear modulus
 characteristic_disp = 1/e_modul_analy*pressure_inlet # characteristic displacement
-characteristic_length = radius_outer # characteristic length
+characteristic_length = 1 # characteristic length
 characteristic_stress = characteristic_nu*characteristic_disp/characteristic_length 
 
 elasticity_utils.lame = lame/characteristic_nu    # non-dimensionalized, used for PINNs
@@ -98,55 +98,37 @@ def zero_neumann_x(x,y,X):
     
     sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
 
-    normals, cond = calculate_boundary_normals(X, geom)
+    normals, cond = calculate_boundary_normals(X,geom)
+    Tx, _, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_xx_n_x = sigma_xx[cond]*normals[:,0:1]
-    sigma_xy_n_y = sigma_xy[cond]*normals[:,1:2]
-    
-    traction_x = sigma_xx_n_x + sigma_xy_n_y
-
-    return traction_x
+    return Tx
 
 def zero_neumann_y(x,y,X):
     
     sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
 
-    normals, cond = calculate_boundary_normals(X, geom)
+    normals, cond = calculate_boundary_normals(X,geom)
+    _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_yx_n_x = sigma_xy[cond]*normals[:,0:1]
-    sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
-    
-    traction_y = sigma_yx_n_x + sigma_yy_n_y
-
-    return traction_y
+    return Ty
 
 def pressure_inner_x(x, y, X):
-    '''
-    Represents the x component of the applied pressure
-    '''
-
+    
     sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
-
+    
     normals, cond = calculate_boundary_normals(X,geom)
+    Tx, _, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_xx_n_x = sigma_xx[cond]*normals[:,0:1]
-    sigma_xy_n_y = sigma_xy[cond]*normals[:,1:2]
-
-    return sigma_xx_n_x + sigma_xy_n_y + pressure_inlet_norm*normals[:,0:1]
+    return Tx + pressure_inlet_norm*normals[:,0:1]
 
 def pressure_inner_y(x, y, X):
-    '''
-    Represents the y component of the applied pressure
-    '''
-
+    
     sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
-
+    
     normals, cond = calculate_boundary_normals(X,geom)
+    _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_yx_n_x = sigma_xy[cond]*normals[:,0:1]
-    sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
-
-    return sigma_yx_n_x + sigma_yy_n_y + pressure_inlet_norm*normals[:,1:2]
+    return Ty + pressure_inlet_norm*normals[:,1:2]
 
 def boundary_outer(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center_outer, axis=-1), radius_outer)
@@ -183,7 +165,7 @@ def input_transform(x):
     return tf.concat([x[:,0:1]/characteristic_length, x[:,1:2]/characteristic_length], axis=1)
 
 # two inputs x and y, output is ux and uy
-layer_size = [2] + [50] * 5 + [5]
+layer_size = [2] + [30] * 5 + [5]
 activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.PFNN(layer_size, activation, initializer)

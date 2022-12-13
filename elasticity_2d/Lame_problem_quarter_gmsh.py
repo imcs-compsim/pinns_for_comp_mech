@@ -10,10 +10,11 @@ from pyevtk.hl import unstructuredGridToVTK
 path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
 sys.path.append(path_utils)
 
-from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters
+from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, stress_to_traction_2d, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
 from geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from custom_geometry import GmshGeometry2D
 from gmsh_models import QuarterCirclewithHole
+import elasticity_utils
 
 '''
 Solves a hollow quarter cylinder under internal pressure (Lame problem)
@@ -39,69 +40,29 @@ center_inner = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.cent
 radius_outer = quarter_circle_with_hole.outer_radius
 center_outer = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.center[1]]
 
-
 # change global variables in elasticity_utils
-#elasticity_utils.lame = 1153.846
-#elasticity_utils.shear = 769.23
+elasticity_utils.geom = geom
 
 # The applied pressure 
 pressure_inlet = 1
 
 def pressure_inner_x(x, y, X):
-    '''
-    Represents the x component of the applied pressure
-    '''
-
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
-
-    normals, cond = calculate_boundary_normals(X,geom)
-
-    sigma_xx_n_x = sigma_xx[cond]*normals[:,0:1]
-    sigma_xy_n_y = sigma_xy[cond]*normals[:,1:2]
-
-    return sigma_xx_n_x + sigma_xy_n_y + pressure_inlet*normals[:,0:1]
-
-def pressure_inner_y(x, y, X):
-    '''
-    Represents the y component of the applied pressure
-    '''
-
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
-
-    normals, cond = calculate_boundary_normals(X,geom)
-
-    sigma_yx_n_x = sigma_xy[cond]*normals[:,0:1]
-    sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
-
-    return sigma_yx_n_x + sigma_yy_n_y + pressure_inlet*normals[:,1:2]
-
-def traction_outer_x(x, y, X):
-    '''
-    Represents the x component of the zero traction
-    '''
     
     sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
-
+    
     normals, cond = calculate_boundary_normals(X,geom)
+    Tx, _, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_xx_n_x = sigma_xx[cond]*normals[:,0:1]
-    sigma_xy_n_y = sigma_xy[cond]*normals[:,1:2]
+    return Tx + pressure_inlet*normals[:,0:1]
 
-    return sigma_xx_n_x + sigma_xy_n_y
-
-def traction_outer_y(x, y, X):
-    '''
-    Represents the y component of the zero traction
-    '''
+def pressure_inner_y(x, y, X):
 
     sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
-
+    
     normals, cond = calculate_boundary_normals(X,geom)
+    _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_yx_n_x = sigma_xy[cond]*normals[:,0:1]
-    sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
-
-    return sigma_yx_n_x + sigma_yy_n_y
+    return Ty + pressure_inlet*normals[:,1:2]
 
 def boundary_outer(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center_outer, axis=-1), radius_outer)
@@ -119,8 +80,8 @@ bc1 = dde.OperatorBC(geom, pressure_inner_x, boundary_inner)
 bc2 = dde.OperatorBC(geom, pressure_inner_y, boundary_inner)
 bc3 = dde.DirichletBC(geom, lambda _: 0.0, boundary_left, component=0)
 bc4 = dde.DirichletBC(geom, lambda _: 0.0, boundary_bottom, component=1)
-bc5 = dde.OperatorBC(geom, traction_outer_x, boundary_outer)
-bc6 = dde.OperatorBC(geom, traction_outer_y, boundary_outer)
+bc5 = dde.OperatorBC(geom, zero_neumman_plane_stress_x, boundary_outer)
+bc6 = dde.OperatorBC(geom, zero_neumman_plane_stress_y, boundary_outer)
 
 n_dummy = 1
 data = dde.data.PDE(
@@ -133,24 +94,23 @@ data = dde.data.PDE(
     train_distribution = "Sobol"
 )
 
-def output_transform(x, y):
-    u = y[:, 0:1]
-    v = y[:, 1:2]
-    return tf.concat([ u*x*0.001, v*y*0.001], axis=1)
-
 # two inputs x and y, output is ux and uy
 layer_size = [2] + [50] * 5 + [2]
 activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
-#net.apply_output_transform(output_transform)
+
+model_path = os.path.join(os.getcwd(), "trained_models/lame/lame")
+n_epochs = 3106 # trained model has 3106 iterations
+model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
 
 model = dde.Model(data, net)
+# if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
 model.compile("adam", lr=0.001)
+losshistory, train_state = model.train(epochs=0, display_every=200, model_restore_path=model_restore_path)
 
-losshistory, train_state = model.train(epochs=2000, display_every=200)
-model.compile("L-BFGS")
-model.train()
+#model.compile("L-BFGS")
+#model.train(model_save_path=model_path)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################

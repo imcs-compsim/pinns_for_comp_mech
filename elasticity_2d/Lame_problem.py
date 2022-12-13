@@ -9,7 +9,7 @@ from pathlib import Path
 path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
 sys.path.append(path_utils)
 
-from elasticity_utils import stress_plane_strain, momentum_2d
+from elasticity_utils import stress_plane_strain, momentum_2d, stress_to_traction_2d
 from geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from elasticity_postprocessing import meshGeometry, postProcess
 
@@ -26,48 +26,40 @@ pressure_inlet = 1
 pressure_outlet = 2
 
 def pressure_inner_x(x, y, X):
-
+    
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
-
+    
     normals, cond = calculate_boundary_normals(X,geom)
+    Tx, _, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_xx_n_x = sigma_xx[cond]*normals[:,0:1]
-    sigma_xy_n_y = sigma_xy[cond]*normals[:,1:2]
-
-    return sigma_xx_n_x + sigma_xy_n_y + pressure_inlet*normals[:,0:1]
+    return Tx + pressure_inlet*normals[:,0:1]
 
 def pressure_outer_x(x, y, X):
 
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
 
     normals, cond = calculate_boundary_normals(X,geom)
+    Tx, _, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_xx_n_x = sigma_xx[cond]*normals[:,0:1]
-    sigma_xy_n_y = sigma_xy[cond]*normals[:,1:2]
-
-    return sigma_xx_n_x + sigma_xy_n_y + pressure_outlet*normals[:,0:1]
+    return Tx + pressure_outlet*normals[:,0:1]
 
 def pressure_inner_y(x, y, X):
 
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
-
+    
     normals, cond = calculate_boundary_normals(X,geom)
+    _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_yx_n_x = sigma_xy[cond]*normals[:,0:1]
-    sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
-
-    return sigma_yx_n_x + sigma_yy_n_y + pressure_inlet*normals[:,1:2]
+    return Ty + pressure_inlet*normals[:,1:2]
 
 def pressure_outer_y(x, y, X):
 
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
-
+    
     normals, cond = calculate_boundary_normals(X,geom)
+    _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    sigma_yx_n_x = sigma_xy[cond]*normals[:,0:1]
-    sigma_yy_n_y = sigma_yy[cond]*normals[:,1:2]
-
-    return sigma_yx_n_x + sigma_yy_n_y + pressure_outlet*normals[:,1:2]
+    return Ty + pressure_outlet*normals[:,1:2]
 
 def boundary_outer(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center_outer, axis=-1), radius_outer)
@@ -97,9 +89,12 @@ initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 
 model = dde.Model(data, net)
-model.compile("adam", lr=0.001)
 
-losshistory, train_state = model.train(epochs=1, display_every=1000)
+model.compile("adam", lr=0.001)
+losshistory, train_state = model.train(epochs=2000, display_every=1000)
+
+model.compile("L-BFGS")
+model.train()
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################

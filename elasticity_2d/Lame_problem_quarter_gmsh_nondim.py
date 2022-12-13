@@ -10,7 +10,7 @@ from pyevtk.hl import unstructuredGridToVTK
 path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
 sys.path.append(path_utils)
 
-from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
+from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, stress_to_traction_2d
 from geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from custom_geometry import GmshGeometry2D
 from gmsh_models import QuarterCirclewithHole
@@ -67,26 +67,22 @@ pressure_inlet_norm = pressure_inlet/characteristic_stress # non-dimensionalized
 elasticity_utils.geom = geom
 
 def pressure_inner_x(x, y, X):
-    '''
-    Represents the x component of the applied pressure
-    '''
-
+    
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
+    
     normals, cond = calculate_boundary_normals(X,geom)
+    Tx, _, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    T_x = zero_neumman_plane_stress_x(x, y, X)
-
-    return T_x + pressure_inlet_norm*normals[:,0:1]
+    return Tx + pressure_inlet_norm*normals[:,0:1]
 
 def pressure_inner_y(x, y, X):
-    '''
-    Represents the y component of the applied pressure
-    '''
 
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
+    
     normals, cond = calculate_boundary_normals(X,geom)
+    _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    T_y = zero_neumman_plane_stress_y(x, y, X)
-
-    return T_y + pressure_inlet_norm*normals[:,1:2]
+    return Ty + pressure_inlet_norm*normals[:,1:2]
 
 def boundary_outer(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center_outer, axis=-1), radius_outer)
