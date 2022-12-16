@@ -46,3 +46,5 @@ For cluster, we concluded that we should use `conda` since we had issues in term
     ```bash
     $ pytest tests/integration_tests/cluster
     ```
+
+> `NOTE`: For conda commands: A conda [cheatsheet](https://docs.conda.io/projects/conda/en/latest/_downloads/843d9e0198f2a193a3484886fa28163c/conda-cheatsheet.pdf) can be very useful. 
