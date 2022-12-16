@@ -15,3 +15,11 @@ Note: DeepXDE needs one of the following packages for the backend-calculation. R
 - Tensorflow
 - Pytorch
 
+## Testing
+
+This repo has `integration_tests` (testing for examples/frameworks) and `unittests` (testing for specific functions). Testing is done by `pytest` and tests are configured in the `setup.cfg` file. 
+
+To run tests, type on the terminal:
+```bash
+$ pytest
+```
