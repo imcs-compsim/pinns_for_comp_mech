@@ -1,0 +1,13 @@
+name: pinn-env
+channels:
+  - conda-forge 
+dependencies:
+  - python=3.8
+  - python-gmsh
+  - tensorflow
+  - pytest
+  - pytest-cov
+  - pip:
+    - deepxde
+    - pyevtk
+    - triangle
