@@ -25,7 +25,7 @@ $ pytest
 ```
 
 ## Cluster setup
-For cluster, we concluded that we should use `conda` since we had issues in terms of package installation particularly the package `gmsh`.  Enable pinn repo to run on cluster:
+For cluster, we should use `conda` since we had issues in terms of package installation particularly the package `gmsh`.  Enable pinn repo to run on cluster:
 
 1. Install miniconda https://docs.conda.io/en/latest/miniconda.html :
 
@@ -42,9 +42,10 @@ For cluster, we concluded that we should use `conda` since we had issues in term
     ```bash
     conda activate pinn-env
     ```
-4. Test cluster (check the folder below to see which tests, examples will be run)
+4. To test cluster, submit a job on a compute node. This is achieved through `test_cluster.sh`. 
     ```bash
-    $ pytest tests/integration_tests/cluster
+    $ sbatch $HOME/pinnswithdxde/tests/integration_tests/cluster/test_cluster.sh
     ```
+> `NOTE`: Do not forget to adopt the inside of the `test_cluster.sh` to specify the slurm options e.g., `--mail-user`.
 
 > `NOTE`: For conda commands: A conda [cheatsheet](https://docs.conda.io/projects/conda/en/latest/_downloads/843d9e0198f2a193a3484886fa28163c/conda-cheatsheet.pdf) can be very useful. 
