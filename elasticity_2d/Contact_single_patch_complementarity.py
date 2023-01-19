@@ -121,10 +121,10 @@ def zero_complementarity_function(x,y,X):
     Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
     gn = calculate_gap_in_normal_direction(x, y, X)
     
-    #a = gn
-    #b = -Pn
-    return Pn-tf.math.maximum(tf.constant(0, dtype=tf.float32), Pn-c_complementarity*gn)
-    #return a + b + tf.math.sqrt(a**2+b**2) 
+    a = gn
+    b = -Pn
+    #return Pn-tf.math.maximum(tf.constant(0, dtype=tf.float32), Pn-c_complementarity*gn)
+    return a + b - tf.sqrt(tf.maximum(a**2+b**2, 1e-9))
 
 def boundary_contact(x, on_boundary):
     return on_boundary and np.isclose(x[1],0)
