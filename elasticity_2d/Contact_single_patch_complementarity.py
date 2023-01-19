@@ -47,7 +47,7 @@ ext_traction = -0.1
 distance = 0
 
 # complementarity parameter c
-c_complementarity=0.00001
+c_complementarity=0.001
 
 def calculate_gap_in_normal_direction(x,y,X):
     '''
@@ -117,32 +117,48 @@ def zero_complimentary(x,y,X):
     return gn*Pn
 
 def zero_complementarity_function(x,y,X):
-    
+    # ref https://onlinelibrary.wiley.com/doi/abs/10.1002/nme.2614
+    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
+    gn = calculate_gap_in_normal_direction(x, y, X)
+
+    return Pn-tf.math.maximum(tf.constant(0, dtype=tf.float32), Pn-c_complementarity*gn)
+
+def zero_fisher_burmeister(x,y,X):
+    # ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf
     Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
     gn = calculate_gap_in_normal_direction(x, y, X)
     
     a = gn
     b = -Pn
-    #return Pn-tf.math.maximum(tf.constant(0, dtype=tf.float32), Pn-c_complementarity*gn)
+    
     return a + b - tf.sqrt(tf.maximum(a**2+b**2, 1e-9))
 
 def boundary_contact(x, on_boundary):
     return on_boundary and np.isclose(x[1],0)
 
-complementarity = True
+method_list = ["KKT_inequality", "complementarity_popp", "fisher_burmeister"]
+method_name = "KKT_inequality"
+  
+# Contact BCs
+# we always enforce tangential traction
+bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_contact)
 
-if complementarity:
-    # Contact BC
-    bc_zero_complementarity = dde.OperatorBC(geom, zero_complementarity_function, boundary_contact)
-    bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_contact)
-    bcs_ = [bc_zero_complementarity,bc_zero_tangential_traction]
-else:
-    # Contact BC
+if method_name == "KKT_inequality":
     bc_positive_normal_gap = dde.OperatorBC(geom, positive_normal_gap, boundary_contact)
     bc_negative_normal_traction = dde.OperatorBC(geom, negative_normal_traction, boundary_contact)
-    bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_contact)
     bc_zero_complimentary = dde.OperatorBC(geom, zero_complimentary, boundary_contact)
     bcs_ = [bc_positive_normal_gap,bc_negative_normal_traction,bc_zero_tangential_traction,bc_zero_complimentary]
+    output_file_name = f"Patch_KKT_inequality"
+elif method_name == "complementarity_popp":
+    bc_zero_complementarity = dde.OperatorBC(geom, zero_complementarity_function, boundary_contact)
+    bcs_ = [bc_zero_complementarity,bc_zero_tangential_traction]
+    output_file_name = f"Patch_complementarity_function_c_{c_complementarity}"
+elif method_name == "fisher_burmeister":
+    bc_zero_complementarity = dde.OperatorBC(geom, zero_fisher_burmeister, boundary_contact)
+    bcs_ = [bc_zero_complementarity,bc_zero_tangential_traction]
+    output_file_name = "Patch_fisher_burmeister"
+else:
+    raise Exception("Method name does not exists!")
 
 n_dummy = 1
 data = dde.data.PDE(
@@ -240,7 +256,7 @@ combined_stress = tuple(np.vstack((np.array(sigma_xx.flatten().tolist()),np.arra
 combined_stress_analytical = tuple(np.vstack((np.array(sigma_analytical[:,0].flatten().tolist()),np.array(sigma_analytical[:,1].flatten().tolist()),np.array(sigma_analytical[:,2].flatten().tolist()))))
 combined_disp_analytical = tuple(np.vstack((np.array(u_combined[:,0].flatten().tolist()),np.array(u_combined[:,1].flatten().tolist()),np.zeros(u_combined[:,1].shape[0]))))
 
-file_path = os.path.join(os.getcwd(), f"Patch_complementarity_function_c_{c_complementarity}")
+file_path = os.path.join(os.getcwd(), output_file_name)
 
 x = X[:,0].flatten()
 y = X[:,1].flatten()
