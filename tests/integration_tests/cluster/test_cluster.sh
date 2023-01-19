@@ -51,7 +51,7 @@
 echo $HOME
 cd $HOME
 
-pytest $HOME/pinnswithdxde/tests/integration/tests/test_cluster.py
+pytest $HOME/pinnswithdxde/tests/integration_tests/cluster/test_cluster.py
 
 echo
 echo "Job finished with exit code $? at: `date`"
