@@ -6,10 +6,10 @@
 ##########################################
 #
 # User's Mail:
-#SBATCH --mail-user=<name>.<surname>@unibw.de
+##SBATCH --mail-user=<name>.<surname>@unibw.de
 #
 # When to send mail?:
-#SBATCH --mail-type=BEGIN,END,FAIL
+##SBATCH --mail-type=BEGIN,END,FAIL
 #
 # Job name:
 #SBATCH --job-name=PINN_cluster_test
@@ -51,7 +51,6 @@
 echo $HOME
 cd $HOME
 
-$HOME/miniconda3/condabin/conda activate pinn-env
 pytest $HOME/pinnswithdxde/tests/integration/tests/test_cluster.py
 
 echo
