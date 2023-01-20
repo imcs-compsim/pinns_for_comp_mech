@@ -51,7 +51,21 @@
 echo $HOME
 cd $HOME
 
+export OMP_NUM_THREADS=1
+export TF_NUM_INTRAOP_THREADS=1
+export TF_NUM_INTEROP_THREADS=$OMP_NUM_THREADS
+
+echo "Job starts at: `date`"
+
+# measure the time
+SECONDS=0 
+python $HOME/pinnswithdxde/tests/integration_tests/cluster/tf_cluster_settings.py
 pytest $HOME/pinnswithdxde/tests/integration_tests/cluster/test_cluster.py
+duration=$SECONDS
+
+echo
+echo "$(($duration / 60)) minutes and $(($duration % 60)) seconds elapsed."
+echo "Number of threads: $OMP_NUM_THREADS"
 
 echo
 echo "Job finished with exit code $? at: `date`"
