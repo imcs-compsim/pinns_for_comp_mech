@@ -42,12 +42,17 @@ For cluster, we should use `conda` since we had issues in terms of package insta
     ```bash
     conda activate pinn-env
     ```
-4. To test cluster, submit a job on a compute node. This is achieved through `test_cluster.sh`. 
+4. To test cluster, submit a job on a compute node. This is achieved through `test_cluster.sh` (full path: pinnswithdxde/tests/integration_tests/cluster/test_cluster.sh).
+
     ```bash
     $ sbatch $HOME/pinnswithdxde/tests/integration_tests/cluster/test_cluster.sh
     ```
-> `NOTE`: Do not forget to adopt the inside of the `test_cluster.sh` to specify the slurm options e.g., `--mail-user`.
+    Number of threads is set in `test_cluster.sh` file. TensorFlow needs to be `intra_op_parallelism_threads` and `inter_op_parallelism_threads` parameters set. Thus, we give  `tf_cluster_settings.py` to the slurm job via sbatch. This enables TensorFlow to set OMP parameters that defined in `test_cluster.sh`.
 
-> `NOTE`: Always be sure that you activated venv `pinn-env` (step 3) before `sbatch` any slurm sript. This includes other scripts you will run as well. The reason behind is that activating venv in `test_cluster.sh` needs the full path for the conda env `pinn-env` and it gives some **init** error if the full path is used.  
+> `NOTE`: Do not forget to adopt the inside of the `test_cluster.sh` to specify the slurm options e.g., `--mail-user`. But the default one should work without error. 
+
+> `NOTE`: Always be sure that you activated venv `pinn-env` (step 3) before `sbatch` any slurm script. This includes other scripts you will run as well. The reason behind is that activating venv in `test_cluster.sh` needs the full path for the conda env `pinn-env` and it gives some **init** error if the full path is used.  
 
 > `NOTE`: For conda commands: A conda [cheatsheet](https://docs.conda.io/projects/conda/en/latest/_downloads/843d9e0198f2a193a3484886fa28163c/conda-cheatsheet.pdf) can be very useful. 
+
+> `NOTE`: Some usefull information regarding [CPU](https://github.com/PrincetonUniversity/slurm_mnist/tree/master/cpu_only#readme) on cluster. 
