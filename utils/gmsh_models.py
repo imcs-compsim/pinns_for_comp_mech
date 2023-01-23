@@ -600,8 +600,8 @@ class QuarterDisc(object):
             gmsh_model.mesh.field.setNumber(2, "InField", 1)
             gmsh_model.mesh.field.setNumber(2, "SizeMin", lcar / self.refine_times)
             gmsh_model.mesh.field.setNumber(2, "SizeMax", lcar)
-            gmsh_model.mesh.field.setNumber(2, "DistMin", 0.01)
-            gmsh_model.mesh.field.setNumber(2, "DistMax", 0.05)
+            gmsh_model.mesh.field.setNumber(2, "DistMin", self.radius/10000)
+            gmsh_model.mesh.field.setNumber(2, "DistMax", self.radius/1000)
 
             gmsh_model.mesh.field.add("Min", 3)
             gmsh_model.mesh.field.setNumbers(3, "FieldsList", [2,3])
