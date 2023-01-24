@@ -386,3 +386,30 @@ def stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond):
     Tt = -Tx*ny + Ty*nx # Direction is clockwise --> if you go from normal tangetial
 
     return Tx, Ty, Tn, Tt
+
+def calculate_traction_mixed_formulation(x, y, X):
+    '''
+    Calculates traction components in the mixed formulation. 
+    
+    Parameters
+    -----------
+        x : tensor
+            Network input
+        y: tensor
+            Network output
+        X : np array
+            Network input as numpy array
+
+    Returns
+    -------
+        Tx, Ty, Tn, Tt: any
+            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
+    '''
+
+    sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
+    
+    normals, cond = calculate_boundary_normals(X,geom)
+
+    Tx, Ty, Tn, Tt = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
+
+    return Tx, Ty, Tn, Tt
