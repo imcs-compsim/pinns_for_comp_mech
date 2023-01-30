@@ -42,23 +42,17 @@ https://par.nsf.gov/servlets/purl/10100420
 
 @author: tsahin
 """
-from cgi import test
 import deepxde as dde
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-import sys
-from pathlib import Path
 import matplotlib.tri as tri
 from deepxde.backend import tf
 from pyevtk.hl import unstructuredGridToVTK
-# add utils folder to the system path
-path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
-sys.path.append(path_utils)
 
-from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, stress_to_traction_2d
-from geometry_utils import calculate_boundary_normals, polar_transformation_2d
-import elasticity_utils
+from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, stress_to_traction_2d
+from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from utils.elasticity import elasticity_utils
 
 # change global variables in elasticity_utils
 elasticity_utils.lame = 1153.846

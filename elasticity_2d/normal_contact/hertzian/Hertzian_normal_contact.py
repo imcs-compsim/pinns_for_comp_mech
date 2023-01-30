@@ -13,11 +13,11 @@ import time
 path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
 sys.path.append(path_utils)
 
-from custom_geometry import GmshGeometry2D
-from gmsh_models import QuarterDisc
-from elasticity_utils import problem_parameters, pde_mixed_plane_strain, stress_to_traction_2d
-from geometry_utils import calculate_boundary_normals, polar_transformation_2d
-import elasticity_utils
+from utils.geometry.custom_geometry import GmshGeometry2D
+from utils.geometry.gmsh_models import QuarterDisc
+from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, stress_to_traction_2d
+from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from utils.elasticity import elasticity_utils
 
 #dde.config.set_default_float("float64")
 

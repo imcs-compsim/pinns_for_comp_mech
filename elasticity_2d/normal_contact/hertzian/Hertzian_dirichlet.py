@@ -1,17 +1,9 @@
 """Backend supported: tensorflow.compat.v1, tensorflow, pytorch"""
 import deepxde as dde
 import numpy as np
-# Import tf if using backend tensorflow.compat.v1 or tensorflow
-from deepxde.backend import tf
 
-import sys
-from pathlib import Path
-# add utils folder to the system path
-path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
-sys.path.append(path_utils)
-
-from elasticity_utils import momentum_2d 
-from elasticity_postprocessing import meshGeometry, postProcess
+from utils.elasticity.elasticity_utils import momentum_2d 
+from utils.postprocess.elasticity_postprocessing import meshGeometry, postProcess
 
 geom_rectangle = dde.geometry.Rectangle(xmin=[0, 0], xmax=[2, 1])
 geom_disk = dde.geometry.Disk([1, 1], 1)

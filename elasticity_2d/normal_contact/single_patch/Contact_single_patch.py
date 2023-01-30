@@ -1,24 +1,18 @@
 import deepxde as dde
 import numpy as np
-import matplotlib.pyplot as plt
 import os
-import sys
-from pathlib import Path
 from deepxde.backend import tf
 from pyevtk.hl import unstructuredGridToVTK
-# add utils folder to the system path
-path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
-sys.path.append(path_utils)
 
-from gmsh_models import Block_2D
-from custom_geometry import GmshGeometry2D
+from utils.geometry.gmsh_models import Block_2D
+from utils.geometry.custom_geometry import GmshGeometry2D
 
-from elasticity_utils import problem_parameters, pde_mixed_plane_stress
-from contact_utils import zero_tangential_traction, positive_normal_gap_sign, negative_normal_traction_sign, zero_complimentary
-from contact_utils import positive_normal_gap_adopted_sigmoid, negative_normal_traction_adopted_sigmoid
-from contact_utils import zero_complementarity_function_based_popp, zero_complementarity_function_based_fisher_burmeister
-import elasticity_utils
-import contact_utils
+from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_stress
+from utils.contact_mech.contact_utils import zero_tangential_traction, positive_normal_gap_sign, negative_normal_traction_sign, zero_complimentary
+from utils.contact_mech.contact_utils import positive_normal_gap_adopted_sigmoid, negative_normal_traction_adopted_sigmoid
+from utils.contact_mech.contact_utils import zero_complementarity_function_based_popp, zero_complementarity_function_based_fisher_burmeister
+from utils.elasticity import elasticity_utils
+from utils.contact_mech import contact_utils
 
 '''
 Single patch-test for testing contact conditions. It is a simple block under compression. Check problem_figures/Contact_patch.png for details.

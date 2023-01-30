@@ -2,13 +2,8 @@ import deepxde as dde
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-import sys
-from pathlib import Path
 from deepxde.backend import tf
 from pyevtk.hl import unstructuredGridToVTK
-# add utils folder to the system path
-path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
-sys.path.append(path_utils)
 
 '''
 Solves a hollow cylinder under internal and external pressure (Lame problem)
@@ -19,11 +14,11 @@ https://engineering.purdue.edu/~ce597m/Handouts/Theory%20of%20elasticity%20by%20
 @author: tsahin
 '''
 
-from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, stress_to_traction_2d, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
-from geometry_utils import calculate_boundary_normals, polar_transformation_2d
-from custom_geometry import GmshGeometry2D
-from gmsh_models import CirclewithHole
-import elasticity_utils
+from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, stress_to_traction_2d, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
+from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from utils.geometry.custom_geometry import GmshGeometry2D
+from utils.geometry.gmsh_models import CirclewithHole
+from utils.elasticity import elasticity_utils
 
 
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
