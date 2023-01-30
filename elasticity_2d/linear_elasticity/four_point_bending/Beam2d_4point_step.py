@@ -219,7 +219,7 @@ def top_bottom(x, on_boundary):
     
 #     return on_boundary and np.logical_or(right, left)
 
-def strain_xx(x,y):
+def strain_xx(x,y,X):
     return dde.grad.jacobian(y, x, i=0, j=0)
 
 # # add FEM data
@@ -231,10 +231,10 @@ def strain_xx(x,y):
 
 
 # Experimental Data from Johannes 
-xChannel2 = np.load(Path(__file__).parent.absolute()/"train_data/xChannel2.npy") 
-measured_strains_2 = np.load(Path(__file__).parent.absolute()/"train_data/strainsInitialChannel2.npy")
-#xChannel1 = np.load(Path(__file__).parent.absolute()/"train_data/xChannel1.npy") 
-#measured_strains_1 = np.load(Path(__file__).parent.absolute()/"train_data/strainsChannel1Luna2Initial.npy")
+xChannel2 = np.load(Path(__file__).parent.parent.parent.absolute()/"train_data/xChannel2.npy") 
+measured_strains_2 = np.load(Path(__file__).parent.parent.parent.absolute()/"train_data/strainsInitialChannel2.npy")
+#xChannel1 = np.load(Path(__file__).parent.parent.parent.absolute()/"train_data/xChannel1.npy") 
+#measured_strains_1 = np.load(Path(__file__).parent.parent.parent.absolute()/"train_data/strainsChannel1Luna2Initial.npy")
 
 # Filter out nans 
 xChannel2 = xChannel2[np.isfinite(measured_strains_2)]

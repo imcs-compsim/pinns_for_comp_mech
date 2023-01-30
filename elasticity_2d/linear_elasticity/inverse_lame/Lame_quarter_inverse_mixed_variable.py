@@ -4,19 +4,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 import pandas as pd
-import sys
 from pathlib import Path
-from deepxde.backend import tf
-from pyevtk.hl import unstructuredGridToVTK
-# add utils folder to the system path
-path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
-sys.path.append(path_utils)
 
-from elasticity_utils import stress_plane_stress, pde_mixed_plane_stress, stress_to_traction_2d, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
-from geometry_utils import calculate_boundary_normals
-from custom_geometry import GmshGeometry2D
-from gmsh_models import QuarterCirclewithHole
-import elasticity_utils
+from utils.elasticity.elasticity_utils import stress_plane_stress, pde_mixed_plane_stress, stress_to_traction_2d, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
+from utils.geometry.geometry_utils import calculate_boundary_normals
+from utils.geometry.custom_geometry import GmshGeometry2D
+from utils.geometry.gmsh_models import QuarterCirclewithHole
+from utils.elasticity import elasticity_utils
 
 '''
 Solves inverse problem for a hollow quarter cylinder under internal pressure (Lame problem) using mixed-variable formulation.
@@ -107,7 +101,7 @@ bc4 = dde.DirichletBC(geom, lambda _: 0.0, boundary_bottom, component=1)
 bc5 = dde.OperatorBC(geom, zero_neumman_plane_stress_x, boundary_outer)
 bc6 = dde.OperatorBC(geom, zero_neumman_plane_stress_y, boundary_outer)
 
-inv_data = str(Path(__file__).parent)+"/data/lame/Inverse_mixed_variable"
+inv_data = str(Path(__file__).parent.parent.parent)+"/data/lame/Inverse_mixed_variable"
 data = np.loadtxt(inv_data)
 np.random.seed(42)
 np.random.shuffle(data)

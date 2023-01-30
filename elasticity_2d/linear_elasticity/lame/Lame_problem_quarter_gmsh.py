@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from pyevtk.hl import unstructuredGridToVTK
+from pathlib import Path
 
 from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, stress_to_traction_2d, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
 from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
@@ -94,7 +95,7 @@ activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 
-model_path = os.path.join(os.getcwd(), "trained_models/lame/lame")
+model_path = str(Path(__file__).parent.parent.parent)+"/trained_models/lame/lame"
 n_epochs = 3106 # trained model has 3106 iterations
 model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
 
