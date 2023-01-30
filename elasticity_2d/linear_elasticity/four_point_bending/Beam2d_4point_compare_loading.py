@@ -2,24 +2,18 @@ import deepxde as dde
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-import sys
-from pathlib import Path
 from deepxde.backend import tf
-from deepxde import utils
 from deepxde import config
 import tensorflow as tf_original
 from pyevtk.hl import unstructuredGridToVTK
-# add utils folder to the system path
-path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
-sys.path.append(path_utils)
-import gmsh
+
 from scipy.interpolate import BSpline
 
-from elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, elastic_strain_2d
-from geometry_utils import calculate_boundary_normals
-from custom_geometry import GmshGeometry2D
-from gmsh_models import Rectangle_4PointBendingCentered
-import elasticity_utils
+from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, elastic_strain_2d
+from utils.geometry.geometry_utils import calculate_boundary_normals
+from utils.geometry.custom_geometry import GmshGeometry2D
+from utils.geometry.gmsh_models import Rectangle_4PointBendingCentered
+from utils.elasticity import elasticity_utils
 
 '''
 In this routine, 4 point bending test example is illustrated.

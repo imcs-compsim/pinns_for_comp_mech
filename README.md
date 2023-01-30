@@ -8,6 +8,11 @@ Collection of scripts for our PINN examples with deepXDE
    $ pip install -r requirements.txt
    ```
 
+Setup the framework using python develop, which will install `utils`.
+```bash
+   $ python setup.py develop
+```
+
 For more info: [deepxde website](https://deepxde.readthedocs.io/en/latest/user/installation.html)
 
 Note: DeepXDE needs one of the following packages for the backend-calculation. Read the website for more info. 

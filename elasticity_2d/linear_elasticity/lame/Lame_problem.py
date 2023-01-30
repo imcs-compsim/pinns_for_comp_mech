@@ -2,16 +2,10 @@
 import deepxde as dde
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-import sys
-from pathlib import Path
-# add utils folder to the system path
-path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
-sys.path.append(path_utils)
 
-from elasticity_utils import stress_plane_strain, momentum_2d, stress_to_traction_2d
-from geometry_utils import calculate_boundary_normals, polar_transformation_2d
-from elasticity_postprocessing import meshGeometry, postProcess
+from utils.elasticity.elasticity_utils import stress_plane_strain, momentum_2d, stress_to_traction_2d
+from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from utils.postprocess.elasticity_postprocessing import meshGeometry, postProcess
 
 radius_inner = 1
 center_inner = [0,0]

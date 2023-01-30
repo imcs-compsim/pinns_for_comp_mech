@@ -4,14 +4,10 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import scipy.interpolate
-import os, sys
-from pathlib import Path
-# add utilies to the system path
-path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
-sys.path.append(path_utils)
+import os
 
-from elasticity_utils import stress_plane_strain, problem_parameters, momentum_2d
-from elasticity_postprocessing import meshGeometry, postProcess
+from utils.elasticity.elasticity_utils import stress_plane_strain, problem_parameters, momentum_2d
+from utils.postprocess.elasticity_postprocessing import meshGeometry, postProcess
 
 '''
 This script is used to create the PINN model of 2D Elasticity example. The example is taken from

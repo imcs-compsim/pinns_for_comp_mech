@@ -1,7 +1,5 @@
 import deepxde as dde
-import numpy as np
-from deepxde import utils
-from geometry_utils import calculate_boundary_normals
+from utils.geometry.geometry_utils import calculate_boundary_normals
 
 # global variables
 lame = 1

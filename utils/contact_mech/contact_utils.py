@@ -1,9 +1,6 @@
-import deepxde as dde
-import numpy as np
-from deepxde import utils
 from deepxde.backend import tf
-from geometry_utils import calculate_boundary_normals
-from elasticity_utils import calculate_traction_mixed_formulation
+from utils.geometry.geometry_utils import calculate_boundary_normals
+from utils.elasticity.elasticity_utils import calculate_traction_mixed_formulation
 
 # Global contact parameters
 geom = None 

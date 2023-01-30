@@ -6,7 +6,7 @@ import triangle as tr
 
 from pyevtk.hl import unstructuredGridToVTK
 
-from geometry_utils import polar_transformation_2d
+from utils.geometry.geometry_utils import polar_transformation_2d
 from deepxde.geometry.csg import CSGUnion, CSGDifference, CSGIntersection
 
 def meshGeometry(geom, n_boundary=100, holes=None, max_mesh_area=None, boundary_distribution="pseudo"):
