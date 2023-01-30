@@ -1,14 +1,6 @@
 """Backend supported: tensorflow.compat.v1, tensorflow, pytorch"""
 import deepxde as dde
 import numpy as np
-# Import tf if using backend tensorflow.compat.v1 or tensorflow
-from deepxde.backend import tf
-
-import sys
-from pathlib import Path
-# add utils folder to the system path
-path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
-sys.path.append(path_utils)
 
 from utils.elasticity.elasticity_utils import stress_plane_strain, momentum_2d 
 from utils.geometry.geometry_utils import calculate_boundary_normals

@@ -32,7 +32,7 @@ def diffusionCoeff(x):
     equation. For the dde.pde interface, the scalar is wrapped in a function
     that returns an numpy array.
     """
-    return np.array([0.1])
+    return np.array([[0.1]])
 
 # Initial condition
 def initial_condition(x):

@@ -1,17 +1,12 @@
 import deepxde as dde
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
 import os
-import sys
 from pathlib import Path
 from deepxde.backend import tf
 import matplotlib.tri as tri
 from pyevtk.hl import unstructuredGridToVTK
 import time
-# add utils folder to the system path
-path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
-sys.path.append(path_utils)
 
 from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import QuarterDisc
@@ -236,7 +231,7 @@ losshistory, train_state = model.train(display_every=200)
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
 
-fem_path = str(Path(__file__).parent)+"/Hertzian_fem/Hertzian_fem_fine_mesh.csv"
+fem_path = str(Path(__file__).parent.parent.parent)+"/Hertzian_fem/Hertzian_fem_fine_mesh.csv"
 df = pd.read_csv(fem_path)
 fem_results = df[["Points_0","Points_1","displacement_0","displacement_1","nodal_cauchy_stresses_xyz_0","nodal_cauchy_stresses_xyz_1","nodal_cauchy_stresses_xyz_3"]]
 fem_results = fem_results.to_numpy()

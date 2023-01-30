@@ -12,7 +12,7 @@ import subprocess
 
 input_files =   [
                 "beams/Euler_beam_cantiliver_static.py",
-                "elasticity_2d/Lame_problem_quarter_gmsh.py",
+                "elasticity_2d/linear_elasticity/lame/Lame_problem_quarter_gmsh.py",
                 "heatEquation/heatEq2D.py"
                 ]
 
