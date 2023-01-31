@@ -411,3 +411,51 @@ def calculate_traction_mixed_formulation(x, y, X):
     Tx, Ty, Tn, Tt = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
     return Tx, Ty, Tn, Tt
+
+def zero_neumann_x_mixed_formulation(x, y, X):
+    '''
+    Calculates/Enforces x component of traction vector in the mixed formulation. This is also known as zero Neumann boundary conditions in x direction.  
+    
+    Parameters
+    -----------
+        x : tensor
+            Network input
+        y: tensor
+            Network output
+        X : np array
+            Network input as numpy array
+
+    Returns
+    -------
+        Tx: any
+            x component of traction vector
+    '''
+    
+    
+    Tx, _, _, _ = calculate_traction_mixed_formulation(x, y, X)
+
+    return Tx
+
+def zero_neumann_y_mixed_formulation(x, y, X):
+    '''
+    Calculates/Enforces y component of traction vector in the mixed formulation. This is also known as zero Neumann boundary conditions in y direction.  
+    
+    Parameters
+    -----------
+        x : tensor
+            Network input
+        y: tensor
+            Network output
+        X : np array
+            Network input as numpy array
+
+    Returns
+    -------
+        Ty: any
+            y component of traction vector
+    '''
+    
+    
+    _, Ty, _, _ = calculate_traction_mixed_formulation(x, y, X)
+
+    return Ty
