@@ -241,10 +241,10 @@ if add_external_data:
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
-losshistory, train_state = model.train(epochs=1, display_every=100) 
+losshistory, train_state = model.train(epochs=3000, display_every=100) 
 
-#model.compile("L-BFGS-B", loss_weights=loss_weights)
-#losshistory, train_state = model.train(display_every=200)
+model.compile("L-BFGS-B", loss_weights=loss_weights)
+losshistory, train_state = model.train(display_every=200)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
