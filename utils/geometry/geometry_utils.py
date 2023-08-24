@@ -56,6 +56,6 @@ def polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, X):
 
     sigma_rr = ((sigma_xx + sigma_yy)/2 + (sigma_xx - sigma_yy)*np.cos(2*theta_radian)/2 + sigma_xy*np.sin(2*theta_radian)).flatten()
     sigma_theta = ((sigma_xx + sigma_yy)/2 - (sigma_xx - sigma_yy)*np.cos(2*theta_radian)/2 - sigma_xy*np.sin(2*theta_radian)).flatten()
-    sigma_rtheta = np.zeros(sigma_theta.shape[0])
+    sigma_rtheta = (-(sigma_xx - sigma_yy)*np.sin(2*theta_radian)/2 + sigma_xy*np.cos(2*theta_radian)).flatten()
     
     return sigma_rr, sigma_theta, sigma_rtheta
