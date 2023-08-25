@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/a11btasa/pinnswithdxde/elasticity_2d/trained_models/surrogate_random_p_3/surrogate_random_p_3-11785.ckpt"
+all_model_checkpoint_paths: "/home/a11btasa/pinnswithdxde/elasticity_2d/trained_models/surrogate_random_p_3/surrogate_random_p_3-11785.ckpt"
