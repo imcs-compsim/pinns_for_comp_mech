@@ -1,6 +1,17 @@
-# PINNsWithDXDE
+# Physics-Informed Neural Networks for Computational Mechanics (pinns_for_comp_mech)
 
-Collection of scripts for our PINN examples with deepXDE
+Implementation of Physics-Informed Neural Networks for computational mechanics based on the deepXDE package.
+
+- Euler-Bernoulli beams
+- Heat equation problems
+- Linear elasticity
+  - Four-point bending test
+  - Forward and inverse Lame` problems
+  - Solid beam
+- Contact problems
+  - Contact between elastic body and rigid flat surface
+  - Hertzian contact problem
+---
 
 ## Installation of the DeepXDE package and required libraries
 
@@ -20,6 +31,8 @@ Note: DeepXDE needs one of the following packages for the backend-calculation. R
 - Tensorflow
 - Pytorch
 
+---
+
 ## Testing
 
 This repo has `integration_tests` (testing for examples/frameworks) and `unittests` (testing for specific functions). Testing is done by `pytest` and tests are configured in the `setup.cfg` file. 
@@ -28,6 +41,8 @@ To run tests, type on the terminal:
 ```bash
 $ pytest
 ```
+
+---
 
 ## Cluster setup
 For cluster, we should use `conda` since we had issues in terms of package installation particularly the package `gmsh`.  Enable pinn repo to run on cluster:
@@ -61,3 +76,16 @@ For cluster, we should use `conda` since we had issues in terms of package insta
 > `NOTE`: For conda commands: A conda [cheatsheet](https://docs.conda.io/projects/conda/en/latest/_downloads/843d9e0198f2a193a3484886fa28163c/conda-cheatsheet.pdf) can be very useful. 
 
 > `NOTE`: Some usefull information regarding [CPU](https://github.com/PrincetonUniversity/slurm_mnist/tree/master/cpu_only#readme) on cluster. 
+
+---
+
+## Cite Physics-Informed Neural Networks for Computational Mechanics (pinns_for_comp_mech)
+
+```
+@article{sahin2023pinnforcontact,
+   title={Solving Forward and Inverse Problems of Contact Mechanics using Physics-Informed Neural Networks},
+   author={Sahin, Tarik and von Danwitz, Max and Popp, Alexander},
+   journal={arXiv preprint arXiv:2308.12716},
+   year={2023}
+}
+```
