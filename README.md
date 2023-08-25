@@ -91,3 +91,5 @@ Whenever you use or mention 'pinns_for_comp_mech' in some sort of scientific doc
    year={2023}
 }
 ```
+
+Paper results are obtained in hastag: c79d3f24023e36341385f10d728e5a93c925fad3
