@@ -79,9 +79,9 @@ For cluster, we should use `conda` since we had issues in terms of package insta
 
 ---
 
-## Citing pinns_for_comp_mech
+## Citing 'pinns_for_comp_mech'
 
-Whenever you use or mention pinns_for_comp_mech in some sort of scientific document/publication/presentation, please cite the following publication. It is publicly avaliable at [arXiv](https://arxiv.org/abs/2308.12716).
+Whenever you use or mention 'pinns_for_comp_mech' in some sort of scientific document/publication/presentation, please cite the following publication. It is publicly avaliable at [arXiv](https://arxiv.org/abs/2308.12716).
 
 ```
 @article{sahin2023pinnforcontact,
