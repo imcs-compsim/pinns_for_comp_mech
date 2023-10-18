@@ -2,10 +2,11 @@
 import deepxde as dde
 import numpy as np
 
-'''
+"""
 This script is used to create the PINN model of cantiliver beam
 see the manuscript for the example, Section 4, Figure 4.2 and 4.3, Deep Learning in Computational Mechanics
-'''
+"""
+
 
 def ddy(x, y):
     return dde.grad.hessian(y, x)
@@ -14,13 +15,16 @@ def ddy(x, y):
 def dddy(x, y):
     return dde.grad.jacobian(ddy(x, y), x)
 
+
 # p = lambda x: x
 L = 1.0
 q = 1.0
 EI = 1.0
 
+
 def p(x):
     return x
+
 
 EI_material = lambda x: 1
 
@@ -38,8 +42,9 @@ def boundary_l(x, on_boundary):
 def boundary_r(x, on_boundary):
     return on_boundary and np.isclose(x[0], 1)
 
+
 def func(x):
-   return -q*x**2/(120*EI)*(20*L**3 - 10*L**2*x + x**3)
+    return -q * x**2 / (120 * EI) * (20 * L**3 - 10 * L**2 * x + x**3)
 
 
 geom = dde.geometry.Interval(0, L)
