@@ -5,10 +5,11 @@ import tensorflow as tf
 import pandas as pd
 
 
-'''
+"""
 This script is used to create the PINN model of clamped Euler-Lagrange beam under arbitrary load (space-time)
 see the manuscript for the example, Section 4, a complex consideration, Fig. 4.5, Deep Learning in Computational Mechanics
-'''
+"""
+
 
 def d_xx(x, y):
     return dde.grad.hessian(y, x)
@@ -17,6 +18,7 @@ def d_xx(x, y):
 def d_xxx(x, y):
     return dde.grad.jacobian(d_xx(x, y), x)
 
+
 def pde(x, y):
     dy_xx = d_xx(x, y)
     dy_xxxx = dde.grad.hessian(dy_xx, x)
@@ -24,12 +26,13 @@ def pde(x, y):
 
     return dy_xxxx + d_tt + p(x)
 
-def p(x):
 
-    pi=np.pi
-    x_t = x[:,1:2]
-    x_s = x[:,0:1]
-    return -(tf.sin(np.pi*x_s)*tf.exp(-x_t)*(np.pi**4*(x_t+1)+x_t-1)) 
+def p(x):
+    pi = np.pi
+    x_t = x[:, 1:2]
+    x_s = x[:, 0:1]
+    return -(tf.sin(np.pi * x_s) * tf.exp(-x_t) * (np.pi**4 * (x_t + 1) + x_t - 1))
+
 
 l_spatial = 0
 r_spatial = 1
@@ -38,6 +41,7 @@ r_time = 1.0
 
 L = 1
 
+
 def boundary_l_space(x, on_boundary):
     return on_boundary and np.isclose(x[0], l_spatial)
 
@@ -45,10 +49,11 @@ def boundary_l_space(x, on_boundary):
 def boundary_r_space(x, on_boundary):
     return on_boundary and np.isclose(x[0], r_spatial)
 
+
 def sol(x):
     x, t = np.split(x, 2, axis=1)
-    #return np.sin(np.pi*x)*np.cos(np.pi**2*t)
-    return np.sin(np.pi*x)*(t+1)*np.exp(-t)
+    # return np.sin(np.pi*x)*np.cos(np.pi**2*t)
+    return np.sin(np.pi * x) * (t + 1) * np.exp(-t)
 
 
 geom = dde.geometry.Interval(l_spatial, r_spatial)
@@ -60,12 +65,14 @@ bc2 = dde.OperatorBC(geomtime, lambda x, y, _: d_xx(x, y), boundary_l_space)
 bc3 = dde.DirichletBC(geomtime, lambda x: 0, boundary_r_space)
 bc4 = dde.OperatorBC(geomtime, lambda x, y, _: d_xx(x, y), boundary_r_space)
 
-ic1 = dde.IC(geomtime, lambda x: tf.sin(np.pi*x[:,0:1]), lambda _, on_initial: on_initial)
+ic1 = dde.IC(
+    geomtime, lambda x: tf.sin(np.pi * x[:, 0:1]), lambda _, on_initial: on_initial
+)
 ic2 = dde.OperatorBC(
-        geomtime,
-        lambda x, y, _: dde.grad.jacobian(y, x, i=0, j=1),
-         lambda _, on_initial: on_initial
-    )
+    geomtime,
+    lambda x, y, _: dde.grad.jacobian(y, x, i=0, j=1),
+    lambda _, on_initial: on_initial,
+)
 
 data = dde.data.TimePDE(
     geomtime,
@@ -85,14 +92,14 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.0001, metrics=["l2 relative error"])
-#model.train(epochs=1000, display_every=200)
-#model.compile("L-BFGS")
+# model.train(epochs=1000, display_every=200)
+# model.compile("L-BFGS")
 losshistory, train_state = model.train(epochs=20000, display_every=1000)
 
 
 dde.saveplot(losshistory, train_state, issave=True, isplot=True)
 
-'''
+"""
 output_dir="/home/a11btasa/git_repos/deepxde_2/beam_results"
 fname="case_2_time_final"
 csv_file = output_dir + "/" + fname + ".csv"
@@ -112,5 +119,4 @@ test_fname = fname + "_" + "test.dat"
 dde.saveplot(losshistory, train_state, issave=True, isplot=True, plot_name=fname,
 loss_fname=loss_fname, train_fname=train_fname, test_fname=test_fname, 
 output_dir=output_dir)
-'''
-
+"""
