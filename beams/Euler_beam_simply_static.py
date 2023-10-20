@@ -3,10 +3,11 @@ import deepxde as dde
 import numpy as np
 import tensorflow as tf
 
-'''
+"""
 This script is used to create the PINN model of simply supported beam under distributed load
 see the manuscript for the example, Section 4, Figure 4.2 and 4.3, Deep Learning in Computational Mechanics
-'''
+"""
+
 
 def ddy(x, y):
     return dde.grad.hessian(y, x)
@@ -15,10 +16,13 @@ def ddy(x, y):
 def dddy(x, y):
     return dde.grad.jacobian(ddy(x, y), x)
 
+
 L = 1
 
+
 def p(x):
-    return 4*(x-1)**2
+    return 4 * (x - 1) ** 2
+
 
 EI_material = lambda x: 1
 
@@ -38,7 +42,7 @@ def boundary_r(x, on_boundary):
 
 
 def func(x):
-    return -x**6/90 + x**5/15 + -x**4/6 + x**3/6 -x/18
+    return -(x**6) / 90 + x**5 / 15 + -(x**4) / 6 + x**3 / 6 - x / 18
 
 
 geom = dde.geometry.Interval(0, L)
