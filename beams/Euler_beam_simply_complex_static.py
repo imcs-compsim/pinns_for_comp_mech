@@ -3,10 +3,10 @@ import deepxde as dde
 import numpy as np
 import tensorflow as tf
 
-'''
+"""
 This script is used to create the PINN model of clamped beam having non-uniform cross-section under arbitrary load
 see the manuscript for the example, Section 4, a complex consideration, Fig. 4.5, Deep Learning in Computational Mechanics
-'''
+"""
 
 
 def ddy(x, y):
@@ -16,17 +16,27 @@ def ddy(x, y):
 def dddy(x, y):
     return dde.grad.jacobian(ddy(x, y), x)
 
+
 L = 1
 
+
 def p(x):
-    return -(8*np.pi**2*((2*np.pi**2*x**2-1)*tf.sin(2*np.pi*x) - 4*np.pi*x*tf.cos(2*np.pi*x)))
+    return -(
+        8
+        * np.pi**2
+        * (
+            (2 * np.pi**2 * x**2 - 1) * tf.sin(2 * np.pi * x)
+            - 4 * np.pi * x * tf.cos(2 * np.pi * x)
+        )
+    )
+
 
 EI_material = lambda x: x**2
 
 
 def pde(x, y):
     dy_xx = ddy(x, y)
-    EI_dy_xx = EI_material(x)*dy_xx
+    EI_dy_xx = EI_material(x) * dy_xx
     dy_xxxx = dde.grad.hessian(EI_dy_xx, x)
     return dy_xxxx + p(x)
 
@@ -40,8 +50,7 @@ def boundary_r(x, on_boundary):
 
 
 def func(x):
-    return np.sin(2*np.pi*x)
-
+    return np.sin(2 * np.pi * x)
 
 
 geom = dde.geometry.Interval(0, L)
