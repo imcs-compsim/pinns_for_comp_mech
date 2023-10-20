@@ -3,10 +3,11 @@ import deepxde as dde
 import numpy as np
 import tensorflow as tf
 
-'''
+"""
 This script is used to create the PINN model of simply supported beam under point load (heaviside function)
 four point bending test
-'''
+"""
+
 
 def ddy(x, y):
     return dde.grad.hessian(y, x)
@@ -15,22 +16,31 @@ def ddy(x, y):
 def dddy(x, y):
     return dde.grad.jacobian(ddy(x, y), x)
 
+
 # p = lambda x: 1
 L = 1
-'''
+"""
 def p(x):
     if x==0.5:
         return 1.
     else:
         return 0.
-'''
+"""
+
+
 def p(x):
-    return (tf.experimental.numpy.heaviside(x-0.3,1) - tf.experimental.numpy.heaviside(x-0.3 - 0.005,1)) + 20*(tf.experimental.numpy.heaviside(x-0.6,1) - tf.experimental.numpy.heaviside(x-0.7,1))
+    return (
+        tf.experimental.numpy.heaviside(x - 0.3, 1)
+        - tf.experimental.numpy.heaviside(x - 0.3 - 0.005, 1)
+    ) + 20 * (
+        tf.experimental.numpy.heaviside(x - 0.6, 1)
+        - tf.experimental.numpy.heaviside(x - 0.7, 1)
+    )
 
 
-#def p(x):
+# def p(x):
 #    return 4*(x-1)**2
-    
+
 
 EI_material = lambda x: 1
 
@@ -50,8 +60,7 @@ def boundary_r(x, on_boundary):
 
 
 def func(x):
-    return -x**6/90 + x**5/15 + -x**4/6 + x**3/6 -x/18
-
+    return -(x**6) / 90 + x**5 / 15 + -(x**4) / 6 + x**3 / 6 - x / 18
 
 
 geom = dde.geometry.Interval(0, L)
@@ -67,8 +76,8 @@ data = dde.data.PDE(
     [bc1, bc2, bc3, bc4],
     num_domain=40,
     num_boundary=2,
-    #solution=None, # analytical solution is not known
-    #num_test=100,
+    # solution=None, # analytical solution is not known
+    # num_test=100,
 )
 
 layer_size = [1] + [30] * 3 + [1]
