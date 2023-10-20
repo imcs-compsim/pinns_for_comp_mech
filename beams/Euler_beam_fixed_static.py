@@ -1,7 +1,6 @@
 """Backend supported: tensorflow.compat.v1, tensorflow, pytorch"""
 import deepxde as dde
 import numpy as np
-import tensorflow as tf
 
 """
 This script is used to create the PINN model of clamped beam
