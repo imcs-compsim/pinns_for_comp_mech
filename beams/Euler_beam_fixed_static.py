@@ -3,10 +3,11 @@ import deepxde as dde
 import numpy as np
 import tensorflow as tf
 
-'''
+"""
 This script is used to create the PINN model of clamped beam
 see the manuscript for the example, Section 4, Figure 4.2 and 4.3, Deep Learning in Computational Mechanics
-'''
+"""
+
 
 def ddy(x, y):
     return dde.grad.hessian(y, x)
@@ -14,6 +15,7 @@ def ddy(x, y):
 
 def dddy(x, y):
     return dde.grad.jacobian(ddy(x, y), x)
+
 
 p = lambda x: 1
 EI_material = lambda x: 1
@@ -34,7 +36,7 @@ def boundary_r(x, on_boundary):
 
 
 def func(x):
-    return -p(x)*x**2/(24*1)*((x-1)**2)
+    return -p(x) * x**2 / (24 * 1) * ((x - 1) ** 2)
 
 
 geom = dde.geometry.Interval(0, 1)
@@ -67,7 +69,7 @@ losshistory, train_state = model.train(epochs=40000, display_every=1000)
 
 dde.saveplot(losshistory, train_state, issave=True, isplot=True)
 
-'''
+"""
 fname="case_1"
 loss_fname = fname + "_" + "loss.dat"
 train_fname = fname + "_" + "train.dat"
@@ -75,4 +77,4 @@ test_fname = fname + "_" + "test.dat"
 dde.saveplot(losshistory, train_state, issave=True, isplot=True, plot_name=fname,
 loss_fname=loss_fname, train_fname=train_fname, test_fname=test_fname, 
 output_dir="/home/a11btasa/git_repos/deepxde_2/beam_results")
-'''
+"""
