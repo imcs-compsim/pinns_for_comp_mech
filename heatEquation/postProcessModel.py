@@ -12,6 +12,7 @@ Created on Wed Dec 17 13:27:23 2021
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 # Plotting
 def plotSideBySide(xx, yy, uLeft, uRight):
     """
@@ -24,17 +25,18 @@ def plotSideBySide(xx, yy, uLeft, uRight):
     uLeft: solution field to be displayed on the left
     uRight: solution field to be displayed on the right
     """
-    
+
     fig, (ax1, ax2) = plt.subplots(1, 2, subplot_kw=dict(projection="3d"))
 
     # Analytical solution
     ax1.scatter(xx, yy, uLeft)
-    
+
     # Model prediction
     ax2.scatter(xx, yy, uRight)
-    
+
     plt.show()
-    
+
+
 def compareModelPredictionAndAnalyticalSolution(model, analytical_solution):
     """
     Evaluates the boundary condition.
@@ -48,17 +50,17 @@ def compareModelPredictionAndAnalyticalSolution(model, analytical_solution):
     # Retrieve geometry information from model
     x_min = model.data.geom.geometry.xmin[0]
     y_min = model.data.geom.geometry.xmin[1]
-    
+
     x_max = model.data.geom.geometry.xmax[0]
     y_max = model.data.geom.geometry.xmax[1]
-    
+
     t_min = model.data.geom.timedomain.t0
     t_max = model.data.geom.timedomain.t1
-    
+
     # Estimate a decent resolution based on the number of residual points in the domain.
-    dim = round(2*model.data.num_domain**(1./3))
+    dim = round(2 * model.data.num_domain ** (1.0 / 3))
     x_dim, y_dim, t_dim = (dim, dim, dim)
-    
+
     # Create tensors:
     x = np.linspace(x_min, x_max, num=x_dim).reshape(x_dim, 1)
     y = np.linspace(y_min, y_max, num=y_dim).reshape(y_dim, 1)
@@ -68,13 +70,12 @@ def compareModelPredictionAndAnalyticalSolution(model, analytical_solution):
     X = np.vstack((np.ravel(xx), np.ravel(yy))).T
 
     for tau in t:
-
         # Analytical solution
         usol = analytical_solution(xx, yy, tau, model.data.auxiliary_var_fn(1))
-       
+
         # Model prediction
-        T = np.array([tau]*x_dim*y_dim)
-        XT = np.hstack((X,T))
+        T = np.array([tau] * x_dim * y_dim)
+        XT = np.hstack((X, T))
         y_pred = model.predict(XT).reshape(y_dim, x_dim)
-        
+
         plotSideBySide(xx, yy, usol, y_pred)
