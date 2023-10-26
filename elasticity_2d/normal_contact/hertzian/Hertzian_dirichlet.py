@@ -2,7 +2,7 @@
 import deepxde as dde
 import numpy as np
 
-from utils.elasticity.elasticity_utils import momentum_2d 
+from utils.elasticity.elasticity_utils import momentum_2d
 from utils.postprocess.elasticity_postprocessing import meshGeometry, postProcess
 
 geom_rectangle = dde.geometry.Rectangle(xmin=[0, 0], xmax=[2, 1])
@@ -13,19 +13,31 @@ geom = dde.geometry.csg.CSGIntersection(geom1=geom_rectangle, geom2=geom_disk)
 def boundary_upper(x, on_boundary):
     return on_boundary and np.isclose(x[1], 1)
 
+
 def fun_middle_point(x):
     return 0
 
+
 n_mid_points = 20
-middle_points_u = np.vstack((np.full(n_mid_points, 1),np.linspace(0, 1, num=n_mid_points))).T
-middle_points_u = middle_points_u[[0,-1]]
+middle_points_u = np.vstack(
+    (np.full(n_mid_points, 1), np.linspace(0, 1, num=n_mid_points))
+).T
+middle_points_u = middle_points_u[[0, -1]]
 middle_points_u_2 = middle_points_u[[0]]
 
-observe_u  = dde.PointSetBC(middle_points_u, fun_middle_point(middle_points_u), component=0)
-observe_v  = dde.PointSetBC(middle_points_u_2, fun_middle_point(middle_points_u_2), component=1)
+observe_u = dde.PointSetBC(
+    middle_points_u, fun_middle_point(middle_points_u), component=0
+)
+observe_v = dde.PointSetBC(
+    middle_points_u_2, fun_middle_point(middle_points_u_2), component=1
+)
 
-bc1 = dde.DirichletBC(geom, lambda _: 0.0, boundary_upper, component=0) # fixed in x direction
-bc2 = dde.DirichletBC(geom, lambda _: -1.0, boundary_upper, component=1) # apply disp in y direction
+bc1 = dde.DirichletBC(
+    geom, lambda _: 0.0, boundary_upper, component=0
+)  # fixed in x direction
+bc2 = dde.DirichletBC(
+    geom, lambda _: -1.0, boundary_upper, component=1
+)  # apply disp in y direction
 
 data = dde.data.PDE(
     geom,
@@ -37,7 +49,7 @@ data = dde.data.PDE(
     num_test=100,
 )
 
-# two inputs x and y, output is ux and uy 
+# two inputs x and y, output is ux and uy
 layer_size = [2] + [50] * 5 + [2]
 activation = "tanh"
 initializer = "Glorot uniform"
@@ -51,6 +63,8 @@ losshistory, train_state = model.train(epochs=1, display_every=1000)
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
-X, triangles = meshGeometry(geom, n_boundary=130, max_mesh_area=0.01, boundary_distribution="Sobol")
+X, triangles = meshGeometry(
+    geom, n_boundary=130, max_mesh_area=0.01, boundary_distribution="Sobol"
+)
 
 postProcess(model, X, triangles, output_name="displacement")
