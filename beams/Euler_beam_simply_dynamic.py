@@ -1,7 +1,6 @@
 """Backend supported: tensorflow.compat.v1, tensorflow, pytorch"""
 import deepxde as dde
 import numpy as np
-import tensorflow as tf
 import pandas as pd
 
 
@@ -9,7 +8,14 @@ import pandas as pd
 This script is used to create the PINN model of clamped Euler-Lagrange beam under arbitrary load (space-time)
 see the manuscript for the example, Section 4, a complex consideration, Fig. 4.5, Deep Learning in Computational Mechanics
 """
-
+from deepxde.backend import get_preferred_backend
+backend_name = get_preferred_backend()
+if (backend_name == "tensorflow.compat.v1") or ((backend_name == "tensorflow")):
+    import tensorflow as bkd
+elif (backend_name == "pytorch"):
+    import torch as bkd
+else:
+    raise NameError(f'The backend {backend_name} is not available. Please use ') 
 
 def d_xx(x, y):
     return dde.grad.hessian(y, x)
@@ -31,7 +37,7 @@ def p(x):
     pi = np.pi
     x_t = x[:, 1:2]
     x_s = x[:, 0:1]
-    return -(tf.sin(np.pi * x_s) * tf.exp(-x_t) * (np.pi**4 * (x_t + 1) + x_t - 1))
+    return -(bkd.sin(np.pi * x_s) * bkd.exp(-x_t) * (np.pi**4 * (x_t + 1) + x_t - 1))
 
 
 l_spatial = 0
@@ -66,7 +72,7 @@ bc3 = dde.DirichletBC(geomtime, lambda x: 0, boundary_r_space)
 bc4 = dde.OperatorBC(geomtime, lambda x, y, _: d_xx(x, y), boundary_r_space)
 
 ic1 = dde.IC(
-    geomtime, lambda x: tf.sin(np.pi * x[:, 0:1]), lambda _, on_initial: on_initial
+    geomtime, lambda x: bkd.sin(np.pi * x[:, 0:1]), lambda _, on_initial: on_initial
 )
 ic2 = dde.OperatorBC(
     geomtime,
