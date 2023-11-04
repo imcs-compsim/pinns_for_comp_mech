@@ -1,13 +1,19 @@
 """Backend supported: tensorflow.compat.v1, tensorflow, pytorch"""
 import deepxde as dde
 import numpy as np
-import tensorflow as tf
 
 """
 This script is used to create the PINN model of clamped beam having non-uniform cross-section under arbitrary load
 see the manuscript for the example, Section 4, a complex consideration, Fig. 4.5, Deep Learning in Computational Mechanics
 """
-
+from deepxde.backend import get_preferred_backend
+backend_name = get_preferred_backend()
+if (backend_name == "tensorflow.compat.v1") or ((backend_name == "tensorflow")):
+    import tensorflow as bkd
+elif (backend_name == "pytorch"):
+    import torch as bkd
+else:
+    raise NameError(f'The backend {backend_name} is not available. Please use ') 
 
 def ddy(x, y):
     return dde.grad.hessian(y, x)
@@ -25,8 +31,8 @@ def p(x):
         8
         * np.pi**2
         * (
-            (2 * np.pi**2 * x**2 - 1) * tf.sin(2 * np.pi * x)
-            - 4 * np.pi * x * tf.cos(2 * np.pi * x)
+            (2 * np.pi**2 * x**2 - 1) * bkd.sin(2 * np.pi * x)
+            - 4 * np.pi * x * bkd.cos(2 * np.pi * x)
         )
     )
 
