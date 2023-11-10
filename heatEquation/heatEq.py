@@ -11,9 +11,17 @@ Created on Wed Nov 17 13:27:23 2021
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 import deepxde as dde
-from deepxde.backend import torch
+
+from deepxde.backend import get_preferred_backend
+
+backend_name = get_preferred_backend()
+if (backend_name == "tensorflow.compat.v1") or ((backend_name == "tensorflow")):
+    raise NameError(f"The backend {backend_name} is not available. Please use pytorch.")
+elif backend_name == "pytorch":
+    import torch as bkd
+else:
+    raise NameError(f"The backend {backend_name} is not available. Please use pytorch.")
 
 
 def pde(x, y):
@@ -38,8 +46,8 @@ def initial_condition(x):
     x : x passed to this function by the dde.pde is the NN input. Therefore,
         we must first extract the space coordinate.
     """
-    x_s = torch.tensor(x[:, 0:1])
-    return torch.cos(np.pi * x_s)
+    x_s = bkd.tensor(x[:, 0:1])
+    return bkd.cos(np.pi * x_s)
 
 
 # Boundary condition
@@ -52,10 +60,10 @@ def boundary_condition(x):
     x : x passed to this function by the dde.pde is the NN input. Therefore,
         we must first extract the time coordinate.
     """
-    x_t = torch.tensor(x[:, 1:2])
+    x_t = bkd.tensor(x[:, 1:2])
     k = 0.1
 
-    return -torch.exp(-k * (np.pi) ** 2 * x_t)
+    return -bkd.exp(-k * (np.pi) ** 2 * x_t)
 
 
 # Analytical solution
