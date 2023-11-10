@@ -1,4 +1,4 @@
-"""Backend supported: tensorflow.compat.v1, tensorflow, pytorch"""
+"""Backend supported: tensorflow.compat.v1, tensorflow"""
 import deepxde as dde
 import numpy as np
 
@@ -7,13 +7,13 @@ This script is used to create the PINN model of simply supported beam under poin
 four point bending test
 """
 from deepxde.backend import get_preferred_backend
+
 backend_name = get_preferred_backend()
 if (backend_name == "tensorflow.compat.v1") or ((backend_name == "tensorflow")):
     import tensorflow as bkd
-elif (backend_name == "pytorch"):
-    import torch as bkd
 else:
-    raise NameError(f'The backend {backend_name} is not available. Please use ') 
+    raise NameError(f"The backend {backend_name} is not available. Please use other.")
+
 
 def ddy(x, y):
     return dde.grad.hessian(y, x)
