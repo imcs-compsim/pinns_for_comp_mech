@@ -28,7 +28,7 @@ def d_xxx(x, y):
 def pde(x, y):
     dy_xx = d_xx(x, y)
     dy_xxxx = dde.grad.hessian(dy_xx, x)
-    d_tt = dde.grad.hessian(y, x, i=1, j=1)
+    d_tt = dde.grad.hessian(y, x, i=0, j=1)
 
     return dy_xxxx + d_tt + p(x)
 

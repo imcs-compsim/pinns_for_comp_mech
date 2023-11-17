@@ -8,6 +8,7 @@ see the manuscript for the example, Section 4, Figure 4.2 and 4.3, Deep Learning
 """
 
 
+# Helper functions for pde, 2. derivative of w w.r.t x
 def ddy(x, y):
     return dde.grad.hessian(y, x)
 
@@ -16,8 +17,10 @@ def dddy(x, y):
     return dde.grad.jacobian(ddy(x, y), x)
 
 
+# Pressure as a function, but constant
 p = lambda x: 1
-EI_material = lambda x: 1
+# E --> Young's modulus , I --> Moment of inertia -->
+EI_material = lambda x: x
 
 
 def pde(x, y):
@@ -26,26 +29,33 @@ def pde(x, y):
     return dy_xxxx + p(x)
 
 
+# We define boundary function for the left side, which is x=0, x[0] --> means for this example x
 def boundary_l(x, on_boundary):
     return on_boundary and np.isclose(x[0], 0)
 
 
+# We define boundary function for the right side, which is x=1, x[0] --> means for this example x
 def boundary_r(x, on_boundary):
     return on_boundary and np.isclose(x[0], 1)
 
 
+# The analytical solution
 def func(x):
     return -p(x) * x**2 / (24 * 1) * ((x - 1) ** 2)
 
 
+# We generate 1D beam, start point 0, end point 1.
 geom = dde.geometry.Interval(0, 1)
 
+# We define boundary conditions.
+# On the left side, w=0 and dw/dx=0
 bc1 = dde.DirichletBC(geom, lambda x: 0, boundary_l)
 bc2 = dde.NeumannBC(geom, lambda x: 0, boundary_l)
+# On the right side (end of the interval) x=1, w=0 and dw/dx=0
 bc3 = dde.DirichletBC(geom, lambda x: 0, boundary_r)
 bc4 = dde.NeumannBC(geom, lambda x: 0, boundary_r)
 
-
+# We generate 20 points in domain, 2 on the boundary, we provide func which is the solution, number of test points
 data = dde.data.PDE(
     geom,
     pde,
@@ -56,7 +66,10 @@ data = dde.data.PDE(
     num_test=100,
 )
 
+# We set input dimension --> 1D --> [1], number of layers --> 3, number of neurons each has 30, output is 1D
+# alternatively, you can define [1,30,30,30,1]
 layer_size = [1] + [30] * 3 + [1]
+# we choose activation function, such tanh
 activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
