@@ -250,3 +250,205 @@ class GmshGeometry2D(Geometry):
         node_coords_xy = np.hstack((node_coords_xy_rp,external_dim_rp))
 
         return node_coords_xy
+    
+
+class GmshGeometry1D(Geometry):
+    def __init__(self, gmsh_model, coord_left, coord_right, coord_quadrature= None, weight_quadrature = None, test_function=None, test_function_derivative= None, n_test_func=None, ele_func=None, external_dim_size=None, borders=None):
+        self.gmsh_model = gmsh_model
+        self.coord_left = coord_left
+        self.coord_right = coord_right
+        self.coord_quadrature = coord_quadrature
+        self.weight_quadrature = weight_quadrature
+        self.test_function = test_function
+        self.test_function_derivative = test_function_derivative
+        self.ele_func = ele_func
+        self.n_test_func = n_test_func
+        self.n_gp = self.weight_quadrature.shape[0]
+        # obtain element information
+        self.get_element_info()
+        #self.boundary_normal_global = self.fun_boundary_normal_global()
+        self.external_dim_size = external_dim_size
+        self.borders = borders
+        if external_dim_size:
+            self.external_dim = np.linspace(self.borders[0],self.borders[1],self.external_dim_size).reshape(-1,1).astype(np.dtype('f8'))
+        self.bbox = (np.array([self.coord_left]), np.array([self.coord_left]))
+        super(GmshGeometry1D, self).__init__(
+            1, self.bbox, 1
+        )
+
+    def inside(self, x):
+        """Check if x is inside the geometry (including the boundary)."""
+
+        node_tag, node_coords_all, parametricCoord  = self.gmsh_model.mesh.getNodes(dim=1, tag=-1, includeBoundary=True)
+        node_tag_inside = self.gmsh_model.mesh.getNodes(dim=1, tag=-1, includeBoundary=False)[0]
+
+        node_coords_x, node_coords_x_boundary, node_coords_x_inside = self.order_coordinates(node_coords_all, node_tag, node_tag_inside=node_tag_inside)
+
+        if self.external_dim_size:
+            node_coords_x_inside = self.add_external_dim(node_coords_x_inside)
+
+        return np.all(np.isin(x, node_coords_x_inside), axis=1)
+
+    def on_boundary(self, x):
+        """Check if x is on the geometry boundary."""
+
+        node_tag, node_coords_all, _  = self.gmsh_model.mesh.getNodes(dim=1, tag=-1, includeBoundary=True)
+        node_tag_inside = self.gmsh_model.mesh.getNodes(dim=1, tag=-1, includeBoundary=False)[0]
+        node_tag_boundary = np.setdiff1d(node_tag, node_tag_inside)
+
+        node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords_all, node_tag, node_tag_boundary, node_tag_inside)
+
+        if self.external_dim_size:
+            node_coords_xy_boundary = self.add_external_dim(node_coords_xy_boundary)
+        
+        return np.all(np.isin(x, node_coords_xy_boundary), axis=1)
+    
+    def boundary_normal(self, x):
+        """Slice the unit normal at x for Neumann or Robin boundary conditions."""
+
+        n, uniq = self.boundary_normal_global
+
+        if self.external_dim_size:
+            x = np.delete(x, -1, 1)
+
+        mask = []
+        for x_i in x:
+            mask.extend(np.where(np.all(np.isclose(x_i,uniq),axis=1))[0].tolist()) 
+        
+        return n[mask]
+
+    def random_points(self, n, random="pseudo"):
+        """Get collocation points from geometry"""
+
+        node_tag, node_coords, _  = self.gmsh_model.mesh.getNodes(dim=1, tag=-1, includeBoundary=False)
+
+        node_coords_x, _, _ = self.order_coordinates(node_coords, node_tag)
+
+        if self.external_dim_size:
+            node_coords_x = self.add_external_dim(node_coords_x)
+
+        return node_coords_x.astype(config.real(np))
+    
+    def get_mesh(self):
+        """Get the mesh for post-processing"""
+
+        node_tag, node_coords, _  = self.gmsh_model.mesh.getNodes(2, -1, includeBoundary=True)
+
+        node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords, node_tag)
+
+        element_types, element_tags, node_tags = self.gmsh_model.mesh.getElements(2,-1)
+
+        if element_types == 2:
+            dol_triangles = node_tags[0].reshape(-1,3) - 1
+
+            offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1, dol_triangles.shape[1])
+            cell_types = np.ones(dol_triangles.shape[0])*5
+        
+        if self.external_dim_size:
+            node_coords_xy = self.add_external_dim(node_coords_xy)
+
+        return node_coords_xy, offset, cell_types, dol_triangles
+
+    def random_boundary_points(self, n, random="pseudo"):
+        """Get boundary points from geometry"""
+
+        node_tag, node_coords, _  = self.gmsh_model.mesh.getNodes(dim=1, tag=-1, includeBoundary=True)
+        node_tag_inside = self.gmsh_model.mesh.getNodes(dim=1, tag=-1, includeBoundary=False)[0]
+        node_tag_boundary = np.setdiff1d(node_tag, node_tag_inside)
+
+        _, node_coords_x_boundary, _ = self.order_coordinates(node_coords, node_tag, node_tag_boundary, node_tag_inside)
+
+        if self.external_dim_size:
+            node_coords_x_boundary = self.add_external_dim(node_coords_x_boundary)
+
+        return node_coords_x_boundary.astype(config.real(np))
+    
+    def order_coordinates(self, node_coords, node_tag, node_tag_boundary=None, node_tag_inside=None):
+        '''Get sorted coordinates and node tags'''
+
+        node_tag -= 1 # gmsh node numbering start with 1 but we need 0         
+
+        node_coords_xyz = node_coords.reshape(-1,3)
+        node_coords_x = node_coords_xyz[node_tag.argsort()][:,0:1]
+        
+        node_coords_x_boundary = None
+        node_coords_x_inside = None
+
+        if node_tag_boundary is not None:
+            node_tag_boundary -= 1
+            node_coords_x_boundary = node_coords_x[node_tag_boundary]
+        if node_tag_inside is not None:
+            node_tag_inside -= 1 
+            node_coords_x_inside = node_coords_x[node_tag_inside]
+
+        return node_coords_x, node_coords_x_boundary, node_coords_x_inside
+    
+    def get_element_info(self):
+        #self.mapped_coordinates = []
+        #self.jacobian = []
+        #self.element_weights = []
+        self.mapped_coordinates = np.array([])
+        self.jacobian = np.array([])
+        self.global_element_weights = np.array([])
+        self.global_element_function = np.array([])
+        
+        self.n_elements = self.gmsh_model.mesh.getElements(1, -1)[1][0].shape[0]
+        
+        self.global_test_function = np.tile(self.test_function,self.n_elements).astype(config.real(np))
+        self.global_test_function = np.expand_dims(self.global_test_function, axis=2)
+        self.global_test_function_derivative = np.tile(self.test_function_derivative,self.n_elements).astype(config.real(np))
+        self.global_test_function_derivative = np.expand_dims(self.global_test_function_derivative, axis=2)
+        
+        for element_tag in self.gmsh_model.mesh.getElements(1, -1)[1][0]:
+            if self.gmsh_model.mesh.getElement(element_tag)[1].shape[0] > 2:
+                raise ValueError("Use linear elements.")
+            id_node1 = self.gmsh_model.mesh.getElement(element_tag)[1][0]
+            id_node2 = self.gmsh_model.mesh.getElement(element_tag)[1][1]
+            
+            coordinate_node1 = self.gmsh_model.mesh.getNode(id_node1)[0][0]
+            coordinate_node2 = self.gmsh_model.mesh.getNode(id_node2)[0][0]
+            
+            element_mapped_coordinate = self.get_mapped_coordinates(coordinate_node1, coordinate_node2)
+            self.mapped_coordinates = np.hstack((self.mapped_coordinates, element_mapped_coordinate))
+            
+            element_jacobian = self.get_jacobian(coordinate_node1, coordinate_node2)
+            self.jacobian = np.hstack((self.jacobian, element_jacobian))
+            
+            self.global_element_weights = np.hstack((self.global_element_weights, self.weight_quadrature))
+            
+            self.global_element_function = np.hstack((self.global_element_function, self.get_element_function(element_mapped_coordinate, element_jacobian)))
+            # list version
+            #self.mapped_coordinates.append(self.get_mapped_coordinates(coordinate_node1, coordinate_node2))
+            #self.jacobian.append(self.get_jacobian(coordinate_node1, coordinate_node2))
+            #self.element_weights.append(self.weight_quadrature)
+        
+        self.mapped_coordinates = self.mapped_coordinates.reshape(-1,1).astype(config.real(np))
+        self.jacobian = self.jacobian.reshape(-1,1).astype(config.real(np))
+        self.global_element_weights = self.global_element_weights.reshape(-1,1).astype(config.real(np))
+        self.global_element_function = self.global_element_function.reshape(-1,1).astype(config.real(np))
+            
+    def get_mapped_coordinates(self, coordinate_node1, coordinate_node2):
+        # linear mapping
+        # x_m = N . x --> N linear shape functions N1=1/2(1-psi) N2=1/2(1+psi)
+        N1 = 1/2*(1-self.coord_quadrature)
+        N2 = 1/2*(1+self.coord_quadrature) 
+        mapped_coordinate = N1*coordinate_node1 + N2*coordinate_node2
+        
+        return mapped_coordinate
+    
+    def get_jacobian(self, coordinate_node1, coordinate_node2):
+        DN1 = -1/2
+        DN2 = 1/2
+        jacob = DN1*coordinate_node1 + DN2*coordinate_node2
+        
+        return jacob
+    
+    def get_element_function(self, element_mapped_coordinate, element_jacobian):
+        
+        f_quad_element = self.ele_func(element_mapped_coordinate)
+        
+        element_func = element_jacobian * np.asarray([sum(self.weight_quadrature * f_quad_element * t) for t in self.test_function])
+        
+        return element_func
+    
+    
