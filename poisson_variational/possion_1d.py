@@ -45,10 +45,10 @@ def func(x):
     return -amp * gtemp
 
 
-quad_rule = GaussQuadratureRule(rule_name="gauss_legendre", dimension=1, ngp=5) # gauss_legendre
+quad_rule = GaussQuadratureRule(rule_name="gauss_labotto", dimension=1, ngp=20) # gauss_legendre
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
-n_test_func = 10
+n_test_func = 30
 test_function, test_function_derivative = get_test_function_properties(n_test_func, coord_quadrature, approach="2")
 
 # Define GMSH and geometry parameters
@@ -56,7 +56,7 @@ gmsh_options = {"General.Terminal":1}
 coord_left = -1
 coord_right = 1
 # create a line element
-Element_1d = Line_1D(coord_left, coord_right, mesh_size=0.01, gmsh_options=gmsh_options)
+Element_1d = Line_1D(coord_left, coord_right, mesh_size=0.1, gmsh_options=gmsh_options)
 
 # generate gmsh model
 gmsh_model = Element_1d.generateGmshModel(visualize_mesh=False)
