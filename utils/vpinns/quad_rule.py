@@ -33,7 +33,7 @@ class GaussQuadratureRule:
         
         coord_quadrature, weight_quadrature = rule_dic[self.rule_name]()
 
-        return coord_quadrature, weight_quadrature
+        return coord_quadrature.reshape(-1,self.dimension), weight_quadrature.reshape(-1,self.dimension)
     
     def gauss_legendre(self):
         
@@ -43,62 +43,84 @@ class GaussQuadratureRule:
                 return leggauss(self.ngp)
             except:
                 raise ValueError("Number of gauss points must be >=1, chosen is {self.ngp}<1")
+        elif self.dimension == 2:
+            coord_quadrature_1d, weight_quadrature_1d = leggauss(self.ngp)
+            
+            coord_quadrature_x, coord_quadrature_y= np.meshgrid(coord_quadrature_1d,coord_quadrature_1d)
+            coord_quadrature_2d=np.array((coord_quadrature_x.ravel(), coord_quadrature_y.ravel())).T
+            
+            weight_quadrature_x, weight_quadrature_y= np.meshgrid(weight_quadrature_1d,weight_quadrature_1d)
+            weight_quadrature_2d=np.array((weight_quadrature_x.ravel(), weight_quadrature_y.ravel())).T
+            
+            #common_weight = weights[:,0]*weights[:,1]
+            
+            return coord_quadrature_2d, weight_quadrature_2d #common_weight      
     
     def gauss_labotto(self):
         
+        if self.ngp < 3:
+            raise ValueError("ngp has to be larger 3.") 
+        
+        a = self.additional_params.get("a",0)
+        b = self.additional_params.get("b",0)
+        
+        coord_quadrature = roots_jacobi(self.ngp - 2, a + 1, b + 1)[0]
+
+        Wl = (
+            (b + 1)
+            * 2 ** (a + b + 1)
+            * gamma(a + self.ngp)
+            * gamma(b + self.ngp)
+            / (
+                (self.ngp - 1)
+                * gamma(self.ngp)
+                * gamma(a + b + self.ngp + 1)
+                * (self.jacobi_polynomial(self.ngp - 1, a, b, -1) ** 2)
+            )
+        )
+
+        weight_quadrature = (
+            2 ** (a + b + 1)
+            * gamma(a + self.ngp)
+            * gamma(b + self.ngp)
+            / (
+                (self.ngp - 1)
+                * gamma(self.ngp)
+                * gamma(a + b + self.ngp + 1)
+                * (self.jacobi_polynomial(self.ngp - 1, a, b, coord_quadrature) ** 2)
+            )
+        )
+
+        Wr = (
+            (a + 1)
+            * 2 ** (a + b + 1)
+            * gamma(a + self.ngp)
+            * gamma(b + self.ngp)
+            / (
+                (self.ngp - 1)
+                * gamma(self.ngp)
+                * gamma(a + b + self.ngp + 1)
+                * (self.jacobi_polynomial(self.ngp - 1, a, b, 1) ** 2)
+            )
+        )
+
+        weight_quadrature = np.append(weight_quadrature, Wr)
+        weight_quadrature = np.append(Wl, weight_quadrature)
+        coord_quadrature = np.append(-1, coord_quadrature)
+        coord_quadrature = np.append(coord_quadrature, 1)
+        
         if self.dimension == 1:
-            if self.ngp < 3:
-                raise ValueError("ngp has to be larger 3.") 
-            
-            a = self.additional_params.get("a",0)
-            b = self.additional_params.get("b",0)
-            
-            coord_quadrature = roots_jacobi(self.ngp - 2, a + 1, b + 1)[0]
-
-            Wl = (
-                (b + 1)
-                * 2 ** (a + b + 1)
-                * gamma(a + self.ngp)
-                * gamma(b + self.ngp)
-                / (
-                    (self.ngp - 1)
-                    * gamma(self.ngp)
-                    * gamma(a + b + self.ngp + 1)
-                    * (self.jacobi_polynomial(self.ngp - 1, a, b, -1) ** 2)
-                )
-            )
-
-            weight_quadrature = (
-                2 ** (a + b + 1)
-                * gamma(a + self.ngp)
-                * gamma(b + self.ngp)
-                / (
-                    (self.ngp - 1)
-                    * gamma(self.ngp)
-                    * gamma(a + b + self.ngp + 1)
-                    * (self.jacobi_polynomial(self.ngp - 1, a, b, coord_quadrature) ** 2)
-                )
-            )
-
-            Wr = (
-                (a + 1)
-                * 2 ** (a + b + 1)
-                * gamma(a + self.ngp)
-                * gamma(b + self.ngp)
-                / (
-                    (self.ngp - 1)
-                    * gamma(self.ngp)
-                    * gamma(a + b + self.ngp + 1)
-                    * (self.jacobi_polynomial(self.ngp - 1, a, b, 1) ** 2)
-                )
-            )
-
-            weight_quadrature = np.append(weight_quadrature, Wr)
-            weight_quadrature = np.append(Wl, weight_quadrature)
-            coord_quadrature = np.append(-1, coord_quadrature)
-            coord_quadrature = np.append(coord_quadrature, 1)
-            
             return coord_quadrature, weight_quadrature
+        
+        elif self.dimension == 2:    
+            coord_quadrature_x, coord_quadrature_y= np.meshgrid(coord_quadrature,coord_quadrature)
+            coord_quadrature_2d=np.array((coord_quadrature_x.ravel(), coord_quadrature_y.ravel())).T
+            
+            weight_quadrature_x, weight_quadrature_y= np.meshgrid(weight_quadrature,weight_quadrature)
+            weight_quadrature_2d=np.array((weight_quadrature_x.ravel(), weight_quadrature_y.ravel())).T
+            
+            return coord_quadrature_2d, weight_quadrature_2d
+            
     
     @staticmethod
     def jacobi_polynomial(n, a, b, x):
