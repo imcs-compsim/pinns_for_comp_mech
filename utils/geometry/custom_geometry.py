@@ -724,7 +724,9 @@ class GmshGeometryElement(Geometry):
             node_tag_inside -= 1 
             node_coords_x_inside = node_coords_x[node_tag_inside]
 
-        return node_coords_x, node_coords_x_boundary, node_coords_x_inside
+        return node_coords_x.astype(config.real(np)) if None else node_coords_x, \
+                node_coords_x_boundary.astype(config.real(np)) if None else node_coords_x_boundary, \
+                node_coords_x_inside.astype(config.real(np)) if None else node_coords_x_inside
     
     def get_element_info(self):
         #self.mapped_coordinates = []
