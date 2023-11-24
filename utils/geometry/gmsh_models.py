@@ -616,3 +616,72 @@ class QuarterDisc(object):
                 gmsh.fltk.run()
 
         return gmsh_model, x_loc_p3, y_loc_p3
+
+    
+class Line_1D(object):
+    def __init__(self, coord_left, coord_right, mesh_size=0.1, gmsh_options=None):
+        self.coord_left = coord_left
+        self.coord_right = coord_right
+        self.mesh_size = mesh_size
+        self.gmsh_options = gmsh_options
+
+    def generateGmshModel(self, visualize_mesh=False):
+        '''
+        Generates a 3D block.
+
+        Parameters
+        ----------
+        visualize_mesh : boolean
+            a booelan value to show the mesh using Gmsh or not
+        Returns 
+        -------
+        gmsh_model: Object
+            gmsh model 
+        '''
+
+        # Parameters
+        x0 = self.coord_left
+        y0 = 0
+        z0 = 0
+        x1 = self.coord_right
+        y1 = 0
+        z1 = 0
+        
+        assert(x1>x0)
+        
+        l = x1 - x0
+        # Mesh size.
+        lcar = self.mesh_size * l
+
+        # create gmsh model instance
+        gmsh_model = gmsh.model
+
+        # initialize gmsh
+        gmsh.initialize(sys.argv)
+
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMin", lcar)
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMax", lcar)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if type(value).__name__ == 'str':
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+        
+        #gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
+        point_a = gmsh.model.geo.addPoint(x0, y0, z0)
+        point_b = gmsh.model.geo.addPoint(x1, y1, z1)
+        
+        gmsh_model.geo.addLine(point_a, point_b)
+
+        gmsh_model.geo.synchronize()
+
+        # generate mesh
+        gmsh_model.mesh.generate(1)
+
+        if visualize_mesh:
+            if '-nopopup' not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model
