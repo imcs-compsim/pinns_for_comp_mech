@@ -69,13 +69,17 @@ data = dde.data.PDE(
 # We set input dimension --> 1D --> [1], number of layers --> 3, number of neurons each has 30, output is 1D
 # alternatively, you can define [1,30,30,30,1]
 layer_size = [1] + [30] * 3 + [1]
-# we choose activation function, such tanh
+# We choose activation function, such tanh
 activation = "tanh"
+# We define how to initialize networks weights 
 initializer = "Glorot uniform"
+# We generate our neural network
 net = dde.maps.FNN(layer_size, activation, initializer)
 
 model = dde.Model(data, net)
+# We define the optimizer, in this case "adam", lr --> learning rate
 model.compile("adam", lr=0.0001, metrics=["l2 relative error"])
+# We train our model using 40000 iterations, we display results every 1000 iterations
 losshistory, train_state = model.train(epochs=40000, display_every=1000)
 
 
