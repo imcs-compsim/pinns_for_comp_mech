@@ -125,7 +125,7 @@ class VariationalPDE(Data):
         bcs_start = list(map(int, bcs_start))
         
         if self.weak_form is not None:
-            if get_num_args(self.weak_form) == 2:
+            if get_num_args(self.weak_form) == 8:
                 n_gp = self.geom.n_gp
                 n_t = self.geom.n_test_func
                 f = 0
@@ -133,23 +133,32 @@ class VariationalPDE(Data):
                 for e in range(self.geom.n_elements):
                     element_loss = bkd.reshape(bkd.stack(
                                     [
-                                    self.geom.jacobian[e][0]
-                                    * bkd.reduce_sum(
-                                        bkd.as_tensor(self.geom.global_element_weights[n_gp*e:n_gp*(e+1)])
-                                        * self.weak_form(inputs, outputs_pde)[pde_start:pde_start+n_gp]
-                                        * bkd.as_tensor(self.geom.global_test_function[i][n_gp*e:n_gp*(e+1)])
+                                    bkd.reduce_sum(
+                                        self.weak_form(inputs, 
+                                                       outputs_pde, 
+                                                       pde_start, 
+                                                       pde_start+n_gp, 
+                                                       bkd.as_tensor(self.geom.jacobian[e]),
+                                                       bkd.as_tensor(self.geom.global_element_weights[e]),
+                                                       bkd.as_tensor(self.geom.global_test_function[i][e]),
+                                                       bkd.as_tensor(self.geom.global_test_function_derivative[i][e])
+                                        )
                                     )
                                     for i in range(n_t)
                                     ], axis=0
                                     ),
                                     (-1,1)
                                     )
-                    pde_start = pde_start + n_gp
                     
-                    residual_nn_element = element_loss - bkd.as_tensor(self.geom.global_element_function[n_t*e:n_t*(e+1)])
+                    if self.geom.ele_func:
+                        residual_nn_element = element_loss - bkd.as_tensor(self.geom.global_element_function[e])
+                    else:
+                        residual_nn_element = element_loss
+                    
                     loss_element = loss_fn(bkd.zeros_like(residual_nn_element), residual_nn_element)
                     
-                    f += loss_element 
+                    f += loss_element
+                    pde_start = pde_start + n_gp
             
             losses = [f]
             
