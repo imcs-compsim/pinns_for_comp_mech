@@ -459,7 +459,7 @@ class GmshGeometryElement(Geometry):
                  weight_quadrature = None, 
                  test_function=None, 
                  test_function_derivative= None, 
-                 n_test_func=None, ele_func=None, 
+                 n_test_func=None, 
                  external_dim_size=None, 
                  borders=None,
                  revert_curve_list=None,
@@ -472,7 +472,6 @@ class GmshGeometryElement(Geometry):
         self.test_function = test_function
         self.test_function_derivative = test_function_derivative
         self.n_test_func = n_test_func
-        self.ele_func = ele_func
         self.dim = dimension
         # obtain element information
         if self.coord_quadrature is not None:
@@ -505,7 +504,7 @@ class GmshGeometryElement(Geometry):
         if self.external_dim_size:
             node_coords_x_inside = self.add_external_dim(node_coords_x_inside)
 
-        return np.all(np.isin(x, node_coords_x_inside), axis=1)
+        return self.is_in_tolerance(x, node_coords_x_inside)
 
     def on_boundary(self, x):
         """Check if x is on the geometry boundary."""
@@ -519,7 +518,15 @@ class GmshGeometryElement(Geometry):
         if self.external_dim_size:
             node_coords_xyz_boundary = self.add_external_dim(node_coords_xyz_boundary)
         
-        return np.all(np.isin(x, node_coords_xyz_boundary), axis=1)
+        return self.is_in_tolerance(x, node_coords_xyz_boundary)
+    
+    def is_in_tolerance(self, provided, target):
+        
+        tolerance = 1e-5
+        
+        contained_rows = np.all(np.isclose(provided[:, None, :], target, rtol=tolerance, atol=tolerance), axis=2)
+        contained_indices_boolean = np.any(contained_rows, axis=1)
+        return contained_indices_boolean
     
     def boundary_normal(self, x):
         """Slice the unit normal at x for Neumann or Robin boundary conditions."""
@@ -724,9 +731,10 @@ class GmshGeometryElement(Geometry):
             node_tag_inside -= 1 
             node_coords_x_inside = node_coords_x[node_tag_inside]
 
-        return node_coords_x.astype(config.real(np)) if None else node_coords_x, \
-                node_coords_x_boundary.astype(config.real(np)) if None else node_coords_x_boundary, \
-                node_coords_x_inside.astype(config.real(np)) if None else node_coords_x_inside
+        return node_coords_x, node_coords_x_boundary, node_coords_x_inside
+        # return node_coords_x.astype(config.real(np)) if node_coords_x is not None else node_coords_x, \
+        #         node_coords_x_boundary.astype(config.real(np)) if node_coords_x_boundary is not None else node_coords_x_boundary, \
+        #         node_coords_x_inside.astype(config.real(np)) if node_coords_x_inside is not None else node_coords_x_inside
     
     def get_element_info(self):
         #self.mapped_coordinates = []
@@ -739,9 +747,7 @@ class GmshGeometryElement(Geometry):
         self.global_test_function = np.empty((self.n_test_func, self.n_elements, self.n_gp, self.dim))
         self.global_test_function_derivative = np.empty((self.n_test_func, self.n_elements, self.n_gp, self.dim))
         self.jacobian = np.empty((self.n_elements,self.n_gp,1))
-        
         self.global_element_weights = np.empty((self.n_elements, self.n_gp, self.dim))
-        self.global_element_function = np.empty((self.n_elements, self.n_test_func, self.dim))
         
         element_id = 0
         
@@ -759,10 +765,6 @@ class GmshGeometryElement(Geometry):
             
             element_jacobian = self.get_jacobian(coordinate_list)
             self.jacobian[element_id] = element_jacobian
-
-            if self.ele_func:
-                element_func = self.get_element_function(element_mapped_coordinate, element_jacobian)
-                self.global_element_function[element_id] = element_func
             
             self.global_test_function[:,element_id] = self.test_function.copy()
             self.global_test_function_derivative[:,element_id] = self.test_function_derivative.copy()
@@ -770,10 +772,20 @@ class GmshGeometryElement(Geometry):
             
             element_id += 1
 
+        self.jacobian = self.jacobian.reshape(self.jacobian.shape[0]*self.jacobian.shape[1],
+                                              self.jacobian.shape[2])
+        self.global_element_weights = self.global_element_weights.reshape(self.global_element_weights.shape[0]*self.global_element_weights.shape[1],
+                                                                          self.global_element_weights.shape[2])
+        self.global_test_function = self.global_test_function.reshape(self.global_test_function.shape[0],
+                                                                      self.global_test_function.shape[1]*self.global_test_function.shape[2],
+                                                                      self.global_test_function.shape[3])
+        self.global_test_function_derivative = self.global_test_function_derivative.reshape(self.global_test_function_derivative.shape[0],
+                                                                                            self.global_test_function_derivative.shape[1]*self.global_test_function_derivative.shape[2],
+                                                                                            self.global_test_function_derivative.shape[3])
+                                
         self.mapped_coordinates = self.mapped_coordinates.astype(config.real(np))
         self.jacobian = self.jacobian.astype(config.real(np))
         self.global_element_weights = self.global_element_weights.astype(config.real(np))
-        self.global_element_function = self.global_element_function.astype(config.real(np))
         self.global_test_function = self.global_test_function.astype(config.real(np))
         self.global_test_function_derivative = self.global_test_function_derivative.astype(config.real(np))
             
@@ -810,8 +822,8 @@ class GmshGeometryElement(Geometry):
     
     def get_jacobian(self, coordinate_list):
         if self.dim == 1:
-            DN1 = -1/2
-            DN2 = 1/2
+            DN1 = -1/2*np.ones((self.n_gp,1))
+            DN2 = 1/2*np.ones((self.n_gp,1))
             jacob = DN1*coordinate_list[0] + DN2*coordinate_list[1]
         
         if self.dim == 2:
@@ -846,11 +858,3 @@ class GmshGeometryElement(Geometry):
             #print(jacob)
  
         return jacob
-    
-    def get_element_function(self, element_mapped_coordinate, element_jacobian):
-        
-        f_quad_element = self.ele_func(element_mapped_coordinate)
-        
-        element_func = element_jacobian * np.asarray([sum(self.weight_quadrature * f_quad_element * t) for t in self.test_function])
-        
-        return element_func
