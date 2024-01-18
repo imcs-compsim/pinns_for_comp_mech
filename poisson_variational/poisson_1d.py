@@ -14,6 +14,9 @@ from utils.vpinns.quad_rule import get_test_function_properties
 
 from utils.vpinns.v_pde import VariationalPDE
 
+import tensorflow as tf
+import torch
+
 '''
 Solving 1D poisson's equation via VPINNS
 '''
@@ -30,6 +33,19 @@ def func(x):
     gtemp = -0.1 * (omega ** 2) * np.sin(omega * x) - (2 * r1 ** 2) * (
         np.tanh(r1 * x)
     ) / ((np.cosh(r1 * x)) ** 2)
+    return -amp * gtemp
+
+def cosh(x):
+    bkd_name = bkd.get_preferred_backend()
+    if (bkd_name == "tensorflow") or (bkd_name == "tensorflow.compat.v1"):
+        return tf.math.cosh(x)
+    elif bkd_name == "pytorch":
+        return torch.cosh(x) 
+
+def func_tensor(x): 
+    gtemp = -0.1 * (omega ** 2) * bkd.sin(omega * x) - (2 * r1 ** 2) * (
+        bkd.tanh(r1 * x)
+    ) / ((cosh(r1 * x)) ** 2)
     return -amp * gtemp
 
 
@@ -49,8 +65,10 @@ Element_1d = Line_1D(coord_left, coord_right, mesh_size=0.1, gmsh_options=gmsh_o
 # generate gmsh model
 gmsh_model = Element_1d.generateGmshModel(visualize_mesh=False)
 
-geom = GmshGeometryElement(gmsh_model, 1, coord_quadrature, weight_quadrature, test_function, test_function_derivative, n_test_func, func)
+geom = GmshGeometryElement(gmsh_model, 1, coord_quadrature, weight_quadrature, test_function, test_function_derivative, n_test_func)
 
+def reshape_tensor(input_tensor):
+    return bkd.reshape(input_tensor, (input_tensor.shape[0]*input_tensor.shape[1],input_tensor.shape[2]))
 
 def pde(x, y):
     dy_xx = dde.grad.hessian(y, x)
@@ -65,10 +83,12 @@ def pde(x, y):
     # Use paddle.sin for backend paddle
     # return -dy_xx - np.pi ** 2 * paddle.sin(np.pi * x)
 
-def weak_form(inputs, outputs, beg, end, e_jacobian, e_weights, e_test_function, test_function_derivative):
+def weak_form(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights, g_test_function, g_test_function_derivative):
     dy_xx = dde.grad.hessian(outputs, inputs)
+    residual = -(dy_xx[beg:] + func_tensor(inputs)[beg:])*g_test_function
     # Use tf.sin for backend tensorflow.compat.v1 or tensorflow
-    return -dy_xx[beg:end]*e_jacobian*e_weights*e_test_function
+    weighted_residual = g_weights*residual*g_jacobian
+    return bkd.reshape(weighted_residual, (n_e, n_gp))
     # Use torch.sin for backend pytorch
     # return -dy_xx - np.pi ** 2 * torch.sin(np.pi * x)
     # Use paddle.sin for backend paddle
@@ -106,22 +126,14 @@ net = dde.nn.FNN(layer_size, activation, initializer)
 
 model = dde.Model(data, net)
 
-model.compile("adam", lr=0.001, metrics=["l2 relative error"])
-losshistory, train_state = model.train(iterations=10000)
+def mean_squared_error(y_true, y_pred):
+    return bkd.mean(bkd.square(y_true - y_pred), dim=0)
 
-model.compile("L-BFGS")
+model.compile("adam", lr=0.001, loss=mean_squared_error, metrics=["l2 relative error"])
+losshistory, train_state = model.train(iterations=25000)
+
+model.compile("L-BFGS", loss=mean_squared_error)
 losshistory, train_state = model.train(display_every=200)
-
-# Optional: Save the model during training.
-# checkpointer = dde.callbacks.ModelCheckpoint(
-#     "model/model", verbose=1, save_better_only=True
-# )
-# Optional: Save the movie of the network solution during training.
-# ImageMagick (https://imagemagick.org/) is required to generate the movie.
-# movie = dde.callbacks.MovieDumper(
-#     "model/movie", [-1], [1], period=100, save_spectrum=True, y_reference=func
-# )
-# losshistory, train_state = model.train(iterations=10000, callbacks=[checkpointer, movie])
 
 x_input = geom.mapped_coordinates
 
@@ -130,18 +142,6 @@ act = u_exact(x_input)
 
 plt.scatter(x_input, pred, color="r")
 plt.plot(x_input, act)
+plt.savefig("1D_poisson_variational")
 plt.show()
-
-#dde.saveplot(losshistory, train_state, issave=True, isplot=True)
-
-# # Optional: Restore the saved model with the smallest training loss
-# # model.restore(f"model/model-{train_state.best_step}.ckpt", verbose=1)
-# # Plot PDE residual
-# x = geom.uniform_points(1000, True)
-# y = model.predict(x, operator=pde)
-# plt.figure()
-# plt.plot(x, y)
-# plt.xlabel("x")
-# plt.ylabel("PDE residual")
-# plt.show()
 
