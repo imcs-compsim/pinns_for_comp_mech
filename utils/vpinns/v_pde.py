@@ -75,6 +75,7 @@ class VariationalPDE(Data):
         geometry,
         weak_form,
         bcs,
+        additional_domain_eq=None,
         num_domain=0,
         num_boundary=0,
         train_distribution="Hammersley",
@@ -87,6 +88,7 @@ class VariationalPDE(Data):
         self.geom = geometry
         self.bcs = bcs if isinstance(bcs, (list, tuple)) else [bcs]
         self.weak_form = weak_form
+        self.additional_domain_eq=additional_domain_eq
 
         self.num_domain = num_domain
         self.num_boundary = num_boundary
@@ -120,50 +122,53 @@ class VariationalPDE(Data):
         elif backend_name == "jax":
             # JAX requires pure functions
             outputs_pde = (outputs, aux[0])
-
+        
         bcs_start = np.cumsum([0] + self.num_bcs)
         bcs_start = list(map(int, bcs_start))
         
         if self.weak_form is not None:
-            if get_num_args(self.weak_form) == 8:
+            if get_num_args(self.weak_form) == 9:
                 n_gp = self.geom.n_gp
                 n_t = self.geom.n_test_func
+                n_e = self.geom.n_elements
                 f = 0
                 pde_start = bcs_start[-1]
-                for e in range(self.geom.n_elements):
-                    element_loss = bkd.reshape(bkd.stack(
-                                    [
-                                    bkd.reduce_sum(
-                                        self.weak_form(inputs, 
-                                                       outputs_pde, 
-                                                       pde_start, 
-                                                       pde_start+n_gp, 
-                                                       bkd.as_tensor(self.geom.jacobian[e]),
-                                                       bkd.as_tensor(self.geom.global_element_weights[e]),
-                                                       bkd.as_tensor(self.geom.global_test_function[i][e]),
-                                                       bkd.as_tensor(self.geom.global_test_function_derivative[i][e])
-                                        )
-                                    )
-                                    for i in range(n_t)
-                                    ], axis=0
+
+                element_loss = bkd.reshape(bkd.stack(
+                                [
+                                bkd.sum(
+                                    self.weak_form(inputs, 
+                                                    outputs_pde, 
+                                                    pde_start,
+                                                    n_e,
+                                                    n_gp, 
+                                                    bkd.as_tensor(self.geom.jacobian),
+                                                    bkd.as_tensor(self.geom.global_element_weights),
+                                                    bkd.as_tensor(self.geom.global_test_function[i]),
+                                                    bkd.as_tensor(self.geom.global_test_function_derivative[i])
                                     ),
-                                    (-1,1)
-                                    )
-                    
-                    if self.geom.ele_func:
-                        residual_nn_element = element_loss - bkd.as_tensor(self.geom.global_element_function[e])
-                    else:
-                        residual_nn_element = element_loss
-                    
-                    loss_element = loss_fn(bkd.zeros_like(residual_nn_element), residual_nn_element)
-                    
-                    f += loss_element
-                    pde_start = pde_start + n_gp
-            
+                                dim=1)
+                                for i in range(n_t)
+                                ], axis=0
+                                ),
+                                (-1,n_e)
+                                )
+                
+                residual_nn_element = element_loss
+                
+                loss_element = loss_fn(bkd.zeros_like(residual_nn_element), residual_nn_element)
+                
+                f = bkd.reduce_sum(loss_element)
+                            
             losses = [f]
-            
+              
+        if self.additional_domain_eq is not None:
+            f = self.additional_domain_eq(inputs, outputs_pde)
             if not isinstance(f, (list, tuple)):
                 f = [f]
+            for residual in f:
+                mse_error = loss_fn(bkd.zeros_like(residual), residual)
+                losses.append(bkd.reduce_sum(mse_error))
 
         if not isinstance(loss_fn, (list, tuple)):
             loss_fn = [loss_fn] * (len(self.bcs))
@@ -172,7 +177,8 @@ class VariationalPDE(Data):
             beg, end = bcs_start[i], bcs_start[i + 1]
             # The same BC points are used for training and testing.
             error = bc.error(self.train_x, inputs, outputs, beg, end)
-            losses.append(loss_fn[i](bkd.zeros_like(error), error))
+            mse_error = loss_fn[i](bkd.zeros_like(error), error)
+            losses.append(bkd.reduce_sum(mse_error))
         return losses
 
     @run_if_all_none("train_x", "train_y", "train_aux_vars")
