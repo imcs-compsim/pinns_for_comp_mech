@@ -33,6 +33,7 @@ from utils.elasticity import elasticity_utils
 
 from deepxde import backend as bkd
 
+#dde.config.set_default_float('float64')
 
 # Define GMSH and geometry parameters
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 11}
@@ -132,11 +133,22 @@ def constitutive_law(x,y):
 
     return [term_x, term_y, term_xy]
 
-residual_form = "2"
+residual_form = "1"
 
 def weak_form(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights, g_test_function, g_test_function_derivative):
     
     if residual_form == "1":
+        vx = g_test_function[:,0:1]
+        vy = g_test_function[:,1:2]
+        
+        sigma_xx_x = dde.grad.jacobian(outputs, inputs, i=2, j=0)
+        sigma_yy_y = dde.grad.jacobian(outputs, inputs, i=3, j=1)
+        sigma_xy_x = dde.grad.jacobian(outputs, inputs, i=4, j=0)
+        sigma_xy_y = dde.grad.jacobian(outputs, inputs, i=4, j=1)
+        
+        residual = vx*vy*(sigma_xx_x[beg:] + sigma_xy_y[beg:] + sigma_xy_x[beg:] + sigma_yy_y[beg:])
+    
+    elif residual_form == "2":
         sigma_xx = outputs[:, 2:3]
         sigma_yy = outputs[:, 3:4]
         sigma_xy = outputs[:, 4:5]
@@ -149,7 +161,7 @@ def weak_form(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights, g_test_fun
         
         residual = -(sigma_xx[beg:]*vx_x*vy + sigma_xy[beg:]*(vx*vy_y + vx_x*vy) + sigma_yy[beg:]*vx*vy_y)
     
-    elif residual_form == "2":
+    elif residual_form == "3":
         vx = g_test_function[:,0:1]
         vy = g_test_function[:,1:2]
         
@@ -158,21 +170,7 @@ def weak_form(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights, g_test_fun
         sigma_xy_x = dde.grad.jacobian(outputs, inputs, i=4, j=0)
         sigma_xy_y = dde.grad.jacobian(outputs, inputs, i=4, j=1)
         
-        residual = vx*vy*(sigma_xx_x[beg:] + sigma_xy_y[beg:] + sigma_xy_x[beg:] + sigma_yy_y[beg:])
-    
-    elif residual_form == "3":
-        
-        sigma_xx = outputs[:, 2:3]
-        sigma_yy = outputs[:, 3:4]
-        sigma_xy = outputs[:, 4:5]
-        
-        vx_x = g_test_function_derivative[:,0:1]
-        vy_y = g_test_function_derivative[:,1:2]
-        
-        vx = g_test_function[:,0:1]
-        vy = g_test_function[:,1:2]
-        
-        residual_1 = sigma_xx[beg:]*vx_x*vy + sigma_xy[beg:]*(vx*vy_y + vx_x*vy) + sigma_yy[beg:]*vx*vy_y
+        residual_1 = vx*vy*(sigma_xx_x[beg:] + sigma_xy_y[beg:] + sigma_xy_x[beg:] + sigma_yy_y[beg:])
         
         # sigma_xx_x = dde.grad.jacobian(outputs, inputs, i=2, j=0)
         # sigma_yy_y = dde.grad.jacobian(outputs, inputs, i=3, j=1)
@@ -281,7 +279,7 @@ def calculate_loss():
         )
     steps = losses[:,0]
     pde_loss = losses[:,1:5].sum(axis=1)
-    neumann_loss = losses[:,6:9].sum(axis=1)
+    neumann_loss = losses[:,5:9].sum(axis=1)
     
     return steps, pde_loss, neumann_loss
 
