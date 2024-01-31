@@ -126,41 +126,43 @@ class VariationalPDE(Data):
         bcs_start = np.cumsum([0] + self.num_bcs)
         bcs_start = list(map(int, bcs_start))
         
+        losses=[]
+        
         if self.weak_form is not None:
-            if get_num_args(self.weak_form) == 9:
-                n_gp = self.geom.n_gp
-                n_t = self.geom.n_test_func
-                n_e = self.geom.n_elements
-                f = 0
-                pde_start = bcs_start[-1]
+            if not isinstance(self.weak_form, (list, tuple)):
+                self.weak_form = [self.weak_form]
+            for weak_form in self.weak_form:
+                if get_num_args(weak_form) == 9:
+                    n_gp = self.geom.n_gp
+                    n_t = self.geom.n_test_func
+                    n_e = self.geom.n_elements
+                    pde_start = bcs_start[-1]
 
-                element_loss = bkd.reshape(bkd.stack(
-                                [
-                                bkd.sum(
-                                    self.weak_form(inputs, 
-                                                    outputs_pde, 
-                                                    pde_start,
-                                                    n_e,
-                                                    n_gp, 
-                                                    bkd.as_tensor(self.geom.jacobian),
-                                                    bkd.as_tensor(self.geom.global_element_weights),
-                                                    bkd.as_tensor(self.geom.global_test_function[i]),
-                                                    bkd.as_tensor(self.geom.global_test_function_derivative[i])
+                    element_integral = bkd.reshape(bkd.stack(
+                                    [
+                                    bkd.sum(
+                                        weak_form(inputs, 
+                                                        outputs_pde, 
+                                                        pde_start,
+                                                        n_e,
+                                                        n_gp, 
+                                                        bkd.as_tensor(self.geom.jacobian),
+                                                        bkd.as_tensor(self.geom.global_element_weights),
+                                                        bkd.as_tensor(self.geom.global_test_function[i]),
+                                                        bkd.as_tensor(self.geom.global_test_function_derivative[i])
+                                        ),
+                                    dim=1)
+                                    for i in range(n_t)
+                                    ], axis=0
                                     ),
-                                dim=1)
-                                for i in range(n_t)
-                                ], axis=0
-                                ),
-                                (-1,n_e)
-                                )
-                
-                residual_nn_element = element_loss
-                
-                loss_element = loss_fn(bkd.zeros_like(residual_nn_element), residual_nn_element)
-                
-                f = bkd.reduce_sum(loss_element)
-                            
-            losses = [f]
+                                    (-1,n_e)
+                                    )
+                    
+                    loss_element = loss_fn(bkd.zeros_like(element_integral), element_integral)
+                    
+                    f = bkd.reduce_sum(loss_element)
+                    
+                    losses.append(f)
               
         if self.additional_domain_eq is not None:
             f = self.additional_domain_eq(inputs, outputs_pde)
@@ -250,7 +252,7 @@ class VariationalPDE(Data):
         self.train_x_bc = (
             np.vstack(x_bcs)
             if x_bcs
-            else np.empty([0, self.train_x_all.shape[-1]], dtype=config.real(np))
+            else np.empty([0, self.geom.mapped_coordinates.shape[-1]], dtype=config.real(np))
         )
         return self.train_x_bc
 
