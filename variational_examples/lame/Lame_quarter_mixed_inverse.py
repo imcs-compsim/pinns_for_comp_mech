@@ -6,11 +6,6 @@ import os
 import pandas as pd
 from pathlib import Path
 
-from utils.elasticity.elasticity_utils import stress_plane_stress, lin_iso_elasticity_plane_stress, stress_to_traction_2d, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
-from utils.geometry.geometry_utils import calculate_boundary_normals
-from utils.geometry.gmsh_models import QuarterCirclewithHole
-from utils.elasticity import elasticity_utils
-
 from utils.geometry.gmsh_models import QuarterCirclewithHole
 from utils.elasticity import elasticity_utils
 
@@ -22,34 +17,19 @@ from utils.vpinns.quad_rule import get_test_function_properties
 
 from utils.vpinns.v_pde import VariationalPDE
 
+from utils.elasticity.elasticity_utils import lin_iso_elasticity_plane_stress
+from utils.elasticity.elasticity_utils import calculate_traction_mixed_formulation, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
+from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from utils.geometry.custom_geometry import GmshGeometry2D
+from utils.geometry.gmsh_models import QuarterCirclewithHole
+from utils.elasticity import elasticity_utils
+
 from deepxde import backend as bkd
-
-'''
-Solves inverse problem for a hollow quarter cylinder under internal pressure (Lame problem) using mixed-variable formulation.
-Unknown quantities:
-    - Young's modulus
-    - Poisson's ratio
-    - Pressure
-    
-Experimental data is generated using PINNs. Data file name:
-    - Inverse_mixed_variable
-
-We add displacement only in x direction and normal stress in y direction to training from the experimental data.
-
-Note: Inverse Lame with displacement based approach did not give good accucary in this example, when we add inlet pressure as also unknown. 
-@tsahin thinks that we need stress information to obtain the inlet pressure. It is not about the number of quantities we addd but the quality of information.
-Therefore we need 1 displacement information and 1 stress. 
-
-Reference solution:
-https://onlinelibrary.wiley.com/doi/epdf/10.1002/nme.6132
-
-@author: tsahin
-'''
 
 
 # Define GMSH and geometry parameters
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 11}
-quarter_circle_with_hole = QuarterCirclewithHole(center=[0,0,0], inner_radius=1, outer_radius=2, mesh_size=0.3, gmsh_options=gmsh_options)
+quarter_circle_with_hole = QuarterCirclewithHole(center=[0,0,0], inner_radius=1, outer_radius=2, mesh_size=0.5, gmsh_options=gmsh_options)
 
 quad_rule = GaussQuadratureRule(rule_name="gauss_labotto", dimension=2, ngp=3) # gauss_legendre gauss_labotto
 coord_quadrature, weight_quadrature = quad_rule.generate()
@@ -173,19 +153,15 @@ def weak_form_y(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights, g_test_f
 
 def pressure_inner_x(x, y, X):
     
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
-    
-    normals, cond = calculate_boundary_normals(X,geom)
-    Tx, _, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
+    normals, _ = calculate_boundary_normals(X,geom)
+    Tx, _, _, _  = calculate_traction_mixed_formulation(x, y, X)
 
     return Tx + pressure_inlet_predicted*normals[:,0:1]
 
 def pressure_inner_y(x, y, X):
 
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
-    
-    normals, cond = calculate_boundary_normals(X,geom)
-    _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
+    normals, _ = calculate_boundary_normals(X,geom)
+    _, Ty, _, _  = calculate_traction_mixed_formulation(x, y, X)
 
     return Ty + pressure_inlet_predicted*normals[:,1:2]
 
@@ -193,22 +169,14 @@ def boundary_outer(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center_outer, axis=-1), radius_outer)
 
 def boundary_inner(x, on_boundary):
-    return on_boundary and np.isclose(np.linalg.norm(x - center_inner, axis=-1), radius_inner)
-
-def boundary_left(x, on_boundary):
-    return on_boundary and np.isclose(x[0],0)
-
-def boundary_bottom(x, on_boundary):
-    return on_boundary and np.isclose(x[1],0)
+    return on_boundary and np.isclose(np.linalg.norm(x - center_inner, axis=-1), radius_inner) #and ~np.logical_and(np.isclose(x[0],1),np.isclose(x[1],0)) and ~np.logical_and(np.isclose(x[0],0),np.isclose(x[1],1))
 
 bc1 = dde.OperatorBC(geom, pressure_inner_x, boundary_inner)
 bc2 = dde.OperatorBC(geom, pressure_inner_y, boundary_inner)
-bc3 = dde.DirichletBC(geom, lambda _: 0.0, boundary_left, component=0)
-bc4 = dde.DirichletBC(geom, lambda _: 0.0, boundary_bottom, component=1)
-bc5 = dde.OperatorBC(geom, zero_neumman_plane_stress_x, boundary_outer)
-bc6 = dde.OperatorBC(geom, zero_neumman_plane_stress_y, boundary_outer)
+bc3 = dde.OperatorBC(geom, zero_neumann_x_mixed_formulation, boundary_outer)
+bc4 = dde.OperatorBC(geom, zero_neumann_y_mixed_formulation, boundary_outer)
 
-inv_data = str(Path(__file__).parent.parent.parent)+"/data/lame/Inverse_mixed_variable"
+inv_data = str(Path(__file__).parent.parent.parent)+"/elasticity_2d/data/lame/Inverse_mixed_variable"
 data = np.loadtxt(inv_data)
 np.random.seed(42)
 np.random.shuffle(data)
@@ -222,7 +190,7 @@ n_dummy = 1
 data = VariationalPDE(
     geom,
     [weak_form_x,weak_form_y],
-    [bc1, bc2, bc3, bc4, bc5, bc6, observe_u, observe_sigma_yy],
+    [bc1, bc2, bc3, bc4, observe_u, observe_sigma_yy],
     constitutive_law,
     num_domain=n_dummy,
     num_boundary=n_dummy,
@@ -230,6 +198,17 @@ data = VariationalPDE(
     train_distribution = "Sobol",
     anchors=data_xy
 )
+
+def output_transform(x, y):
+    u = y[:, 0:1]
+    v = y[:, 1:2]
+    sigma_xx = y[:, 2:3]
+    sigma_yy = y[:, 3:4]
+    sigma_xy = y[:, 4:5]
+    x_loc = x[:, 0:1]
+    y_loc = x[:, 1:2]
+    
+    return bkd.concat([u*(x_loc),v*(y_loc), sigma_xx, sigma_yy, sigma_xy*x_loc*y_loc], axis=1)
 
 # two inputs x and y, output is ux and uy
 layer_size = [2] + [50] * 5 + [5]
@@ -240,16 +219,17 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 model = dde.Model(data, net)
 
 external_var_list = [e_predicted, nu_predicted, pressure_inlet_predicted]
-
 parameter_file_name = "lame_inverse_mixed_variable.dat"
+variable = dde.callbacks.VariableValue(external_var_list, period=10, filename=parameter_file_name, precision=4)
 
-variable = dde.callbacks.VariableValue(external_var_list, period=10, filename=parameter_file_name)
+def mean_squared_error(y_true, y_pred):
+    return bkd.mean(bkd.square(y_true - y_pred), dim=0)
 
 n_iter_adam = 2000
-model.compile("adam", lr=0.001, external_trainable_variables=external_var_list)
+model.compile("adam", lr=0.001, loss=mean_squared_error, external_trainable_variables=external_var_list)
 losshistory, train_state = model.train(epochs=n_iter_adam, callbacks=[variable], display_every=100)
 
-model.compile("L-BFGS-B", external_trainable_variables=external_var_list)
+model.compile("L-BFGS-B", loss=mean_squared_error, external_trainable_variables=external_var_list)
 losshistory, train_state = model.train(callbacks=[variable], display_every=100)
 
 # ######## PLOT estimated parameters vs actuals ##########
@@ -287,7 +267,7 @@ line_3.set_label(r'Predicted $P$')
 ax.legend(prop={'size': 25}, loc=6)
 
 ax.set_xlabel("Epochs", size=25)
-ax.set_ylabel(r"Estimated parameter values", size=25)
+ax.set_ylabel(r"Parameters", size=25)
 ax.tick_params(labelsize=20)
 
 fig.savefig("lame_inverse_mixed_variable.png", dpi=300)
