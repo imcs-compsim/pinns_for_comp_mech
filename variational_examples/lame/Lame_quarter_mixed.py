@@ -35,6 +35,50 @@ from deepxde import backend as bkd
 
 #dde.config.set_default_float('float64')
 
+"""
+Solves the quarter Lame problem using VPINNs.
+
+  * * * * * *
+  *            *
+  *              *
+  *                *     
+     *              *   
+       *             * 
+        *             *    
+  y      *            *
+  |__x   * * * * * * **
+  -------| --> R_i
+  ---------------------| -->R_o     
+ 
+Dirichlet BCs:
+
+u_x(x=0,y) = 0
+u_y(x,y=0) = 0
+
+where u_x represents the displacement in x direction, while u_y represents the displacement in y direction. 
+
+Neumann boundary conditions (in polar coordinates)
+P(r=R_i,\theta) = 1 
+
+In this problem set the material properties as follows:
+    - lame : 1153.846
+    - shear: 769.23
+
+which will lead Young's modulus: 2000 and Poisson's coeff: 0.3. In this example, the Dirichlet boundary conditions are enforced hardly by choosing a surrogate model as follows:
+
+u_s = u_x*x
+v_s = u_y*y
+
+where u_x and u_y are the network predictions.   
+
+VPINNs weak formulation based on R(1) and R(2): https://www.worldscientific.com/doi/10.1142/S1758825123500655
+
+The problem definition and analytical solution:
+https://par.nsf.gov/servlets/purl/10100420
+
+@author: tsahin
+"""
+
 # Define GMSH and geometry parameters
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 11}
 quarter_circle_with_hole = QuarterCirclewithHole(center=[0,0,0], inner_radius=1, outer_radius=2, mesh_size=0.3, gmsh_options=gmsh_options)
