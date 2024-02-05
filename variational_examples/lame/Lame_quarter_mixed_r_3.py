@@ -33,8 +33,6 @@ from utils.elasticity import elasticity_utils
 
 from deepxde import backend as bkd
 
-#dde.config.set_default_float('float64')
-
 """
 Solves the quarter Lame problem using VPINNs.
 
@@ -71,13 +69,15 @@ v_s = u_y*y
 
 where u_x and u_y are the network predictions.   
 
-VPINNs weak formulation based on R(1) and R(2): https://www.worldscientific.com/doi/10.1142/S1758825123500655
+VPINNs weak formulation based on R(3): https://www.worldscientific.com/doi/10.1142/S1758825123500655
 
 The problem definition and analytical solution:
 https://par.nsf.gov/servlets/purl/10100420
 
 @author: tsahin
 """
+
+#dde.config.set_default_float('float64')
 
 # Define GMSH and geometry parameters
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 11}
@@ -177,66 +177,86 @@ def constitutive_law(x,y):
 
     return [term_x, term_y, term_xy]
 
-residual_form = "1"
+residual_form = "3"
 
-def weak_form_x(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights, g_test_function, g_test_function_derivative):
+def weak_form_1(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights, g_test_function, g_test_function_derivative):
+    vx = g_test_function[:,0:1]
+    vy = g_test_function[:,1:2]
     
-    if residual_form == "1":
-        vx = g_test_function[:,0:1]
-        vy = g_test_function[:,1:2]
-        
-        sigma_xx_x = dde.grad.jacobian(outputs, inputs, i=2, j=0)
-        sigma_xy_y = dde.grad.jacobian(outputs, inputs, i=4, j=1)
-        
-        residual_x = vx*vy*(sigma_xx_x[beg:] + sigma_xy_y[beg:])
-        
-    elif residual_form == "2":
-        sigma_xx = outputs[:, 2:3]
-        sigma_xy = outputs[:, 4:5]
-        
-        vx_x = g_test_function_derivative[:,0:1]
-        vy_y = g_test_function_derivative[:,1:2]
-        
-        vx = g_test_function[:,0:1]
-        vy = g_test_function[:,1:2]
-        
-        residual_x = -(sigma_xx[beg:]*vx_x*vy + sigma_xy[beg:]*vx*vy_y)
+    sigma_xx_xx = dde.grad.hessian(outputs, inputs, component=2, i=0, j=0)
+    sigma_xy_xy = dde.grad.hessian(outputs, inputs, component=4, i=0, j=1)
     
-    weighted_residual_x = g_weights[:,0:1]*g_weights[:,1:2]*(residual_x)*g_jacobian
+    residual = vx*vy*(sigma_xx_xx[beg:] + sigma_xy_xy[beg:])
+    weighted_residual_x = g_weights[:,0:1]*g_weights[:,1:2]*(residual)*g_jacobian
     
     return bkd.reshape(weighted_residual_x, (n_e, n_gp))
 
-def weak_form_y(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights, g_test_function, g_test_function_derivative):
+def weak_form_2(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights, g_test_function, g_test_function_derivative):
+    vx = g_test_function[:,0:1]
+    vy = g_test_function[:,1:2]
     
-    if residual_form == "1":
-        vx = g_test_function[:,0:1]
-        vy = g_test_function[:,1:2]
-        
-        sigma_yy_y = dde.grad.jacobian(outputs, inputs, i=3, j=1)
-        sigma_xy_x = dde.grad.jacobian(outputs, inputs, i=4, j=0)
-        
-        residual_y = vx*vy*(sigma_yy_y[beg:] + sigma_xy_x[beg:])
+    sigma_xx_xy = dde.grad.hessian(outputs, inputs, component=2, i=0, j=1)
+    sigma_xy_yy = dde.grad.hessian(outputs, inputs, component=4, i=1, j=1)
     
-    elif residual_form == "2":
-        sigma_yy = outputs[:, 3:4]
-        sigma_xy = outputs[:, 4:5]
-        
-        vx_x = g_test_function_derivative[:,0:1]
-        vy_y = g_test_function_derivative[:,1:2]
-        
-        vx = g_test_function[:,0:1]
-        vy = g_test_function[:,1:2]
-        
-        residual_y = -(sigma_xy[beg:]*vx_x*vy + sigma_yy[beg:]*vx*vy_y)
+    residual = vx*vy*(sigma_xx_xy[beg:] + sigma_xy_yy[beg:])
+    weighted_residual_x = g_weights[:,0:1]*g_weights[:,1:2]*(residual)*g_jacobian
     
-    weighted_residual_y = g_weights[:,0:1]*g_weights[:,1:2]*(residual_y)*g_jacobian
+    return bkd.reshape(weighted_residual_x, (n_e, n_gp))
+
+def weak_form_3(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights, g_test_function, g_test_function_derivative):
+    vx = g_test_function[:,0:1]
+    vy = g_test_function[:,1:2]
     
-    return bkd.reshape(weighted_residual_y, (n_e, n_gp))
+    sigma_xy_xx = dde.grad.hessian(outputs, inputs, component=4, i=0, j=0)
+    sigma_yy_xy = dde.grad.hessian(outputs, inputs, component=3, i=0, j=1)
+    
+    residual = vx*vy*(sigma_xy_xx[beg:] + sigma_yy_xy[beg:])
+    weighted_residual_x = g_weights[:,0:1]*g_weights[:,1:2]*(residual)*g_jacobian
+    
+    return bkd.reshape(weighted_residual_x, (n_e, n_gp))
+
+def weak_form_4(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights, g_test_function, g_test_function_derivative):
+    vx = g_test_function[:,0:1]
+    vy = g_test_function[:,1:2]
+    
+    sigma_xy_xy = dde.grad.hessian(outputs, inputs, component=4, i=0, j=1)
+    sigma_yy_yy = dde.grad.hessian(outputs, inputs, component=3, i=1, j=1)
+    
+    residual = vx*vy*(sigma_xy_xy[beg:] + sigma_yy_yy[beg:])
+    weighted_residual_x = g_weights[:,0:1]*g_weights[:,1:2]*(residual)*g_jacobian
+    
+    return bkd.reshape(weighted_residual_x, (n_e, n_gp))
+
+def weak_form_5(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights, g_test_function, g_test_function_derivative):
+    
+    vx = g_test_function[:,0:1]
+    vy = g_test_function[:,1:2]
+    
+    sigma_xx_x = dde.grad.jacobian(outputs, inputs, i=2, j=0)
+    sigma_xy_y = dde.grad.jacobian(outputs, inputs, i=4, j=1)
+    
+    residual = vx*vy*(sigma_xx_x[beg:] + sigma_xy_y[beg:])
+    weighted_residual_x = g_weights[:,0:1]*g_weights[:,1:2]*(residual)*g_jacobian
+    
+    return bkd.reshape(weighted_residual_x, (n_e, n_gp))
+
+def weak_form_6(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights, g_test_function, g_test_function_derivative):
+    
+    vx = g_test_function[:,0:1]
+    vy = g_test_function[:,1:2]
+    
+    sigma_yy_y = dde.grad.jacobian(outputs, inputs, i=3, j=1)
+    sigma_xy_x = dde.grad.jacobian(outputs, inputs, i=4, j=0)
+    
+    residual = vx*vy*(sigma_yy_y[beg:] + sigma_xy_x[beg:])
+    weighted_residual_x = g_weights[:,0:1]*g_weights[:,1:2]*(residual)*g_jacobian
+    
+    return bkd.reshape(weighted_residual_x, (n_e, n_gp))
 
 n_dummy = 1
 data = VariationalPDE(
     geom,
-    [weak_form_x,weak_form_y],
+    [weak_form_1,weak_form_2,weak_form_3,weak_form_4,weak_form_5,weak_form_6],
     [bc1,bc2,bc3,bc4],
     constitutive_law,
     num_domain=n_dummy,
