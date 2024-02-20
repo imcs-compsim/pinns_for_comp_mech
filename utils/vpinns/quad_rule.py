@@ -304,8 +304,8 @@ def lagrange_basis_shape_functions_derivative(n, x):
                 if k != i:
                     for j in range(n_nodes):
                         if j != i and j != k:
-                            dN_i_inner *= (x - node_coord[j]) / (node_coord[i] - node_coord[j])*(1/(node_coord[i]-node_coord[k]))
-                    dN_i = dN_i + dN_i_inner
+                            dN_i_inner *= (x - node_coord[j]) / (node_coord[i] - node_coord[j])
+                    dN_i = dN_i + dN_i_inner*(1/(node_coord[i]-node_coord[k]))
         # normalize it
         # N_i = dN_i/dN_i[np.abs(dN_i).argmax()]
         
