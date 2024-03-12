@@ -16,7 +16,7 @@ from pathlib import Path
 from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain
 from utils.elasticity.elasticity_utils import calculate_traction_mixed_formulation, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
 from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
-from utils.geometry.custom_geometry import GmshGeometry2D
+from utils.geometry.custom_geometry import GmshGeometryElement
 from utils.geometry.gmsh_models import QuarterCirclewithHole
 from utils.elasticity import elasticity_utils
 
@@ -39,7 +39,7 @@ gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=False)
 
 revert_curve_list = ["curve_2"]
 revert_normal_dir_list = [2,2,1,2]
-geom = GmshGeometry2D(gmsh_model, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
+geom = GmshGeometryElement(gmsh_model, dimension=2, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
 
 radius_inner = quarter_circle_with_hole.inner_radius
 center_inner = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.center[1]]
@@ -94,7 +94,7 @@ data = dde.data.PDE(
     [bc1,bc2,bc3,bc4],
     num_domain=n_dummy,
     num_boundary=n_dummy,
-    num_test=n_dummy,
+    num_test=None,
     train_distribution = "Sobol"
 )
 
@@ -266,7 +266,7 @@ gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=False)
 
 revert_curve_list = ["curve_2"]
 revert_normal_dir_list = [2,2,1,2]
-geom = GmshGeometry2D(gmsh_model, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
+geom = GmshGeometryElement(gmsh_model, dimension=2, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
 
 X, offset, cell_types, dol_triangles = geom.get_mesh()
 
