@@ -2,12 +2,12 @@ import deepxde as dde
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from deepxde.backend import tf
+from deepxde import backend as bkd
 from pyevtk.hl import unstructuredGridToVTK
 
 from utils.elasticity.elasticity_utils import stress_plane_stress, problem_parameters, stress_to_traction_2d
 from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
-from utils.geometry.custom_geometry import GmshGeometry2D
+from utils.geometry.custom_geometry import GmshGeometryElement
 from utils.geometry.gmsh_models import QuarterCirclewithHole
 from utils.elasticity import elasticity_utils
 
@@ -31,7 +31,7 @@ gmsh_model = quarter_circle_with_hole.generateGmshModel()
 
 revert_curve_list = ["curve_2"]
 revert_normal_dir_list = [2,2,1,2]
-geom = GmshGeometry2D(gmsh_model, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
+geom = GmshGeometryElement(gmsh_model, dimension=2, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
 
 radius_inner = quarter_circle_with_hole.inner_radius
 center_inner = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.center[1]]
@@ -151,13 +151,13 @@ data = dde.data.PDE(
     [bc1, bc2, bc3, bc4, bc5],
     num_domain=n_dummy,
     num_boundary=n_dummy,
-    num_test=n_dummy,
+    num_test=None,
     train_distribution = "Sobol"
 )
 
 # non-dimensionalize the input using characteristic length 
 def input_transform(x):
-    return tf.concat([x[:,0:1]/characteristic_length, x[:,1:2]/characteristic_length], axis=1)
+    return bkd.concat([x[:,0:1]/characteristic_length, x[:,1:2]/characteristic_length], axis=1)
 
 # two inputs x and y, output is ux and uy
 layer_size = [2] + [30] * 5 + [5]
