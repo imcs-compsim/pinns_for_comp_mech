@@ -5,6 +5,187 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+class GmshGeometry3D(Geometry):
+    def __init__(self, gmsh_model, external_dim_size=None):
+        self.gmsh_model = gmsh_model
+        self.external_dim_size = external_dim_size
+        self.boundary_normal_global = self.fun_boundary_normal_global()
+        self.bbox = (np.array([1,1,1]))
+        super(GmshGeometry3D, self).__init__(
+            3, self.bbox, 1
+        )
+    
+    def inside(self, x):
+        """Check if x is inside the geometry (including the boundary)."""
+
+        node_tag, node_coords_all, parametricCoord  = self.gmsh_model.mesh.getNodes(dim=self.dim, tag=-1, includeBoundary=True)
+        node_tag_inside = self.gmsh_model.mesh.getNodes(dim=self.dim, tag=-1, includeBoundary=False)[0]
+
+        _, _, node_coords_xyz_inside = self.order_coordinates(node_coords_all, node_tag, node_tag_inside=node_tag_inside)
+
+        if self.external_dim_size:
+            node_coords_xyz_inside = self.add_external_dim(node_coords_xyz_inside)
+
+        return self.is_in_tolerance(x, node_coords_xyz_inside)
+
+    def on_boundary(self, x):
+        """Check if x is on the geometry boundary."""
+
+        node_tag, node_coords_all, _  = self.gmsh_model.mesh.getNodes(dim=self.dim, tag=-1, includeBoundary=True)
+        node_tag_inside = self.gmsh_model.mesh.getNodes(dim=self.dim, tag=-1, includeBoundary=False)[0]
+        node_tag_boundary = np.setdiff1d(node_tag, node_tag_inside)
+
+        _, node_coords_xyz_boundary, _ = self.order_coordinates(node_coords_all, node_tag, node_tag_boundary, node_tag_inside)
+
+        if self.external_dim_size:
+            node_coords_xyz_boundary = self.add_external_dim(node_coords_xyz_boundary)
+        
+        return self.is_in_tolerance(x, node_coords_xyz_boundary)
+    
+    def is_in_tolerance(self, provided, target):
+            
+        tolerance = 1e-5
+        
+        contained_rows = np.all(np.isclose(provided[:, None, :], target, rtol=tolerance, atol=tolerance), axis=2)
+        contained_indices_boolean = np.any(contained_rows, axis=1)
+        return contained_indices_boolean
+        
+    def boundary_normal(self, x):
+        """Slice the unit normal at x for Neumann or Robin boundary conditions."""
+
+        n, uniq = self.boundary_normal_global
+
+        if self.external_dim_size:
+            x = np.delete(x, -1, 1)
+
+        mask = []
+        for x_i in x:
+            mask.extend(np.where(np.all(np.isclose(x_i,uniq),axis=1))[0].tolist()) 
+        
+        return n[mask]
+        
+    def fun_boundary_normal_global(self):
+        """Compute the unit normal on the geometry boundary"""
+
+        # fig = plt.figure(figsize=(8, 8), dpi=80)
+
+        node_tag_boundary, node_coords_xyz_boundary, normal_boundary = [],[],[]
+        border = {}
+        start = 0
+
+        for geometry_entitiy_pair in self.gmsh_model.getEntities():
+            if geometry_entitiy_pair[0] == 2: # if it is a surface
+                s_tag = geometry_entitiy_pair[1]
+                surface_name = "surface_" + str(s_tag)
+                
+                # get node tag, coordinates and parametric coordinates form geometry
+                node_tag, node_coords, parameteric_coords = self.gmsh_model.mesh.getNodes(dim=2, tag = s_tag, includeBoundary=True) # dim, curve tag, includeBoundary
+                # get normals
+                normals = self.gmsh_model.getNormal(s_tag, parameteric_coords)
+                
+                
+                # reshape coordinates and first derivative
+                node_coords = node_coords.reshape(-1,3)
+                normals = normals.reshape(-1,3)
+
+                # store intermediate quantities in the global variables
+                node_tag_boundary.extend(node_tag.tolist())
+                node_coords_xyz_boundary.extend(node_coords.tolist())
+                normal_boundary.extend(normals.tolist())
+
+                # distinguish start/end positio for each surface 
+                end = start+node_coords.shape[0]
+                border[surface_name] = [start,end]
+                start = end
+
+        # convert them into numpy array
+        node_tag_boundary = np.array(node_tag_boundary)
+        node_coords_xyz_boundary = np.array(node_coords_xyz_boundary)
+        normal_boundary = np.array(normal_boundary)
+
+        # get the unique nodes
+        u, idx, c = np.unique(node_tag_boundary, return_counts=True, return_index=True)
+        # get the repeated nodes that have more than 1 boundary normal
+        # repeated_node_tag = u[c>1]
+        
+        # get the unique coordinates and corresponding unit boundary normals of the geometry
+        uniq = node_coords_xyz_boundary[sorted(idx)]
+        normal_boundary = normal_boundary[sorted(idx)] 
+
+        return normal_boundary, uniq
+        
+    def random_points(self, n, random="pseudo"):
+        """Get collocation points from geometry""" 
+
+        node_tag, node_coords, _  = self.gmsh_model.mesh.getNodes(dim=self.dim, tag=-1, includeBoundary=False)
+
+        node_coords_xyz, _, _ = self.order_coordinates(node_coords, node_tag)
+
+        if self.external_dim_size:
+            node_coords_xyz = self.add_external_dim(node_coords_xyz)
+
+        return node_coords_xyz.astype(config.real(np))
+    
+    def random_boundary_points(self, n, random="pseudo"):
+        """Get boundary points from geometry"""
+
+        node_tag, node_coords, _  = self.gmsh_model.mesh.getNodes(dim=self.dim, tag=-1, includeBoundary=True)
+        node_tag_inside = self.gmsh_model.mesh.getNodes(dim=self.dim, tag=-1, includeBoundary=False)[0]
+        node_tag_boundary = np.setdiff1d(node_tag, node_tag_inside)
+
+        _, node_coords_xyz_boundary, _ = self.order_coordinates(node_coords, node_tag, node_tag_boundary, node_tag_inside)
+
+        if self.external_dim_size:
+            node_coords_xyz_boundary = self.add_external_dim(node_coords_xyz_boundary)
+
+        return node_coords_xyz_boundary.astype(config.real(np))
+        
+    def get_mesh(self):
+        None
+    
+    def order_coordinates(self, node_coords, node_tag, node_tag_boundary=None, node_tag_inside=None):
+        '''Get sorted coordinates and node tags'''
+
+        node_tag -= 1 # gmsh node numbering start with 1 but we need 0         
+
+        node_coords_xyz = node_coords.reshape(-1,3)
+        node_coords_xyz = node_coords_xyz[node_tag.argsort()][:,0:3]
+        
+        node_coords_xyz_boundary = None
+        node_coords_xyz_inside = None
+
+        if node_tag_boundary is not None:
+            node_tag_boundary -= 1
+            node_coords_xyz_boundary = node_coords_xyz[node_tag_boundary]
+        if node_tag_inside is not None:
+            node_tag_inside -= 1 
+            node_coords_xyz_inside = node_coords_xyz[node_tag_inside]
+
+        return node_coords_xyz, node_coords_xyz_boundary, node_coords_xyz_inside
+    
+    def get_mesh(self):
+        """Get the mesh for post-processing"""
+
+        node_tag, node_coords, _  = self.gmsh_model.mesh.getNodes(self.dim, -1, includeBoundary=True)
+
+        node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords, node_tag)
+
+        element_types, element_tags, node_tags = self.gmsh_model.mesh.getElements(self.dim,-1)
+
+        if element_types[0] == 4: # 4-node tetrahedron
+            raise NotImplemented("Elemental info for 4-node tetrahedron not implemented!")
+        
+        elif element_types[0] == 5: # 8-node hexahedron
+            quads = node_tags[0].reshape(-1,8) - 1
+            offset = np.arange(8,quads.shape[0]*quads.shape[1]+1, quads.shape[1])
+            cell_types = np.ones(quads.shape[0])*12 #https://docs.vtk.org/en/latest/design_documents/VTKFileFormats.html check cell types, for hexahedron it is 12
+            elements = quads
+        
+        if self.external_dim_size:
+            node_coords_xy = self.add_external_dim(node_coords_xy)
+
+        return node_coords_xy, offset, cell_types, elements
+        
 class GmshGeometry2D(Geometry):
     def __init__(self, gmsh_model, external_dim_size=None, borders=None, revert_curve_list=None, revert_normal_dir_list=None):
         self.gmsh_model = gmsh_model
