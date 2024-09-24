@@ -485,10 +485,10 @@ def get_elastic_strain_3d(x,y):
     
     # Shear strains
     eps_xy = 1/2 * (dde.grad.jacobian(y, x, i=1, j=0) + dde.grad.jacobian(y, x, i=0, j=1))
-    eps_xz = 1/2 * (dde.grad.jacobian(y, x, i=2, j=0) + dde.grad.jacobian(y, x, i=0, j=2))
     eps_yz = 1/2 * (dde.grad.jacobian(y, x, i=2, j=1) + dde.grad.jacobian(y, x, i=1, j=2))
-    
-    return eps_xx, eps_yy, eps_zz, eps_xy, eps_xz, eps_yz
+    eps_xz = 1/2 * (dde.grad.jacobian(y, x, i=2, j=0) + dde.grad.jacobian(y, x, i=0, j=2))
+
+    return eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz 
 
 def get_stress_tensor(x,y):
     '''
@@ -506,7 +506,7 @@ def get_stress_tensor(x,y):
     sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz: tensor
         contains the components of stress tensor in 3D
     '''
-    eps_xx, eps_yy, eps_zz, eps_xy, eps_xz, eps_yz = get_elastic_strain_3d(x,y)
+    eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz = get_elastic_strain_3d(x,y)
 
     nu,lame,shear,e_modul = problem_parameters()
     
