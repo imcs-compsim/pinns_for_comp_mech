@@ -65,7 +65,7 @@ data = dde.data.PDE(
     geom,
     pde_mixed_3d,
     [],
-    num_domain=n_dummy,
+    num_domain=300,
     num_boundary=n_dummy,
     num_test=None,
     train_distribution = "Sobol"
