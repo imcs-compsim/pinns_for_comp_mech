@@ -585,14 +585,14 @@ def pde_mixed_3d(x, y):
     sigma_xy_y = dde.grad.jacobian(y, x, i=6, j=1)
     #sigma_xy_z = dde.grad.jacobian(y, x, i=6, j=2)
     
-    sigma_xz_x = dde.grad.jacobian(y, x, i=7, j=0)
-    #sigma_xz_y = dde.grad.jacobian(y, x, i=7, j=1)
-    sigma_xz_z = dde.grad.jacobian(y, x, i=7, j=2)
+    #sigma_yz_x = dde.grad.jacobian(y, x, i=7, j=0)
+    sigma_yz_y = dde.grad.jacobian(y, x, i=7, j=1)
+    sigma_yz_z = dde.grad.jacobian(y, x, i=7, j=2)
     
-    #sigma_yz_x = dde.grad.jacobian(y, x, i=8, j=0)
-    sigma_yz_y = dde.grad.jacobian(y, x, i=8, j=1)
-    sigma_yz_z = dde.grad.jacobian(y, x, i=8, j=2)
-
+    sigma_xz_x = dde.grad.jacobian(y, x, i=8, j=0)
+    #sigma_xz_y = dde.grad.jacobian(y, x, i=8, j=1)
+    sigma_xz_z = dde.grad.jacobian(y, x, i=8, j=2)
+    
     # Momentum equations
     momentum_x = sigma_xx_x + sigma_xy_y + sigma_xz_z
     momentum_y = sigma_yy_y + sigma_xy_x + sigma_yz_z
