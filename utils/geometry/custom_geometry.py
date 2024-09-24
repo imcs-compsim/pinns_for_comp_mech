@@ -116,14 +116,21 @@ class GmshGeometry3D(Geometry):
         
     def random_points(self, n, random="pseudo"):
         """Get collocation points from geometry""" 
-
+        np.random.seed(42)
+        
         node_tag, node_coords, _  = self.gmsh_model.mesh.getNodes(dim=self.dim, tag=-1, includeBoundary=False)
 
         node_coords_xyz, _, _ = self.order_coordinates(node_coords, node_tag)
 
         if self.external_dim_size:
             node_coords_xyz = self.add_external_dim(node_coords_xyz)
-
+            
+        if not (n==1):
+            if n>node_coords_xyz.shape[0]:
+                raise Warning(f"The number o desired samples (num_domain={n}) cannot be larger than total number of total points inside of the domain ({node_coords_xyz.shape[0]})")
+            random_indices = np.random.choice(node_coords_xyz.shape[0], size=n, replace=False)
+            node_coords_xyz = node_coords_xyz[random_indices]
+            
         return node_coords_xyz.astype(config.real(np))
     
     def random_boundary_points(self, n, random="pseudo"):
@@ -139,9 +146,6 @@ class GmshGeometry3D(Geometry):
             node_coords_xyz_boundary = self.add_external_dim(node_coords_xyz_boundary)
 
         return node_coords_xyz_boundary.astype(config.real(np))
-        
-    def get_mesh(self):
-        None
     
     def order_coordinates(self, node_coords, node_tag, node_tag_boundary=None, node_tag_inside=None):
         '''Get sorted coordinates and node tags'''
