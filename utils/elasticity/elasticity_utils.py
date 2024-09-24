@@ -464,19 +464,19 @@ def zero_neumann_y_mixed_formulation(x, y, X):
 #################################################################################################################################################################################
 def get_elastic_strain_3d(x,y):
     '''
-    Calculates the strain tensor components for plane stress condition in 2D.
+    Calculates the strain tensor components in 3D.
 
     Parameters
     ----------
-    x : Placeholder (tf)
+    x : Placeholder (tensor)
         contains the placeholder for coordinates of input points
-    y : Placeholder (tf)
+    y : Placeholder (tensor)
         contains the placeholder for network output
 
     Returns 
     -------
-    sigma_xx, sigma_yy, sigma_xy: Placeholder (tf)
-        contains the components of stress tensor 
+    eps_xx, eps_yy, eps_zz, eps_xy, eps_xz, eps_yz: tensor
+        contains the components of strain tensor in 3D
     '''
     # Normal strains
     eps_xx = dde.grad.jacobian(y, x, i=0, j=0)
@@ -492,19 +492,19 @@ def get_elastic_strain_3d(x,y):
 
 def get_stress_tensor(x,y):
     '''
-    Calculates the stress tensor components for plane stress condition.
+    Calculates the stress tensor components in 3D.
 
     Parameters
     ----------
-    x : Placeholder (tf)
+    x : Placeholder (tensor)
         contains the placeholder for coordinates of input points
-    y : Placeholder (tf)
+    y : Placeholder (tensor)
         contains the placeholder for network output
 
     Returns 
     -------
-    sigma_xx, sigma_yy, sigma_xy: Placeholder (tf)
-        contains the components of stress tensor 
+    sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz: tensor
+        contains the components of stress tensor in 3D
     '''
     eps_xx, eps_yy, eps_zz, eps_xy, eps_xz, eps_yz = get_elastic_strain_3d(x,y)
 
@@ -525,19 +525,19 @@ def get_stress_tensor(x,y):
 
 def get_stress_coupling(x,y):
     '''
-    Calculates the difference between predicted stresses and calculated stresses based on linear isotropic material law and predicted displacements in plane strain condition.
+    Calculates the difference between predicted stresses and calculated stresses based on linear isotropic material law and predicted displacements in 3D.
 
     Parameters
     ----------
-    x : tensor
-        the input arguments
-    y: tensor
-        the network output
+    x : Placeholder (tensor)
+        contains the placeholder for coordinates of input points
+    y : Placeholder (tensor)
+        contains the placeholder for network output
 
     Returns
     -------
-    term_x, term_y, term_xy: tensor
-        difference between predicted stresses and calculated stresses in X, Y and XY direction 
+    term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor
+        difference between predicted stresses and calculated stresses in 3D
     '''
     
     sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz = get_stress_tensor(x,y)
@@ -557,10 +557,10 @@ def pde_mixed_3d(x, y):
 
     Parameters
     ----------
-    x : tensor
-        the input arguments
-    y : tensor
-        the network output
+    x : Placeholder (tensor)
+        contains the placeholder for coordinates of input points
+    y : Placeholder (tensor)
+        contains the placeholder for network output
 
     Returns
     -------
@@ -664,7 +664,7 @@ def get_tractions_mixed_3d(x, y, X):
 
     Returns
     -------
-        Tx, Ty, Tn, Tt: any
+        Tx, Ty, Tz, Tn, Tt_x, Tt_y, Tt_z: tensor
             Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
     '''    
     sigma_xx =  y[:, 3:4]
@@ -695,7 +695,7 @@ def apply_zero_neumann_x_mixed_formulation(x, y, X):
 
     Returns
     -------
-        Tx: any
+        Tx: tensor
             x component of traction vector
     '''
     
@@ -718,7 +718,7 @@ def apply_zero_neumann_y_mixed_formulation(x, y, X):
 
     Returns
     -------
-        Ty: any
+        Ty: tensor
             y component of traction vector
     '''
     
@@ -741,7 +741,7 @@ def apply_zero_neumann_z_mixed_formulation(x, y, X):
 
     Returns
     -------
-        Tz: any
+        Tz: tensor
             z component of traction vector
     '''
     
