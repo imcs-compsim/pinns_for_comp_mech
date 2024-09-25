@@ -33,6 +33,42 @@ def calculate_boundary_normals(X,geom):
 
     return normals, cond
 
+def calculate_boundary_normals_3D(X,geom):
+    '''
+    Calculates the boundary normals in 3D and the masked array to select the points on boundary which is quite useful to avoid unnecessary multiplications.
+    This method is different compared to calculate_boundary_normals since we need to get also tangential components of the normal vector as well.
+
+    Parameters
+    ----------
+    X : numpy array
+        contains the coordinates of input points
+    geom : object
+        contains the geometry object of the problem
+
+    Returns 
+    -------
+    normals: Tensor
+        contains the normal vector as a tensor
+    cond: numpy boolean array
+        contains a masked array to select points on boundary 
+    '''
+    # boundary points
+    cond = geom.on_boundary(X)
+    boundary_points = X[cond]
+
+    # convert them the normal function and tangential functions to tensor functions
+    boundary_normal_tensor = utils.return_tensor(geom.boundary_normal)
+    boundary_tangential_1_tensor = utils.return_tensor(geom.boundary_tangential_1)
+    boundary_tangential_2_tensor = utils.return_tensor(geom.boundary_tangential_2)
+    
+    # normals
+    normals = boundary_normal_tensor(boundary_points)
+    # tangentials
+    tangentials_1 = boundary_tangential_1_tensor(boundary_points)
+    tangentials_2 = boundary_tangential_2_tensor(boundary_points)
+
+    return normals, tangentials_1, tangentials_2, cond
+
 
 def polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, X):
     '''
