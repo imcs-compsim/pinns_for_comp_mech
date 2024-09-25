@@ -53,7 +53,7 @@ class GmshGeometry3D(Geometry):
     def boundary_normal(self, x):
         """Slice the unit normal at x for Neumann or Robin boundary conditions."""
 
-        n, uniq = self.boundary_normal_global
+        n, _, _, uniq = self.boundary_normal_global
 
         if self.external_dim_size:
             x = np.delete(x, -1, 1)
@@ -63,6 +63,34 @@ class GmshGeometry3D(Geometry):
             mask.extend(np.where(np.all(np.isclose(x_i,uniq),axis=1))[0].tolist()) 
         
         return n[mask]
+    
+    def boundary_tangential_1(self, x):
+        """Slice the unit tangentil vector 1 at x for Neumann or Robin boundary conditions."""
+
+        _, t_1, _, uniq = self.boundary_normal_global
+
+        if self.external_dim_size:
+            x = np.delete(x, -1, 1)
+
+        mask = []
+        for x_i in x:
+            mask.extend(np.where(np.all(np.isclose(x_i,uniq),axis=1))[0].tolist()) 
+        
+        return t_1[mask]
+    
+    def boundary_tangential_2(self, x):
+        """Slice the unit tangentil vector 2 at x for Neumann or Robin boundary conditions."""
+
+        _, _, t_2, uniq = self.boundary_normal_global
+
+        if self.external_dim_size:
+            x = np.delete(x, -1, 1)
+
+        mask = []
+        for x_i in x:
+            mask.extend(np.where(np.all(np.isclose(x_i,uniq),axis=1))[0].tolist()) 
+        
+        return t_2[mask]
         
     def fun_boundary_normal_global(self):
         """Compute the unit normal on the geometry boundary"""
@@ -93,15 +121,18 @@ class GmshGeometry3D(Geometry):
                 node_coords_xyz_boundary.extend(node_coords.tolist())
                 normal_boundary.extend(normals.tolist())
 
-                # distinguish start/end positio for each surface 
-                end = start+node_coords.shape[0]
-                border[surface_name] = [start,end]
-                start = end
+                # # distinguish start/end positio for each surface 
+                # end = start+node_coords.shape[0]
+                # border[surface_name] = [start,end]
+                # start = end
 
         # convert them into numpy array
         node_tag_boundary = np.array(node_tag_boundary)
         node_coords_xyz_boundary = np.array(node_coords_xyz_boundary)
         normal_boundary = np.array(normal_boundary)
+        
+        # calculate the tangential vector components.
+        tangential_boundary_1, tangential_boundary_2 = self.compute_tangentials(normal_boundary)
 
         # get the unique nodes
         u, idx, c = np.unique(node_tag_boundary, return_counts=True, return_index=True)
@@ -111,9 +142,45 @@ class GmshGeometry3D(Geometry):
         # get the unique coordinates and corresponding unit boundary normals of the geometry
         uniq = node_coords_xyz_boundary[sorted(idx)]
         normal_boundary = normal_boundary[sorted(idx)] 
+        tangential_boundary_1 = tangential_boundary_1[sorted(idx)] 
+        tangential_boundary_2 = tangential_boundary_2[sorted(idx)] 
 
-        return normal_boundary, uniq
-        
+        return normal_boundary, tangential_boundary_1, tangential_boundary_2, uniq
+    
+    def compute_tangentials(self, normal_boundaries):
+        # calculate the tangential vector components here.
+        # Tangential of normal vector in 3D is a plane. Thus, we need two tangetial vectors, let's call them t_1 and t_2.
+        t_1_list = []
+        t_2_list = []
+
+        # Loop over each normal vector in the input array
+        for n in normal_boundaries:
+            n_x, n_y, n_z = n
+
+            # case 1 Handle [0, 0, 1]
+            if np.isclose(n_z, 1):
+                t_1 = np.array([0, 1, 0])
+                t_2 = np.array([-1, 0, 0])
+            # case 2 Handle [0, 0, -1]
+            elif np.isclose(n_z, -1):
+                t_1 = np.array([0, 1, 0])
+                t_2 = np.array([1, 0, 0])
+            else:
+                t_1 = np.array([n_y, -n_x, 0]) / np.sqrt(n_x**2 + n_y**2)
+                t_2 = np.cross(n, t_1)
+
+            # check if all normal_boundary (let's call it as n), t1 and t2 are perpedicular to each, meaning 
+            # n . t_1 = 0, n . t_2 = 0, and t_1 . t-2 = 0
+            assert(np.isclose(np.dot(n,t_1), 0))
+            assert(np.isclose(np.dot(n,t_2), 0))
+            assert(np.isclose(np.dot(t_1,t_2), 0))
+
+            # Append results to the list
+            t_1_list.append(t_1)
+            t_2_list.append(t_2)
+
+        return np.array(t_1_list), np.array(t_2_list)    
+    
     def random_points(self, n, random="pseudo"):
         """Get collocation points from geometry""" 
         np.random.seed(42)
