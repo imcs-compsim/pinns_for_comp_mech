@@ -21,7 +21,7 @@ from utils.geometry.gmsh_models import Block_3D_hex
 from utils.elasticity import elasticity_utils
 from utils.elasticity.elasticity_utils import pde_mixed_3d, get_tractions_mixed_3d
 from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
-from utils.geometry.geometry_utils import calculate_boundary_normals
+from utils.geometry.geometry_utils import calculate_boundary_normals_3D
 
 length = 1
 height = 1
@@ -46,25 +46,31 @@ geom = GmshGeometry3D(gmsh_model)
 
 elasticity_utils.geom = geom
 
-# def boundary_top(x, on_boundary):
-#     return on_boundary and np.isclose(x[1],height)
+# This is for testing the Neumann BCs as soft constraints
+soft_constraint = False 
+bcs = []
+if soft_constraint:     
+    # Top surface
+    def boundary_top(x, on_boundary):
+        return on_boundary and np.isclose(x[1],height)
+    # Neumann BC on top
+    def apply_pressure_y_top(x,y,X):
+        Tx, Ty, Tz, Tn, Tt_1, Tt_2 = get_tractions_mixed_3d(x, y, X)
+        
+        normals, tangentials_1, tangentials_2, cond= calculate_boundary_normals_3D(X,geom)
 
-# def apply_pressure_y_top(x,y,X):
-#     Tx, Ty, Tz, Tn, Tt_x, Tt_y, Tt_z = get_tractions_mixed_3d(x, y, X)
+        return Ty - pressure*normals[:,1:2]
+
+
+    bc_pressure_y_top = dde.OperatorBC(geom, apply_pressure_y_top, boundary_top)
     
-#     normals, cond = calculate_boundary_normals(X,geom)
-
-#     return Ty + pressure*normals[:,1:2]
-    
-
-# # Neumann BC on top
-# bc_pressure_y_top = dde.OperatorBC(geom, apply_pressure_y_top, boundary_top)
+    bcs = [bc_pressure_y_top]
 
 n_dummy = 1
 data = dde.data.PDE(
     geom,
     pde_mixed_3d,
-    [],
+    bcs,
     num_domain=300,
     num_boundary=n_dummy,
     num_test=None,
@@ -100,11 +106,17 @@ def output_transform(x, y):
     sigma_yz_surfaces = (top_surface)*(back_surface)
     sigma_xz_surfaces = (right_surface)*(back_surface)
     
+    #
+    if soft_constraint:
+        sigma_yy_part = sigma_yy
+    else:
+        sigma_yy_part = pressure + sigma_yy*(top_surface) #sigma_yy
+    
     return bkd.concat([u*(left_surface), #displacement in x direction is 0 at x=0
                       v*(bottom_surface), #displacement in y direction is 0 at y=0
                       w*(front_surface), #displacement in z direction is 0 at z=0
                       sigma_xx*(right_surface), 
-                      pressure + sigma_yy*(top_surface),
+                      sigma_yy_part, #pressure + sigma_yy*(top_surface), #sigma_yy
                       sigma_zz*(back_surface),
                       sigma_xy*sigma_xy_surfaces,
                       sigma_yz*sigma_yz_surfaces,
