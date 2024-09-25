@@ -1,5 +1,6 @@
 import deepxde as dde
-from utils.geometry.geometry_utils import calculate_boundary_normals
+from utils.geometry.geometry_utils import calculate_boundary_normals, calculate_boundary_normals_3D
+import deepxde.backend as bkd
 
 # global variables
 lame = 1
@@ -603,7 +604,7 @@ def pde_mixed_3d(x, y):
 
     return [momentum_x, momentum_y, momentum_z, term_xx, term_yy, term_zz, term_xy, term_yz, term_xz]
 
-def stress_to_traction_3d(sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_xz, sigma_yz, normals, cond):
+def stress_to_traction_3d(sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_xz, sigma_yz, normals, tangentials_1, tangentials_2, cond):
     '''
     Calculates the traction components in Cartesian (x, y, z) and polar coordinates (n and t) in 3D.
 
@@ -631,9 +632,20 @@ def stress_to_traction_3d(sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_xz, sigm
     Tx, Ty, Tz, Tn, Tt, Tn: any
         Traction components in Cartesian (x, y, z) and polar coordinates (n and t)
     '''
+    # normals 
     nx = normals[:,0:1]
     ny = normals[:,1:2]
     nz = normals[:,2:3]
+    
+    # tangentials in epsilon direction
+    t1x = tangentials_1[:,0:1]
+    t1y = tangentials_1[:,1:2]
+    t1z = tangentials_1[:,2:3]
+    
+    # tangentials in eta direction
+    t2x = tangentials_2[:,0:1]
+    t2y = tangentials_2[:,1:2]
+    t2z = tangentials_2[:,2:3]
 
     # Calculate the traction components in Cartesian coordinates
     Tx = sigma_xx[cond]*nx + sigma_xy[cond]*ny + sigma_xz[cond]*nz
@@ -641,13 +653,13 @@ def stress_to_traction_3d(sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_xz, sigm
     Tz = sigma_xz[cond]*nx + sigma_yz[cond]*ny + sigma_zz[cond]*nz
     
     # Calculate the traction components in polar coordinates (normal and tangential)
+    # Calculate normal traction
     Tn = Tx*nx + Ty*ny + Tz*nz
-    # For tangential components, I have some doubts, so this has to be reconsidered again.
-    Tt_x = -Ty*ny - Tz*nz
-    Tt_y = Tx*nx - Tz*nz
-    Tt_z = Tx*nx + Ty*ny
+    # Calculate tangential tractions (popp thesis page 23). 
+    Tt_1 = Tx*t1x + Ty*t1y + Tz*t1z
+    Tt_2 = Tx*t2x + Ty*t2y + Tz*t2z
     
-    return Tx, Ty, Tz, Tn, Tt_x, Tt_y, Tt_z
+    return Tx, Ty, Tz, Tn, Tt_1, Tt_2
 
 def get_tractions_mixed_3d(x, y, X):
     '''
@@ -664,7 +676,7 @@ def get_tractions_mixed_3d(x, y, X):
 
     Returns
     -------
-        Tx, Ty, Tz, Tn, Tt_x, Tt_y, Tt_z: tensor
+        Tx, Ty, Tz, Tn, Tt_1, Tt_2: tensor
             Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
     '''    
     sigma_xx =  y[:, 3:4]
@@ -674,11 +686,11 @@ def get_tractions_mixed_3d(x, y, X):
     sigma_yz =  y[:, 7:8]
     sigma_xz =  y[:, 8:9]
     
-    normals, cond = calculate_boundary_normals(X,geom)
+    normals, tangentials_1, tangentials_2, cond = calculate_boundary_normals_3D(X,geom)
 
-    Tx, Ty, Tz, Tn, Tt_x, Tt_y, Tt_z = stress_to_traction_3d(sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_xz, sigma_yz, normals, cond)
+    Tx, Ty, Tz, Tn, Tt_1, Tt_2 = stress_to_traction_3d(sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_xz, sigma_yz, normals, tangentials_1, tangentials_2, cond)
 
-    return Tx, Ty, Tz, Tn, Tt_x, Tt_y, Tt_z
+    return Tx, Ty, Tz, Tn, Tt_1, Tt_2
 
 def apply_zero_neumann_x_mixed_formulation(x, y, X):
     '''
@@ -699,7 +711,7 @@ def apply_zero_neumann_x_mixed_formulation(x, y, X):
             x component of traction vector
     '''
     
-    Tx, Ty, Tz, Tn, Tt_x, Tt_y, Tt_z = get_tractions_mixed_3d(x, y, X)
+    Tx, Ty, Tz, Tn, Tt_1, Tt_2 = get_tractions_mixed_3d(x, y, X)
 
     return Tx
 
@@ -722,7 +734,7 @@ def apply_zero_neumann_y_mixed_formulation(x, y, X):
             y component of traction vector
     '''
     
-    Tx, Ty, Tz, Tn, Tt_x, Tt_y, Tt_z = get_tractions_mixed_3d(x, y, X)
+    Tx, Ty, Tz, Tn, Tt_1, Tt_2 = get_tractions_mixed_3d(x, y, X)
 
     return Ty
 
@@ -745,6 +757,6 @@ def apply_zero_neumann_z_mixed_formulation(x, y, X):
             z component of traction vector
     '''
     
-    Tx, Ty, Tz, Tn, Tt_x, Tt_y, Tt_z = get_tractions_mixed_3d(x, y, X)
+    Tx, Ty, Tz, Tn, Tt_1, Tt_2 = get_tractions_mixed_3d(x, y, X)
 
     return Tz
