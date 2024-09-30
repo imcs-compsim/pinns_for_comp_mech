@@ -442,7 +442,143 @@ class Block_2D(object):
 #                 gmsh.fltk.run()
 
 #         return gmsh_model
+
+class Sphere_hertzian(object):
+    def __init__(self, path):
+        self.path = path
     
+    def generateGmshModel(self, visualize_mesh=False):
+        # Initialize Gmsh
+        gmsh.initialize()
+
+        # Create Gmsh model instance
+        gmsh_model = gmsh.model
+        # Create a new model
+        gmsh_model.add("Sphere_hertzian")
+
+        # Import the STEP file
+        gmsh_model.occ.importShapes(self.path)
+
+        # Synchronize the CAD model with Gmsh
+        gmsh_model.occ.synchronize()
+
+        # Identify the bottom edges (curves) and increase the number of divisions
+        # You can retrieve curve (edge) IDs and set the desired number of seeds (divisions)
+        curves = gmsh_model.getEntities(dim=1)
+        # print("Curves:", curves)  # List the curves (edges) to identify the ones at the bottom
+
+        # Set more divisions on the bottom curves
+        # Replace curve IDs with the actual curve IDs from the geometry
+        # To find correct edges: just visualize it
+        for curve_id in [8,10,11,15]:  
+            gmsh.model.mesh.setTransfiniteCurve(curve_id, 20)
+        for curve_id in [2,7,9]:  
+            gmsh.model.mesh.setTransfiniteCurve(curve_id, 5)
+        for curve_id in [3,12,14]:  
+            gmsh.model.mesh.setTransfiniteCurve(curve_id, 30)
+
+        # Synchronize geometry
+        gmsh_model.occ.synchronize()
+
+        # Generate mesh
+        gmsh_model.mesh.generate(3)
+
+        if visualize_mesh:
+            gmsh.fltk.run()
+
+        return gmsh_model
+
+class Sphere_hertzian_reverted(object):
+    def __init__(self, path):
+        self.path = path
+    
+    def generateGmshModel(self, visualize_mesh=False):
+        # Initialize Gmsh
+        gmsh.initialize()
+
+        # Create Gmsh model instance
+        gmsh_model = gmsh.model
+        # Create a new model
+        gmsh_model.add("Sphere_hertzian")
+
+        # Import the STEP file
+        gmsh_model.occ.importShapes(self.path)
+
+        # Synchronize the CAD model with Gmsh
+        gmsh_model.occ.synchronize()
+
+        # Identify the bottom edges (curves) and increase the number of divisions
+        # You can retrieve curve (edge) IDs and set the desired number of seeds (divisions)
+        curves = gmsh_model.getEntities(dim=1)
+        # print("Curves:", curves)  # List the curves (edges) to identify the ones at the bottom
+
+        # Set more divisions on the bottom curves
+        # Replace curve IDs with the actual curve IDs from the geometry
+        # To find correct edges: just visualize it
+        for curve_id in [6,7,8,9]: 
+            gmsh.model.mesh.setTransfiniteCurve(curve_id, 20)
+        for curve_id in [1,4,14]: 
+            gmsh.model.mesh.setTransfiniteCurve(curve_id, 5)
+        for curve_id in [5,12,16]:
+            gmsh.model.mesh.setTransfiniteCurve(curve_id, 30)
+
+        # Synchronize geometry
+        gmsh_model.occ.synchronize()
+
+        # Generate mesh
+        gmsh_model.mesh.generate(3)
+
+        if visualize_mesh:
+            gmsh.fltk.run()
+
+        return gmsh_model
+
+class Cylinder_hertzian(object):
+    def __init__(self, path):
+        self.path = path
+    
+    def generateGmshModel(self, visualize_mesh=False):
+        # Initialize Gmsh
+        gmsh.initialize()
+
+        # Create Gmsh model instance
+        gmsh_model = gmsh.model
+        # Create a new model
+        gmsh_model.add("Sphere_hertzian")
+
+        # Import the STEP file
+        gmsh_model.occ.importShapes(self.path)
+
+        # Synchronize the CAD model with Gmsh
+        gmsh_model.occ.synchronize()
+
+        # Identify the bottom edges (curves) and increase the number of divisions
+        # You can retrieve curve (edge) IDs and set the desired number of seeds (divisions)
+        curves = gmsh_model.getEntities(dim=1)
+        # print("Curves:", curves)  # List the curves (edges) to identify the ones at the bottom
+
+        # Set more divisions on the bottom curves
+        # Replace curve IDs with the actual curve IDs from the geometry
+        for curve_id in [7,9]:  
+            gmsh.model.mesh.setTransfiniteCurve(curve_id, 10)
+        gmsh.model.mesh.setTransfiniteCurve(8, 25)
+        gmsh.model.mesh.setTransfiniteCurve(6, 25)
+        for curve_id in [2,16]:  
+            gmsh.model.mesh.setTransfiniteCurve(curve_id, 15)
+        # for curve_id in [5,12,16]:  
+        #     gmsh.model.mesh.setTransfiniteCurve(curve_id, 30)
+
+        # Synchronize geometry
+        gmsh_model.occ.synchronize()
+
+        # Generate mesh
+        gmsh_model.mesh.generate(3)
+
+        if visualize_mesh:
+            gmsh.fltk.run()
+
+        return gmsh_model
+
 class Block_3D_hex(object):
     def __init__(self, origin, length, height, width, divisions, gmsh_options=None):
         '''
