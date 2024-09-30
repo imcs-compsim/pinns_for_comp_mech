@@ -244,7 +244,10 @@ class GmshGeometry3D(Geometry):
         element_types, element_tags, node_tags = self.gmsh_model.mesh.getElements(self.dim,-1)
 
         if element_types[0] == 4: # 4-node tetrahedron
-            raise NotImplemented("Elemental info for 4-node tetrahedron not implemented!")
+            tets = node_tags[0].reshape(-1,4) - 1
+            offset = np.arange(4,tets.shape[0]*tets.shape[1]+1, tets.shape[1])
+            cell_types = np.ones(tets.shape[0])*10 #https://docs.vtk.org/en/latest/design_documents/VTKFileFormats.html check cell types, for tets it is 10
+            elements = tets
         
         elif element_types[0] == 5: # 8-node hexahedron
             quads = node_tags[0].reshape(-1,8) - 1
