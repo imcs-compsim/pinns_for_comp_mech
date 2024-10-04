@@ -265,7 +265,7 @@ class GmshGeometry3D(Geometry):
 
         node_tag, node_coords, _  = self.gmsh_model.mesh.getNodes(self.dim, -1, includeBoundary=True)
 
-        node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside = self.order_coordinates(node_coords, node_tag)
+        node_coords_xyz, node_coords_xyz_boundary, node_coords_xyz_inside = self.order_coordinates(node_coords, node_tag)
 
         element_types, element_tags, node_tags = self.gmsh_model.mesh.getElements(self.dim,-1)
 
@@ -282,9 +282,9 @@ class GmshGeometry3D(Geometry):
             elements = quads
         
         if self.external_dim_size:
-            node_coords_xy = self.add_external_dim(node_coords_xy)
+            node_coords_xyz = self.add_external_dim(node_coords_xyz)
 
-        return node_coords_xy, offset, cell_types, elements
+        return node_coords_xyz, offset, cell_types, elements
         
 class GmshGeometry2D(Geometry):
     def __init__(self, gmsh_model, external_dim_size=None, borders=None, revert_curve_list=None, revert_normal_dir_list=None):
