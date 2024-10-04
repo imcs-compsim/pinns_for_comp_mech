@@ -3,7 +3,7 @@ import os
 import numpy as np
 from pyevtk.hl import unstructuredGridToVTK
 
-def save_normals_to_vtk(geom, 
+def export_normals_tangentials_to_vtk(geom, 
                         save_folder_path = None,
                         file_name = "default_boundary_normals"):
     '''
