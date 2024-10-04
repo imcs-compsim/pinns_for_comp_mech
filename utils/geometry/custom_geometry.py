@@ -6,9 +6,10 @@ import matplotlib.pyplot as plt
 import os
 
 class GmshGeometry3D(Geometry):
-    def __init__(self, gmsh_model, external_dim_size=None):
+    def __init__(self, gmsh_model, external_dim_size=None, target_surface_ids=None):
         self.gmsh_model = gmsh_model
         self.external_dim_size = external_dim_size
+        self.target_surface_ids = target_surface_ids
         self.boundary_normal_global = self.fun_boundary_normal_global()
         self.bbox = (np.array([1,1,1]))
         super(GmshGeometry3D, self).__init__(
@@ -97,7 +98,7 @@ class GmshGeometry3D(Geometry):
 
         # fig = plt.figure(figsize=(8, 8), dpi=80)
 
-        node_tag_boundary, node_coords_xyz_boundary, normal_boundary = [],[],[]
+        node_tag_boundary, node_coords_xyz_boundary, normal_boundary, surface_id = [],[],[],[]
         border = {}
         start = 0
 
@@ -115,6 +116,9 @@ class GmshGeometry3D(Geometry):
                 # reshape coordinates and first derivative
                 node_coords = node_coords.reshape(-1,3)
                 normals = normals.reshape(-1,3)
+                
+                surface_id_intermediate = [s_tag]*node_coords.shape[0]
+                surface_id.extend(surface_id_intermediate)
 
                 # store intermediate quantities in the global variables
                 node_tag_boundary.extend(node_tag.tolist())
@@ -130,6 +134,7 @@ class GmshGeometry3D(Geometry):
         node_tag_boundary = np.array(node_tag_boundary)
         node_coords_xyz_boundary = np.array(node_coords_xyz_boundary)
         normal_boundary = np.array(normal_boundary)
+        surface_id = np.array(surface_id)
         
         # calculate the tangential vector components.
         tangential_boundary_1, tangential_boundary_2 = self.compute_tangentials(normal_boundary)
@@ -137,7 +142,28 @@ class GmshGeometry3D(Geometry):
         # get the unique nodes
         u, idx, c = np.unique(node_tag_boundary, return_counts=True, return_index=True)
         # get the repeated nodes that have more than 1 boundary normal
-        # repeated_node_tag = u[c>1]
+        repeated_node_tag = u[c>1]
+        
+        if self.target_surface_ids:
+            for repeated_node_id in repeated_node_tag:
+                # get the neighboring surfaces which includes this point
+                neighbor_surface_ids = surface_id[node_tag_boundary == repeated_node_id]
+                # choose the target face that is one of the neighboring surfaces
+                target_surface_position = None 
+                for target_surface in self.target_surface_ids:
+                    if np.isin(target_surface,neighbor_surface_ids):
+                        target_surface_position = np.where(neighbor_surface_ids==target_surface)[0][0]
+                        break
+                if target_surface_position is None:
+                    continue
+                determined_boundary_normal = normal_boundary[node_tag_boundary == repeated_node_id][target_surface_position]
+                determined_tangential_boundary_1 = tangential_boundary_1[node_tag_boundary == repeated_node_id][target_surface_position]
+                determined_tangential_boundary_2 = tangential_boundary_2[node_tag_boundary == repeated_node_id][target_surface_position]
+                ids_of_repeated_node = np.where(node_tag_boundary == repeated_node_id)[0]
+                for id in ids_of_repeated_node:
+                    normal_boundary[id] = determined_boundary_normal
+                    tangential_boundary_1[id] = determined_tangential_boundary_1
+                    tangential_boundary_2[id] = determined_tangential_boundary_2
         
         # get the unique coordinates and corresponding unit boundary normals of the geometry
         uniq = node_coords_xyz_boundary[sorted(idx)]
