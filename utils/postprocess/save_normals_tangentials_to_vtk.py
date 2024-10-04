@@ -5,7 +5,7 @@ from pyevtk.hl import unstructuredGridToVTK
 
 def export_normals_tangentials_to_vtk(geom, 
                         save_folder_path = None,
-                        file_name = "default_boundary_normals"):
+                        file_name = "default_boundary_normals_tangentials"):
     '''
     Stores 
     '''
