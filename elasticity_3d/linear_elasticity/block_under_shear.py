@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import os
 from deepxde.backend import tf
 from pyevtk.hl import unstructuredGridToVTK
+from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -117,7 +118,10 @@ losshistory, train_state = model.train(epochs=1000, display_every=200)
 model.compile("L-BFGS")
 losshistory, train_state = model.train(display_every=200)
 
-solutionFieldOnMeshToVtk3D(geom, model, save_folder_path="/home/a11btasa/git_repos/github_imcs/pinns_for_comp_mech", file_name="3D_block_shear")
+solutionFieldOnMeshToVtk3D(geom, 
+                           model, 
+                           save_folder_path=str(Path(__file__).parent.parent.parent), 
+                           file_name="3D_block_shear")
 
 
 
