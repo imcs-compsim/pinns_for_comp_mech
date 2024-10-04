@@ -49,6 +49,10 @@ def calculate_boundary_normals_3D(X,geom):
     -------
     normals: Tensor
         contains the normal vector as a tensor
+    tangentials_1: Tensor
+        contains the first tangential vector as a tensor
+    tangentials_2: Tensor
+        contains the second tangential vector as a tensor
     cond: numpy boolean array
         contains a masked array to select points on boundary 
     '''

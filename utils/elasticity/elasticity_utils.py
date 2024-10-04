@@ -476,7 +476,7 @@ def get_elastic_strain_3d(x,y):
 
     Returns 
     -------
-    eps_xx, eps_yy, eps_zz, eps_xy, eps_xz, eps_yz: tensor
+    eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz: tensor
         contains the components of strain tensor in 3D
     '''
     # Normal strains
@@ -533,7 +533,7 @@ def get_stress_coupling(x,y):
     x : Placeholder (tensor)
         contains the placeholder for coordinates of input points
     y : Placeholder (tensor)
-        contains the placeholder for network output
+        contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz
 
     Returns
     -------
@@ -561,13 +561,13 @@ def pde_mixed_3d(x, y):
     x : Placeholder (tensor)
         contains the placeholder for coordinates of input points
     y : Placeholder (tensor)
-        contains the placeholder for network output
+        contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz
 
     Returns
     -------
-    momentum_x, momentum_y, momentum_z, term_x, term_y, term_z, term_xy, term_xz, term_yz: tensor
+    momentum_x, momentum_y, momentum_z, term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor
         momentum_x, momentum_y, momentum_z: momentum terms based on derivatives of predicted stresses
-        term_x, term_y, term_z, term_xy, term_xz, term_yz: difference between predicted stresses and calculated stresses in X, Y, Z, XY, XZ, and YZ directions
+        term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: difference between predicted stresses and calculated stresses in X, Y, Z, XY, YZ, and XZ directions
     '''
     # Stress derivatives
     sigma_xx_x = dde.grad.jacobian(y, x, i=3, j=0)
@@ -624,6 +624,10 @@ def stress_to_traction_3d(sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_xz, sigm
         Shear stress component in the yz plane
     normals : numpy.ndarray
         Normal vectors
+    tangentials_1 : numpy.ndarray
+        Tangential vectors in the first coordinate direction
+    tangentials_2 : numpy.ndarray
+        Tangential vectors in the second coordinate direction
     cond : boolean
         Dimensions of stresses and normals have to match. Normals are calculated on the boundary, while stresses are calculated everywhere.
 

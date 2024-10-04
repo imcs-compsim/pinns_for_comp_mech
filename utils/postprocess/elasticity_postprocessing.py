@@ -181,12 +181,16 @@ def solutionFieldOnMeshToVtk3D(geom,
         The geometry object 
     model: object
         The trained model
+    save_folder_path: str
+        The path to the folder for storing the results
     file_path: str:
         The full file path to store the results
     analytical_displacements: numpy array, 
         Analytical displacement solutions. Order u_x, u_y, u_z
     analytical_stresses: numpy array, 
         Analytical stress solutions. Order sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz
+    polar_transformation: str
+        Coordinate system for polar transformation: spherical or cylindrical
     '''
     
     X, offset, cell_types, elements = geom.get_mesh()
