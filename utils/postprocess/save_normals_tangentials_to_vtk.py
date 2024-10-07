@@ -8,6 +8,7 @@ def export_normals_tangentials_to_vtk(geom,
                         file_name = "default_boundary_normals_tangentials"):
     '''
     Stores the boundary normals and tangentials for the provided geometry.
+    How to visualize boundary normals in Paraview: Glyph filter https://discourse.paraview.org/t/vector-plot/4603 
     '''
     X, offset, cell_types, elements = geom.get_mesh()
     
