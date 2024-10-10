@@ -98,24 +98,24 @@ def output_transform(x, y):
     z_loc = x[:, 2:3]
     
     # define surfaces
-    top_surface = (height-y_loc)
-    bottom_surface = (y_loc)
-    right_surface = (length-x_loc)
-    left_surface = (x_loc)
-    front_surface = (z_loc)
-    back_surface = (width-z_loc)
+    y_at_h = (height-y_loc)
+    y_at_0 = (y_loc)
+    x_at_l = (length-x_loc)
+    x_at_0 = (x_loc)
+    z_at_0 = (z_loc)
+    z_at_w = (width-z_loc)
     
     # define the surfaces where shear forces will be applied.
-    sigma_xy_surfaces = (top_surface)*(right_surface)
-    sigma_yz_surfaces = (top_surface)*(back_surface)*(front_surface)
-    sigma_xz_surfaces = (right_surface)*(back_surface)*(front_surface)
+    sigma_xy_surfaces = (y_at_h)*(x_at_l)*(x_at_0)
+    sigma_yz_surfaces = (y_at_h)*(z_at_w)*(z_at_0)
+    sigma_xz_surfaces = (x_at_l)*(z_at_w)*(z_at_0)*(x_at_0)
     
-    return bkd.concat([u*(left_surface), #displacement in x direction is 0 at x=0
+    return bkd.concat([u*(x_at_0), #displacement in x direction is 0 at x=0
                       v,
-                      w*(front_surface), #displacement in z direction is 0 at z=0
-                      sigma_xx*(right_surface), 
-                      pressure + sigma_yy*(top_surface),
-                      sigma_zz*(back_surface),
+                      w*(z_at_0), #displacement in z direction is 0 at z=0
+                      sigma_xx*(x_at_l), 
+                      pressure + sigma_yy*(y_at_h),
+                      sigma_zz*(z_at_w),
                       sigma_xy*sigma_xy_surfaces,
                       sigma_yz*sigma_yz_surfaces,
                       sigma_xz*sigma_xz_surfaces
