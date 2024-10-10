@@ -107,8 +107,8 @@ def output_transform(x, y):
     
     # define the surfaces where shear forces will be applied.
     sigma_xy_surfaces = (top_surface)*(right_surface)
-    sigma_yz_surfaces = (top_surface)*(back_surface)
-    sigma_xz_surfaces = (right_surface)*(back_surface)
+    sigma_yz_surfaces = (top_surface)*(back_surface)*(front_surface)
+    sigma_xz_surfaces = (right_surface)*(back_surface)*(front_surface)
     
     return bkd.concat([u*(left_surface), #displacement in x direction is 0 at x=0
                       v,
