@@ -114,7 +114,7 @@ def polar_transformation_3d_spherical(sigma_xx, sigma_yy, sigma_zz, sigma_xy, si
 
     Returns 
     -------
-    sigma_rr, sigma_theta, sigma_phi, sigma_rtheta, sigma_rphi, sigma_thetaphi : numpy arrays
+    sigma_rr, sigma_thetatheta, sigma_phiphi, sigma_rtheta, sigma_thetaphi, sigma_rphi : numpy arrays
         stress components in spherical coordinates
     '''
     
