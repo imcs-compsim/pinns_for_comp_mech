@@ -183,8 +183,8 @@ def solutionFieldOnMeshToVtk3D(geom,
         The trained model
     save_folder_path: str
         The path to the folder for storing the results
-    file_path: str:
-        The full file path to store the results
+    file_name: str
+        The name of the resulting save file
     analytical_displacements: numpy array, 
         Analytical displacement solutions. Order u_x, u_y, u_z
     analytical_stresses: numpy array, 

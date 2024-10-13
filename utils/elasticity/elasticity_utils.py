@@ -633,8 +633,8 @@ def stress_to_traction_3d(sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_xz, sigm
 
     Returns
     -------
-    Tx, Ty, Tz, Tn, Tt, Tn: any
-        Traction components in Cartesian (x, y, z) and polar coordinates (n and t)
+    Tx, Ty, Tz, Tn, Tt_1, Tt_2: any
+        Traction components in Cartesian (x, y, z) coordinates and in normal (n) and tangential directions (t_1, t_2)
     '''
     # normals 
     nx = normals[:,0:1]
