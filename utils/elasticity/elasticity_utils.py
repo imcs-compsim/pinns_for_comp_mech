@@ -3,8 +3,8 @@ from utils.geometry.geometry_utils import calculate_boundary_normals, calculate_
 import deepxde.backend as bkd
 
 # global variables
-lame = 1
-shear = 0.5
+lame = 1        # Lame ist lambda
+shear = 0.5     # shear ist mü
 geom = None
 
 def momentum_2d(x, y):    
@@ -22,6 +22,183 @@ def momentum_2d(x, y):
     momentum_y = sigma_yy_y + sigma_xy_x
 
     return [momentum_x, momentum_y]
+
+def deformation_gradient(x, y):
+
+    "Sollte die model prediction nicht ein Spaltenvektor aus u_x & u_y sein?"
+    
+    #coord_x, coord_y = x[:,0:1], x[:,1:2]
+    disp_x, disp_y = y[:,0:1], y[:,1:2]
+
+    f_xx = dde.grad.jacobian(disp_x, x, i=0, j=0) + 1
+    f_yy = dde.grad.jacobian(disp_y, x, i=0, j=1) + 1
+    f_xy = dde.grad.jacobian(disp_x, x, i=0, j=1)
+    f_yx = dde.grad.jacobian(disp_y, x, i=0, j=0)
+
+    return f_xx, f_yy, f_xy, f_yx
+
+def green_lagrange_strain_tensor(x, y):
+
+    f_xx, f_yy, f_xy, f_yx = deformation_gradient(x, y)
+    
+    e_xx = 0.5*(f_xx**2 + f_yx**2 - 1)
+    e_yy = 0.5*(f_xy**2 + f_yy**2 - 1)
+    e_xy = 0.5*(f_xx*f_xy + f_yx * f_yy)
+    e_yx = 0.5*(f_xy*f_xx + f_yy * f_yx)
+    
+    return e_xx, e_yy, e_xy, e_yx
+
+"Ab hier plane strain"
+
+def second_piola_stress_tensor_plane_strain(x, y):
+    
+    e_xx, e_yy, e_xy, e_yx = green_lagrange_strain_tensor(x, y)
+    nu, lame, shear, e_modul = problem_parameters()
+    
+    #e_xx, e_yy, e_xy = elastic_strain_2d(x, y)     #When checking for linear results
+    
+    "lame & nu & mü bereits definiert"
+    
+    e_yx = e_xy
+    s_xx = e_xx * (lame + 2*shear) + lame * e_yy
+    s_yy = e_yy * (lame + 2*shear) + lame * e_xx
+    #s_xy = lame * (e_xx + e_yy) + 2*shear * e_xy   #Original
+    s_xy = 2 * shear * e_xy                          #Idee
+    #s_yx = lame * (e_xx + e_yy) + 2*shear * e_yx   #Original
+    s_yx = 2 * shear * e_yx                           #Idee
+    
+    return s_xx, s_yy, s_xy, s_yx
+
+def first_piola_stress_tensor_plane_strain(x,y):
+    
+    s_xx, s_yy, s_xy, s_yx = second_piola_stress_tensor_plane_strain(x, y)
+    f_xx, f_yy, f_xy, f_yx = deformation_gradient(x, y)
+
+    p_xx = f_xx * s_xx + f_xy * s_yx
+    p_yy = f_yx * s_xy + f_yy * s_yy
+    p_xy = f_xx * s_xy + f_xy * s_yy
+    p_yx = f_yx * s_xx + f_yy * s_yx
+
+    return p_xx, p_yy, p_xy, p_yx
+
+def momentum_2d_firstpiola_plane_strain(x, y):    
+    # calculate strain terms (kinematics, small strain theory)
+
+    p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor_plane_strain(x,y)
+
+    # governing equation
+    p_xx_x = dde.grad.jacobian(p_xx, x, i=0, j=0)
+    p_yy_y = dde.grad.jacobian(p_yy, x, i=0, j=1)
+    p_xy_y = dde.grad.jacobian(p_xy, x, i=0, j=1)
+    p_yx_x = dde.grad.jacobian(p_yx, x, i=0, j=0)
+
+    momentum_x = p_xx_x + p_xy_y
+    momentum_y = p_yy_y + p_yx_x
+
+    return [momentum_x, momentum_y]
+
+"Ab hier für plane stress"
+
+def second_piola_stress_tensor_plane_stress(x, y):
+    
+    e_xx, e_yy, e_xy, e_yx = green_lagrange_strain_tensor(x, y)
+    nu, lame, shear, e_modul = problem_parameters()
+    
+    #e_xx, e_yy, e_xy = elastic_strain_2d(x, y)     #When checking for linear results
+    
+    s_xx = e_modul / (1 - nu**2) * (e_xx + nu * e_yy)
+    s_yy = e_modul / (1 - nu**2) * (nu * e_xx + e_yy)
+    s_xy = e_modul / (1 - nu**2) * ((1 - nu)/2) * e_xy
+    s_yx = s_xy
+    
+    return s_xx, s_yy, s_xy, s_yx
+
+def first_piola_stress_tensor_plane_stress(x,y):
+    
+    s_xx, s_yy, s_xy, s_yx = second_piola_stress_tensor_plane_stress(x,y)
+    f_xx, f_yy, f_xy, f_yx = deformation_gradient(x, y)
+
+    p_xx = f_xx * s_xx + f_xy * s_yx
+    p_yy = f_yx * s_xy + f_yy * s_yy
+    p_xy = f_xx * s_xy + f_xy * s_yy
+    p_yx = f_yx * s_xx + f_yy * s_yx
+
+    return p_xx, p_yy, p_xy, p_yx
+
+def momentum_2d_firstpiola_plane_stress(x, y):    
+    # calculate strain terms (kinematics, small strain theory)
+
+    p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor_plane_stress(x,y)
+
+    # governing equation
+    p_xx_x = dde.grad.jacobian(p_xx, x, i=0, j=0)
+    p_yy_y = dde.grad.jacobian(p_yy, x, i=0, j=1)
+    p_xy_y = dde.grad.jacobian(p_xy, x, i=0, j=1)
+    p_yx_x = dde.grad.jacobian(p_yx, x, i=0, j=0)
+
+    momentum_x = p_xx_x + p_xy_y
+    momentum_y = p_yy_y + p_yx_x
+
+    return [momentum_x, momentum_y]
+
+"The only difference between Cauchy plane stress and strain is in the second_piola_stress_tensor kind"
+
+def cauchy_stress_plane_strain(x, y):
+    
+    f_xx, f_yy, f_xy, f_yx = deformation_gradient(x, y)
+    #s_xx, s_yy, s_xy, s_yx = second_piola_stress_tensor_plane_strain(x, y) 
+    p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor_plane_strain(x,y)
+    
+    det_F = 1/(f_xx * f_yy - f_xy * f_yx)
+    
+    # T_xx = det_F * (f_xx * s_xx + f_xy * s_yx) * f_xx + (f_xx * s_xy + f_xy * s_yy) * f_xy
+    # T_xy = det_F * (f_xx * s_xx + f_xy * s_yx) * f_yx + (f_xx * s_xy + f_xy * s_yy) * f_yy
+    # T_yx = det_F * (f_yx * s_xx + f_yy * s_yx) * f_xx + (f_yx * s_xy + f_yy * s_yy) * f_xy
+    # T_yy = det_F * (f_yx * s_xx + f_yy * s_yx) * f_yx + (f_yx * s_xy + f_yy * s_yy) * f_yy
+    
+    T_xx = det_F * (p_xx * f_xx + p_xy * f_xy)      #Alternative formulation
+    T_xy = det_F * (p_xx * f_yx + p_xy * f_yy)
+    T_yx = det_F * (p_yx * f_xx + p_yy * f_xy)
+    T_yy = det_F * (p_xy * f_yx + p_yy * f_yy)
+    
+    return T_xx, T_yy, T_xy, T_yx
+    
+def cauchy_stress_plane_stress(x, y):
+    
+    f_xx, f_yy, f_xy, f_yx = deformation_gradient(x, y)
+    #s_xx, s_yy, s_xy, s_yx = second_piola_stress_tensor_plane_stress(x, y) 
+    p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor_plane_stress(x,y)
+    
+    det_F = 1 / (f_xx * f_yy - f_xy * f_yx)
+    
+    
+    # T_xx = det_F * (f_xx * s_xx + f_xy * s_yx) * f_xx + (f_xx * s_xy + f_xy * s_yy) * f_xy
+    # T_xy = det_F * (f_xx * s_xx + f_xy * s_yx) * f_yx + (f_xx * s_xy + f_xy * s_yy) * f_yy
+    # T_yx = det_F * (f_yx * s_xx + f_yy * s_yx) * f_xx + (f_yx * s_xy + f_yy * s_yy) * f_xy
+    # T_yy = det_F * (f_yx * s_xx + f_yy * s_yx) * f_yx + (f_yx * s_xy + f_yy * s_yy) * f_yy
+    
+    T_xx = det_F * (p_xx * f_xx + p_xy * f_xy)      #Alternative formulation
+    T_xy = det_F * (p_xx * f_yx + p_xy * f_yy)
+    T_yx = det_F * (p_yx * f_xx + p_yy * f_xy)
+    T_yy = det_F * (p_xy * f_yx + p_yy * f_yy)
+    
+    return T_xx, T_yy, T_xy, T_yx
+
+# def momentum_2d_firstpiola_plane_stress(x, y):    
+#     # calculate strain terms (kinematics, small strain theory)
+
+#     p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor(x,y)
+
+#     # governing equation
+#     p_xx_x = dde.grad.jacobian(p_xx, x, i=0, j=0)
+#     p_yy_y = dde.grad.jacobian(p_yy, x, i=0, j=1)
+#     p_xy_y = dde.grad.jacobian(p_xy, x, i=0, j=1)
+#     p_yx_x = dde.grad.jacobian(p_yx, x, i=0, j=0)
+
+#     momentum_x = p_xx_x + p_xy_y
+#     momentum_y = p_yy_y + p_yx_x
+
+#     return [momentum_x, momentum_y]
 
 def momentum_2d_plane_stress(x, y):    
     # calculate strain terms (kinematics, small strain theory)
@@ -58,7 +235,7 @@ def elastic_strain_2d(x,y):
     eps_xx = dde.grad.jacobian(y, x, i=0, j=0)
     eps_yy = dde.grad.jacobian(y, x, i=1, j=1)
     eps_xy = 1/2*(dde.grad.jacobian(y, x, i=1, j=0)+dde.grad.jacobian(y, x, i=0, j=1))
-    
+    nu = lame/(2*(lame+shear))
     return eps_xx, eps_yy, eps_xy
 
 
@@ -77,8 +254,14 @@ def problem_parameters():
         e_modul: Float
             Young's modulus
     '''
-    e_modul = shear*(3*lame+2*shear)/(lame+shear)
+    
     nu = lame/(2*(lame+shear))
+    e_modul = shear*(3*lame+2*shear)/(lame+shear) #Original
+    
+    # Alternativ:
+    #e_modul = (lame*(1+nu)*(1-2*nu))/(nu)
+    
+    "lambda_ = (nu * e_modul)/(1 - nu - 2*nu^(2))" "Lame ist lambda und shear ist mü"
     
     return nu, lame, shear, e_modul
 
@@ -163,6 +346,32 @@ def zero_neumman_plane_stress_x(x, y, X):
 
     return Tx
 
+def zero_neumman_first_piola_plane_stress_x(x, y, X):
+    '''
+    Calculates x component of the homogeneous Neumann BC
+    
+    Parameters
+    ----------
+    x : tensor
+        the input arguments (coordinates x and y)
+    y: tensor
+        the network output (predicted displacement in x and y direction)
+    X: np.array
+        the input arguments as an array (coordinates x and y)
+
+    Returns
+    -------
+    sigma_xx_n_x + sigma_xy_n_y: tensor
+        x component of the homogeneous Neumann BC
+    '''
+    
+    p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor_plane_stress(x,y)
+
+    normals, cond = calculate_boundary_normals(X,geom)
+    Tx, _, _, _ = piola_stress_to_traction_2d(p_xx, p_yy, p_xy, p_yx, normals, cond)
+
+    return Tx
+
 def zero_neumman_plane_stress_y(x, y, X):
     '''
     Calculates y component of the homogeneous Neumann BC
@@ -186,6 +395,32 @@ def zero_neumman_plane_stress_y(x, y, X):
 
     normals, cond = calculate_boundary_normals(X,geom)
     _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
+
+    return Ty
+
+def zero_neumman_first_piola_plane_stress_y(x, y, X):
+    '''
+    Calculates y component of the homogeneous Neumann BC
+
+    Parameters
+    ----------
+    x : tensor
+        the input arguments (coordinates x and y)
+    y: tensor
+        the network output (predicted displacement in x and y direction)
+    X: np.array
+        the input arguments as an array (coordinates x and y)
+
+    Returns
+    -------
+    sigma_yx_n_x + sigma_yy_n_y: tensor
+        y component of the homogeneous Neumann BC
+    '''
+
+    p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor_plane_stress(x,y)
+
+    normals, cond = calculate_boundary_normals(X,geom)
+    _, Ty, _, _ = piola_stress_to_traction_2d(p_xx, p_yy, p_xy, p_yx, normals, cond)
 
     return Ty
 
@@ -215,6 +450,32 @@ def zero_neumman_plane_strain_x(x, y, X):
 
     return Tx
 
+def zero_neumman_first_piola_plane_strain_x(x, y, X):
+    '''
+    Calculates x component of the homogeneous Neumann BC
+    
+    Parameters
+    ----------
+    x : tensor
+        the input arguments (coordinates x and y)
+    y: tensor
+        the network output (predicted displacement in x and y direction)
+    X: np.array
+        the input arguments as an array (coordinates x and y)
+
+    Returns
+    -------
+    sigma_xx_n_x + sigma_xy_n_y: tensor
+        x component of the homogeneous Neumann BC
+    '''
+    
+    p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor_plane_strain(x,y)
+    
+    normals, cond = calculate_boundary_normals(X,geom)
+    Tx, _, _, _ = piola_stress_to_traction_2d(p_xx, p_yy, p_xy, p_yx, normals, cond)
+
+    return Tx
+
 def zero_neumman_plane_strain_y(x, y, X):
     '''
     Calculates y component of the homogeneous Neumann BC
@@ -238,6 +499,32 @@ def zero_neumman_plane_strain_y(x, y, X):
 
     normals, cond = calculate_boundary_normals(X,geom)
     _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
+
+    return Ty
+
+def zero_neumman_frist_piola_plane_strain_y(x, y, X):
+    '''
+    Calculates y component of the homogeneous Neumann BC
+
+    Parameters
+    ----------
+    x : tensor
+        the input arguments (coordinates x and y)
+    y: tensor
+        the network output (predicted displacement in x and y direction)
+    X: np.array
+        the input arguments as an array (coordinates x and y)
+
+    Returns
+    -------
+    sigma_yx_n_x + sigma_yy_n_y: tensor
+        y component of the homogeneous Neumann BC
+    '''
+
+    p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor_plane_strain(x,y)
+
+    normals, cond = calculate_boundary_normals(X,geom)
+    _, Ty, _, _ = piola_stress_to_traction_2d(p_xx, p_yy, p_xy, p_yx, normals, cond)
 
     return Ty
 
@@ -381,6 +668,40 @@ def stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond):
     
     Tx = sigma_xx_n_x + sigma_xy_n_y
     Ty = sigma_yx_n_x + sigma_yy_n_y
+    Tn = Tx*nx + Ty*ny
+    Tt = -Tx*ny + Ty*nx # Direction is clockwise --> if you go from normal tangetial
+
+    return Tx, Ty, Tn, Tt
+
+def piola_stress_to_traction_2d(p_xx, p_yy, p_xy, p_yx, normals, cond):
+    '''
+    Calculates the traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential)).
+
+    Parameters
+    -----------
+        sigma_xx (any): Stress component in x direction
+        sigma_yy (any): Stress component in y direction
+        sigma_xy (any): Stress component in xy direction (shear)
+        normals (vector): Normal vectors
+        cond (boolean): Dimensions of stresses and and normals have to match. Normals are calculated on the boundary, while stresses are calculated everywhere.
+
+    Returns
+    -------
+        Tx, Ty, Tn, Tt: any
+            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
+    '''
+    
+    nx = normals[:,0:1]
+    ny = normals[:,1:2]
+
+    p_xx_n_x = p_xx[cond]*nx
+    p_xy_n_y = p_xy[cond]*ny
+
+    p_yx_n_x = p_xy[cond]*nx
+    p_yy_n_y = p_yy[cond]*ny
+    
+    Tx = p_xx_n_x + p_xy_n_y
+    Ty = p_yx_n_x + p_yy_n_y
     Tn = Tx*nx + Ty*ny
     Tt = -Tx*ny + Ty*nx # Direction is clockwise --> if you go from normal tangetial
 
