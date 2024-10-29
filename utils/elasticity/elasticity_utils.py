@@ -6,6 +6,7 @@ import deepxde.backend as bkd
 lame = 1        # Lame ist lambda
 shear = 0.5     # shear ist mü
 geom = None
+model_type = "plane_strain"
 
 def momentum_2d(x, y):    
     # calculate strain terms (kinematics, small strain theory)
@@ -25,8 +26,6 @@ def momentum_2d(x, y):
 
 def deformation_gradient(x, y):
 
-    "Sollte die model prediction nicht ein Spaltenvektor aus u_x & u_y sein?"
-    
     #coord_x, coord_y = x[:,0:1], x[:,1:2]
     disp_x, disp_y = y[:,0:1], y[:,1:2]
 
@@ -45,6 +44,16 @@ def green_lagrange_strain_tensor(x, y):
     e_yy = 0.5*(f_xy**2 + f_yy**2 - 1)
     e_xy = 0.5*(f_xx*f_xy + f_yx * f_yy)
     e_yx = 0.5*(f_xy*f_xx + f_yy * f_yx)
+    
+    return e_xx, e_yy, e_xy, e_yx
+
+def green_lagrange_strain_tensor_2(x,y):
+   
+    e_xx = 1/2 * (2 * dde.grad.jacobian(y, x, i=0, j=0) + (dde.grad.jacobian(y, x, i=0, j=0)**2 + dde.grad.jacobian(y, x, i=1, j=0)**2))
+    e_yy = 1/2 * (2 * dde.grad.jacobian(y, x, i=1, j=1) + (dde.grad.jacobian(y, x, i=0, j=1)**2 + dde.grad.jacobian(y, x, i=1, j=1)**2))
+    e_xy = 1/2 * (dde.grad.jacobian(y, x, i=1, j=0) + dde.grad.jacobian(y, x, i=0, j=1) + (dde.grad.jacobian(y, x, i=0, j=0) * dde.grad.jacobian(y, x, i=0, j=1) + dde.grad.jacobian(y, x, i=1, j=1) * dde.grad.jacobian(y, x, i=1, j=0)))
+    e_yx = e_xy
+    #nu = lame/(2*(lame+shear))
     
     return e_xx, e_yy, e_xy, e_yx
 
@@ -101,14 +110,14 @@ def momentum_2d_firstpiola_plane_strain(x, y):
 
 def second_piola_stress_tensor_plane_stress(x, y):
     
-    e_xx, e_yy, e_xy, e_yx = green_lagrange_strain_tensor(x, y)
+    e_xx, e_yy, e_xy, e_yx = green_lagrange_strain_tensor_2(x, y)
     nu, lame, shear, e_modul = problem_parameters()
     
-    #e_xx, e_yy, e_xy = elastic_strain_2d(x, y)     #When checking for linear results
+    # e_xx, e_yy, e_xy = elastic_strain_2d(x, y)     #When checking for linear results
     
     s_xx = e_modul / (1 - nu**2) * (e_xx + nu * e_yy)
     s_yy = e_modul / (1 - nu**2) * (nu * e_xx + e_yy)
-    s_xy = e_modul / (1 - nu**2) * ((1 - nu)/2) * e_xy
+    s_xy = e_modul / (1 - nu**2) * ((1 - nu)) * e_xy
     s_yx = s_xy
     
     return s_xx, s_yy, s_xy, s_yx
@@ -177,10 +186,15 @@ def cauchy_stress_plane_stress(x, y):
     # T_yx = det_F * (f_yx * s_xx + f_yy * s_yx) * f_xx + (f_yx * s_xy + f_yy * s_yy) * f_xy
     # T_yy = det_F * (f_yx * s_xx + f_yy * s_yx) * f_yx + (f_yx * s_xy + f_yy * s_yy) * f_yy
     
+    # T_xx = det_F * (p_xx * f_xx + p_xy * f_xy)      #Alternative formulation
+    # T_xy = det_F * (p_xx * f_yx + p_xy * f_yy)
+    # T_yx = det_F * (p_yx * f_xx + p_yy * f_xy)
+    # T_yy = det_F * (p_xy * f_yx + p_yy * f_yy)
+    
     T_xx = det_F * (p_xx * f_xx + p_xy * f_xy)      #Alternative formulation
-    T_xy = det_F * (p_xx * f_yx + p_xy * f_yy)
-    T_yx = det_F * (p_yx * f_xx + p_yy * f_xy)
-    T_yy = det_F * (p_xy * f_yx + p_yy * f_yy)
+    T_xy = det_F * (p_yx * f_xx + p_yy * f_xy)
+    T_yx = det_F * (p_xx * f_yx + p_xy * f_yy)
+    T_yy = det_F * (p_yx * f_yx + p_yy * f_yy)
     
     return T_xx, T_yy, T_xy, T_yx
 
@@ -369,7 +383,7 @@ def zero_neumman_first_piola_plane_stress_x(x, y, X):
 
     normals, cond = calculate_boundary_normals(X,geom)
     Tx, _, _, _ = piola_stress_to_traction_2d(p_xx, p_yy, p_xy, p_yx, normals, cond)
-
+    
     return Tx
 
 def zero_neumman_plane_stress_y(x, y, X):
@@ -502,7 +516,7 @@ def zero_neumman_plane_strain_y(x, y, X):
 
     return Ty
 
-def zero_neumman_frist_piola_plane_strain_y(x, y, X):
+def zero_neumman_first_piola_plane_strain_y(x, y, X):
     '''
     Calculates y component of the homogeneous Neumann BC
 
