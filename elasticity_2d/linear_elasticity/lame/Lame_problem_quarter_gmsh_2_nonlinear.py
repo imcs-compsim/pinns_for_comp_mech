@@ -40,8 +40,8 @@ center_outer = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.cent
 # change global variables in elasticity_utils
 elasticity_utils.geom = geom
 # change global variables in elasticity_utils
-elasticity_utils.lame = 150/3     #75/26 -->E-Modul=5    75/13 -->E-Modul=10    150/3 -->E-Modul=20       1500/13 -->E-Modul=200    1153.846  -->E-Modul= 2000   1575000/13   --> E-Modul=210000
-elasticity_utils.shear = 100/3    #25/13                  50/3                   100/3                     1000/3                    769.23                       1050000/13
+elasticity_utils.lame = 150/13     #75/26 -->E-Modul=5    75/13 -->E-Modul=10    150/13 -->E-Modul=20       1500/13 -->E-Modul=200    1153.846  -->E-Modul= 2000   1575000/13   --> E-Modul=210000
+elasticity_utils.shear = 100/13    #25/13                  50/13                   100/13                     1000/13                    769.23                       1050000/13
 nu,lame,shear,e_modul = problem_parameters()
 
 # The applied pressure 
@@ -146,10 +146,10 @@ model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
 model = dde.Model(data, net)
 # if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
 model.compile("adam", lr=0.001)
-losshistory, train_state = model.train(epochs=4000, display_every=200, model_restore_path=None)
+losshistory, train_state = model.train(epochs=1, display_every=200, model_restore_path=None)
 
-model.compile("L-BFGS")
-model.train(model_save_path=model_path, display_every=200)
+# model.compile("L-BFGS")
+# model.train(model_save_path=model_path, display_every=200)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
