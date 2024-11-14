@@ -146,10 +146,10 @@ model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
 model = dde.Model(data, net)
 # if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
 model.compile("adam", lr=0.001)
-losshistory, train_state = model.train(epochs=1, display_every=200, model_restore_path=None)
+losshistory, train_state = model.train(epochs=6000, display_every=200, model_restore_path=None)
 
-# model.compile("L-BFGS")
-# model.train(model_save_path=model_path, display_every=200)
+model.compile("L-BFGS")
+model.train(model_save_path=model_path, display_every=200)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
@@ -226,7 +226,7 @@ def compareModelPredictionAndAnalyticalSolution(model):
     sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(T_xx, T_yy, T_xy, r_x)
     
     # FE solution
-    data_fe = pd.read_excel("/home_student/kappen/Downloads/FE_lame_solution_coordinates_over_paraview_new.ods", engine="odf")
+    data_fe = pd.read_excel("/home_student/kappen/Downloads/output_num_example_new_pressure_definition.ods", engine="odf")
     data_pinn = pd.read_excel("/home_student/kappen/Downloads/PINN_lame_solution_coordinates_over_paraview_new.ods", engine="odf")
     
     print(data_fe.head())  # Print the first few rows to check the data structure
