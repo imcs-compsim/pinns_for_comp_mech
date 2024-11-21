@@ -7,6 +7,7 @@ from deepxde import backend as bkd
 import pandas as pd
 from pathlib import Path
 from matplotlib import tri
+import pyvista as pv
 
 from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, first_piola_stress_tensor, momentum_2d_firstpiola, problem_parameters, piola_stress_to_traction_2d, zero_neumman_first_piola_x, zero_neumman_first_piola_y, cauchy_stress, green_lagrange_strain_tensor_2, green_lagrange_strain_tensor_1
 from utils.geometry.geometry_utils import calculate_boundary_normals
@@ -26,6 +27,7 @@ https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.504.4507&rep=rep1&type
 
 height = 1
 width = 5
+applied_displacement = -0.1
 
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 block_2d = Block_2D(coord_left_corner=[-width/2,-height/2], coord_right_corner=[width/2,height/2], mesh_size=0.15, gmsh_options=gmsh_options)
@@ -71,7 +73,7 @@ def right(x, on_boundary):
 
 bc1 = dde.OperatorBC(geom, zero_neumman_first_piola_x, top_bottom_right)
 bc2 = dde.OperatorBC(geom, zero_neumman_first_piola_y, top_bottom)
-bc3 = dde.DirichletBC(geom, lambda _: -0.1, right, component=1)
+bc3 = dde.DirichletBC(geom, lambda _: applied_displacement, right, component=1)
 
 n_dummy = 1
 data = dde.data.PDE(
@@ -120,36 +122,68 @@ model.train()
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
 
-fem_path = str(Path(__file__).parent.parent.parent.parent.parent)+"/Comparison_FE_to_PINN_in_paraview/2D Beam/Set_1/fem_spreadsheet_2d_beam.csv"
-df = pd.read_csv(fem_path)
-fem_results = df[["Points_0","Points_1","displacement_0","displacement_1","nodal_cauchy_stresses_xyz_0","nodal_cauchy_stresses_xyz_1","nodal_cauchy_stresses_xyz_3"]]
-fem_results = fem_results.to_numpy()
-node_coords_xy = fem_results[:,0:2]
-displacement_fem = fem_results[:,2:4]
-stress_fem = fem_results[:,4:7]
+file_path =  "/home_student/kappen/Comparison_FE_to_PINN_in_paraview/ba-kappen-reference-results-main/bending_beam/nonlinear/bending_beam_nonlinear_E=10.0_disp=-0.1/bending_beam_nonlinear_E=10.0_disp=-0.1-structure.pvd"
 
-X, offset, cell_types, dol_triangles = geom.get_mesh()
+# Convert the Path object to a string
+reader = pv.get_reader(file_path)
 
-# X = node_coords_xy
-# x = X[:,0].flatten()
-# y = X[:,1].flatten()
-# z = np.zeros(y.shape)
-# triangles = tri.Triangulation(x, y)
+reader.set_active_time_point(-1)
+data = reader.read()[0]
 
-# triangle_coordinate_x = x[triangles.triangles]
-# triangle_coordinate_y = y[triangles.triangles]
+X = data.points
 
-# # np.isclose(np.linalg.norm(x - center_outer, axis=-1), radius_outer)
-# calculate_norm = np.sqrt(triangle_coordinate_x**2+triangle_coordinate_y**2)
-# mask = np.isclose(calculate_norm,1)
-# dol_triangles = triangles.triangles[~mask.all(axis=1)]
+# print("Shape of X:", X.shape)
+# print("Shape of X[:, 0:2]:", X[:, 0:2].shape)
+
+
+displacement = model.predict(X[:,0:2])
+# cauchy_stress = model.predict(X[:,0:2], operator=cauchy_stress)
+# cauchy_stress = np.column_stack((T_xx, T_yy, T_xy))
+
+
+displacement_extended = np.hstack((displacement, np.zeros_like(displacement[:,0:1])))
+
+data.point_data['pred_displacement'] = displacement_extended
+# data.point_data['pred_stress'] = cauchy_stress
+
+disp_fem = data.point_data['displacement']
+# stress_fem = data.point_data['nodal_cauchy_stresses_xyz']
+
+error_disp = (disp_fem - displacement)
+# error_stress = (stress_fem - cauchy_stress)
+
+data.save(f"Beam2D_gmsh_nicht_linear_displacement_{applied_displacement:.2f}_activationfunc_{activation}.vtu")
+
+exit()
+# displacement_fem = data.point_data['displacement']
+# stress_fem = data.point_data['nodal_cauchy_stresses_xyz']
+
+
+# fem_path = str(Path(__file__).parent.parent.parent.parent.parent)+"/Comparison_FE_to_PINN_in_paraview/2D Beam/Set_2_correct_visualization/fem_spreadsheet_2d_beam.csv"
+# df = pd.read_csv(fem_path)
+# fem_results = df[["Points_0","Points_1","displacement_0","displacement_1","nodal_cauchy_stresses_xyz_0","nodal_cauchy_stresses_xyz_1","nodal_cauchy_stresses_xyz_3"]]
+# fem_results = fem_results.to_numpy()
+
+# displacement_fem = fem_results[:,2:4]
+# stress_fem = fem_results[:,4:7]
+
+# X, offset, cell_types, dol_triangles = geom.get_mesh()
+triangles = tri.Triangulation(x, y)
+
+triangle_coordinate_x = x[triangles.triangles]
+triangle_coordinate_y = y[triangles.triangles]
+
+# np.isclose(np.linalg.norm(x - center_outer, axis=-1), radius_outer)
+calculate_norm = np.sqrt(triangle_coordinate_x**2+triangle_coordinate_y**2)
+mask = np.isclose(calculate_norm,1)
+dol_triangles = triangles.triangles[~mask.all(axis=1)]
 
 # fem
-# u_fem, v_fem = displacement_fem[:,0], displacement_fem[:,1]
+u_fem, v_fem = displacement_fem[:,0], displacement_fem[:,1]
 sigma_xx_fem, sigma_yy_fem, sigma_xy_fem = stress_fem[:,0:1], stress_fem[:,1:2], stress_fem[:,2:3]
 
-# combined_disp_fem = tuple(np.vstack((np.array(u_fem.tolist()),np.array(v_fem.tolist()),np.zeros(u_fem.shape[0]))))
-# combined_stress_fem = tuple(np.vstack((np.array(sigma_xx_fem.flatten().tolist()),np.array(sigma_yy_fem.flatten().tolist()),np.array(sigma_xy_fem.flatten().tolist()))))
+combined_disp_fem = tuple(np.vstack((np.array(u_fem.tolist()),np.array(v_fem.tolist()),np.zeros(u_fem.shape[0]))))
+combined_stress_fem = tuple(np.vstack((np.array(sigma_xx_fem.flatten().tolist()),np.array(sigma_yy_fem.flatten().tolist()),np.array(sigma_xy_fem.flatten().tolist()))))
 
 displacement = model.predict(X)
 u_pred, v_pred = displacement[:,0], displacement[:,1]
@@ -162,34 +196,28 @@ combined_stress = tuple(np.vstack((np.array(T_xx.flatten().tolist()),np.array(T_
 combined_stress_p = tuple(np.vstack((np.array(p_xx.flatten().tolist()),np.array(p_yy.flatten().tolist()),np.array(p_xy.flatten().tolist()))))
 
 # error
-# error_disp_x = abs(np.array(u_pred.tolist()) - u_fem.flatten())
-# error_disp_y =  abs(np.array(v_pred.tolist()) - v_fem.flatten())
-# combined_error_disp = tuple(np.vstack((error_disp_x, error_disp_y,np.zeros(error_disp_x.shape[0]))))
+error_disp_x = abs(np.array(u_pred.tolist()) - u_fem.flatten())
+error_disp_y =  abs(np.array(v_pred.tolist()) - v_fem.flatten())
+combined_error_disp = tuple(np.vstack((error_disp_x, error_disp_y,np.zeros(error_disp_x.shape[0]))))
 
-# error_stress_x = abs(np.array(T_xx.flatten().tolist()) - sigma_xx_fem.flatten())
-# error_stress_y =  abs(np.array(T_yy.flatten().tolist()) - sigma_yy_fem.flatten())
-# error_stress_xy =  abs(np.array(T_xy.flatten().tolist()) - sigma_xy_fem.flatten())
-# combined_error_stress = tuple(np.vstack((error_stress_x, error_stress_y, error_stress_xy)))
+error_stress_x = abs(np.array(T_xx.flatten().tolist()) - sigma_xx_fem.flatten())
+error_stress_y =  abs(np.array(T_yy.flatten().tolist()) - sigma_yy_fem.flatten())
+error_stress_xy =  abs(np.array(T_xy.flatten().tolist()) - sigma_xy_fem.flatten())
+combined_error_stress = tuple(np.vstack((error_stress_x, error_stress_y, error_stress_xy)))
 
 
-# file_path = os.path.join(os.getcwd(), "Beam2D_gmsh_nicht_linear")
+#dol_triangles = dol_triangles
+offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
+cell_types = np.ones(dol_triangles.shape[0])*5
 
-# x = X[:,0].flatten()
-# y = X[:,1].flatten()
-# z = np.zeros(y.shape)
+#file_path = os.path.join(os.getcwd(), "Beam2D_gmsh_nicht_linear_applied_displacment")
+file_path = os.path.join(os.getcwd(),f"Beam2D_gmsh_nicht_linear_displacement_{applied_displacement:.2f}_activationfunc_{activation}")
 
-# #dol_triangles = dol_triangles
-# offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
-# cell_types = np.ones(dol_triangles.shape[0])*5
-
-file_path = os.path.join(os.getcwd(), "Beam2D_gmsh_nicht_linear")
 
 x = X[:,0].flatten()
 y = X[:,1].flatten()
 z = np.zeros(y.shape)
 
-unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, cell_types, pointData = { "displacement" : combined_disp, "stress" : combined_stress, "1st piola stress": combined_stress_p,})
-
-
-#"stress_fem": combined_stress_fem, "1st piola stress": combined_stress_p, "error_disp_x": error_disp_x, "error_disp_y": error_disp_y, 
-#                                             "error_stress_x": error_stress_x, "error_stress_y": error_stress_y, "error_stress_xy": error_stress_xy})
+unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, cell_types, pointData = { "displacement" : combined_disp, "stress" : combined_stress, "1st piola stress": combined_stress_p, 
+                                                                                                    "stress_fem": combined_stress_fem, "1st piola stress": combined_stress_p, "error_disp_x": error_disp_x, "error_disp_y": error_disp_y, 
+                                                                                                    "error_stress_x": error_stress_x, "error_stress_y": error_stress_y, "error_stress_xy": error_stress_xy})
