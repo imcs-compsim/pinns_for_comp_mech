@@ -113,7 +113,7 @@ net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, loss_weights=None)
-losshistory, train_state = model.train(epochs=4000, display_every=200)
+losshistory, train_state = model.train(epochs=2500, display_every=200)
 
 model.compile("L-BFGS",loss_weights=None)
 model.train()
@@ -149,19 +149,22 @@ data.point_data['pred_stress'] = cauchy
 disp_fem = data.point_data['displacement']
 stress_fem = data.point_data['nodal_cauchy_stresses_xyz']
 
-error_disp = (disp_fem - displacement)
+error_disp = abs((disp_fem - displacement))
 data.point_data['pointwise_displacement_error'] = error_disp
 # select xx, yy, and xy component (1st, 2nd and 4th column)
 columns = [0,1,3]
-error_stress = (stress_fem[:, columns] - cauchy)
+error_stress = abs((stress_fem[:, columns] - cauchy))
 data.point_data['pointwise_cauchystress_error'] = error_stress
-data.point_data['pointwise_cauchystress_error'].column_names
+#data.point_data['pointwise_cauchystress_error'].column_names
 
 data.save(f"Beam2D_gmsh_nicht_linear_displacement_{applied_displacement:.2f}_activationfunc_{activation}.vtu")
 
+print("NOTE THAT 'Warp By Vector' DOES NOT WORK HERE AS THE Z-DIMENSION VALUES ARE ILL-DEFINED.")
+print("USE CALCULATION WITH 'displacement_X*iHat + displacement_Y*jHat + 0*kHat' AND THEN APPLY 'Warp By Vector'.")
+
 exit()
 # displacement_fem = data.point_data['displacement']
-# stress_fem = data.point_data['nodal_cauchy_stresses_xyz']
+# stress_fem = data.point_data['nodal_cauchy_stresses_xyz']cauchy
 
 
 # fem_path = str(Path(__file__).parent.parent.parent.parent.parent)+"/Comparison_FE_to_PINN_in_paraview/2D Beam/Set_2_correct_visualization/fem_spreadsheet_2d_beam.csv"
