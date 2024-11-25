@@ -113,7 +113,7 @@ net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, loss_weights=None)
-losshistory, train_state = model.train(epochs=2500, display_every=200)
+losshistory, train_state = model.train(epochs=4000, display_every=200)
 
 model.compile("L-BFGS",loss_weights=None)
 model.train()
