@@ -137,20 +137,25 @@ X = data.points
 
 
 displacement = model.predict(X[:,0:2])
-# cauchy_stress = model.predict(X[:,0:2], operator=cauchy_stress)
-# cauchy_stress = np.column_stack((T_xx, T_yy, T_xy))
+T_xx, T_yy, T_xy, T_yx = model.predict(X[:,0:2], operator=cauchy_stress)
+cauchy = np.column_stack((T_xx, T_yy, T_xy))
 
 
 displacement_extended = np.hstack((displacement, np.zeros_like(displacement[:,0:1])))
 
 data.point_data['pred_displacement'] = displacement_extended
-# data.point_data['pred_stress'] = cauchy_stress
+data.point_data['pred_stress'] = cauchy
 
 disp_fem = data.point_data['displacement']
-# stress_fem = data.point_data['nodal_cauchy_stresses_xyz']
+stress_fem = data.point_data['nodal_cauchy_stresses_xyz']
 
 error_disp = (disp_fem - displacement)
-# error_stress = (stress_fem - cauchy_stress)
+data.point_data['pointwise_displacement_error'] = error_disp
+# select xx, yy, and xy component (1st, 2nd and 4th column)
+columns = [0,1,3]
+error_stress = (stress_fem[:, columns] - cauchy)
+data.point_data['pointwise_cauchystress_error'] = error_stress
+data.point_data['pointwise_cauchystress_error'].column_names
 
 data.save(f"Beam2D_gmsh_nicht_linear_displacement_{applied_displacement:.2f}_activationfunc_{activation}.vtu")
 
