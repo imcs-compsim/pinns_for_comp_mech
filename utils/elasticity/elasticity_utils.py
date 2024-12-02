@@ -6,9 +6,10 @@ import deepxde.backend as bkd
 lame = 1        # Lame ist lambda
 shear = 0.5     # shear ist mü
 geom = None
-model_type = "plane_stress"
+model_type = "plane_strain"
 model_complexity = "nonlinear"          #with "linear" --> linear strain defintion, everyhing else i.e. "hueicii" nonlinear
 green_lagrange_tensor_type = "second"    #type "first" is the formulation in question whether its right or not - "hviuvi" calls the second formulation
+
 
 def momentum_2d(x, y):    
     # calculate strain terms (kinematics, small strain theory)
@@ -73,11 +74,16 @@ def second_piola_stress_tensor(x, y):
     
     if model_type == "plane_strain":                                            
         e_yx = e_xy
-        s_xx = e_xx * (lame + 2 * shear) + lame * e_yy
-        s_yy = e_yy * (lame + 2 * shear) + lame * e_xx
-        s_xy = 2 * shear * e_xy                         
-        s_yx = 2 * shear * e_yx 
+        # s_xx = e_xx * (lame + 2 * shear) + lame * e_yy
+        # s_yy = e_yy * (lame + 2 * shear) + lame * e_xx
+        # s_xy = 2 * shear * e_xy                         
+        # s_yx = 2 * shear * e_yx 
         
+        # calculate stress terms (constitutive law - plane strain)
+        s_xx = e_modul/((1+nu)*(1-2*nu))*((1-nu)*e_xx+nu*e_yy)
+        s_yy = e_modul/((1+nu)*(1-2*nu))*(nu*e_xx+(1-nu)*e_yy)
+        s_xy = e_modul/((1+nu)*(1-2*nu))*((1-2*nu)*e_xy)
+        s_yx = s_xy
     else:           #plane_stress
         s_xx = e_modul / (1 - nu**2) * (e_xx + nu * e_yy)
         s_yy = e_modul / (1 - nu**2) * (nu * e_xx + e_yy)
@@ -581,7 +587,35 @@ def piola_stress_to_traction_2d(p_xx, p_yy, p_xy, p_yx, normals, cond):
 
     return Tx, Ty, Tn, Tt
 
-def calculate_traction_mixed_formulation(x, y, X):
+def calculate_traction_mixed_from_piola_formulation(x, y, X):
+    '''
+    Calculates traction components in the mixed formulation. 
+    
+    Parameters
+    -----------    #     term_x = sigma_xx - y[:, 2:3]
+    # term_y = sigma_yy - y[:, 3:4]
+    # term_xy = sigma_xy - y[:, 4:5]
+            Network input
+        y: tensor
+            Network output
+        X : np array
+            Network input as numpy array
+
+    Returns
+    -------
+        Tx, Ty, Tn, Tt: any
+            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
+    '''
+
+    p_xx, p_yy, p_xy, p_yx = y[:, 2:3], y[:, 3:4], y[:, 4:5], y[:5:6]
+    
+    normals, cond = calculate_boundary_normals(X,geom)
+
+    Tx, Ty, Tn, Tt = piola_stress_to_traction_2d(p_xx, p_yy, p_xy, p_yx, normals, cond)
+
+    return Tx, Ty, Tn, Tt
+
+def calculate_traction_mixed_from_cauchy_stress_formulation(x, y, X):
     '''
     Calculates traction components in the mixed formulation. 
     
@@ -605,7 +639,7 @@ def calculate_traction_mixed_formulation(x, y, X):
     
     normals, cond = calculate_boundary_normals(X,geom)
 
-    Tx, Ty, Tn, Tt = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
+    Tx, Ty, Tn, Tt = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, sigma_xy, normals, cond)
 
     return Tx, Ty, Tn, Tt
 
@@ -629,7 +663,7 @@ def zero_neumann_x_mixed_formulation(x, y, X):
     '''
     
     
-    Tx, _, _, _ = calculate_traction_mixed_formulation(x, y, X)
+    Tx, _, _, _ = calculate_traction_mixed_from_cauchy_stress_formulation(x, y, X)
 
     return Tx
 
@@ -653,9 +687,10 @@ def zero_neumann_y_mixed_formulation(x, y, X):
     '''
     
     
-    _, Ty, _, _ = calculate_traction_mixed_formulation(x, y, X)
+    _, Ty, _, _ = calculate_traction_mixed_from_cauchy_stress_formulation(x, y, X)
 
     return Ty
+
 #################################################################################################################################################################################
 # Equations for 3D elasticity
 #################################################################################################################################################################################
