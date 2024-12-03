@@ -9,7 +9,7 @@ from pathlib import Path
 from matplotlib import tri
 import pyvista as pv
 
-from utils.elasticity.elasticity_utils import problem_parameters, first_piola_stress_tensor, momentum_2d_firstpiola, problem_parameters, zero_neumman_first_piola_x, zero_neumman_first_piola_y, cauchy_stress
+from utils.elasticity.elasticity_utils import problem_parameters, first_piola_stress_tensor, momentum_mixed, problem_parameters, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation, cauchy_stress
 from utils.geometry.geometry_utils import calculate_boundary_normals
 from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import Block_2D
@@ -79,8 +79,8 @@ def right(x, on_boundary):
     return on_boundary and np.isclose(x[0],width/2)
 
 
-bc1 = dde.OperatorBC(geom, zero_neumman_first_piola_x, top_bottom_right)
-bc2 = dde.OperatorBC(geom, zero_neumman_first_piola_y, top_bottom)
+bc1 = dde.OperatorBC(geom, zero_neumann_x_mixed_formulation, top_bottom_right)
+bc2 = dde.OperatorBC(geom, zero_neumann_y_mixed_formulation, top_bottom)
 bc3 = dde.DirichletBC(geom, lambda _: applied_displacement, right, component=1)
 bc4 = dde.DirichletBC(geom, lambda _: 0, left, component=0)
 bc5 = dde.DirichletBC(geom, lambda _: 0, left, component=1)
@@ -89,11 +89,11 @@ bc5 = dde.DirichletBC(geom, lambda _: 0, left, component=1)
 n_dummy = 1
 data = dde.data.PDE(
     geom,
-    momentum_2d_firstpiola,
+    momentum_mixed,
     [bc1, bc2, bc3, bc4, bc5],
-    num_domain=n_dummy,
-    num_boundary=n_dummy,
-    num_test=None,
+    num_domain = n_dummy,
+    num_boundary = n_dummy,
+    num_test = None,
     train_distribution = "Sobol",
 )
 
@@ -117,8 +117,8 @@ def output_transform(x, y):
 #     u_y_analy = -y[:,1:2]*shear_y/(6*e_modul*Inertia)*(3*nu*y_loc**2*(l-x_loc) + (4+5*nu)*h**2*x_loc/4 + (3*l-x_loc)*x_loc**2)
 #     return tf.concat([ u_x_analy, u_y_analy], axis=1)
 
-# two inputs x and y, output is ux and uy
-layer_size = [2] + [16] * 4 + [2]
+# two inputs x and y, output is ux, uy, Txx, Tyy, Txy, Tyx
+layer_size = [2] + [50] * 3 + [6]
 activation = "swish"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
@@ -127,7 +127,7 @@ loss_weights=[1,1,1,1,1]
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, loss_weights=None)
-losshistory, train_state = model.train(epochs=4000, display_every=200)
+losshistory, train_state = model.train(epochs=6000, display_every=200)
 
 model.compile("L-BFGS",loss_weights=None)
 model.train()
@@ -146,8 +146,26 @@ data = reader.read()[0]
 
 X = data.points
 
+# Predict the outputs using the model
+predictions = model.predict(X[:, 0:2])  # Input the spatial points (x, y)
+
+# Extract the displacements
+u_x = predictions[:, 0]  # First column corresponds to u_x
+u_y = predictions[:, 1]  # Second column corresponds to u_y
+
+# Extract the Cauchy stress components
+T_xx = predictions[:, 2]  # Third column corresponds to T_xx
+T_yy = predictions[:, 3]  # Fourth column corresponds to T_yy
+T_xy = predictions[:, 4]  # Fifth column corresponds to T_xy
+T_yx = T_xy  # If you assume the stress tensor is symmetric
+
+# T_xx = model.predict(X[:,2])
+# T_yy = model.predict(X[:,3])
+# T_xy = model.predict(X[:,4])
+# T_yx = model.predict(X[:,4])
+
 displacement = model.predict(X[:,0:2])
-T_xx, T_yy, T_xy, T_yx = model.predict(X[:,0:2], operator=cauchy_stress)
+#T_xx, T_yy, T_xy, T_yx = model.predict(X[:,0:2], operator=cauchy_stress)
 P_xx, P_yy, P_xy, P_yx = model.predict(X[:,0:2], operator=first_piola_stress_tensor)
 
 first_piola = np.column_stack((P_xx, P_yy, P_xy))
@@ -162,7 +180,7 @@ data.point_data['pred_stress'] = cauchy
 disp_fem = data.point_data['displacement']
 stress_fem = data.point_data['nodal_cauchy_stresses_xyz']
 
-error_disp = abs((disp_fem - displacement))
+error_disp = abs((disp_fem - displacement[:, 0:2]))
 data.point_data['pointwise_displacement_error'] = error_disp
 # select xx, yy, and xy component (1st, 2nd and 4th column)
 columns = [0,1,3]
@@ -170,7 +188,7 @@ error_stress = abs((stress_fem[:, columns] - cauchy))
 data.point_data['pointwise_cauchystress_error'] = error_stress
 #data.point_data['pointwise_cauchystress_error'].column_names
 
-data.save(f"Beam2D_{model_complexity}_u_{applied_displacement:.1f}_{activation}_{model_type}.vtu")
+data.save(f"Beam2D_mixed_{model_complexity}_u_{applied_displacement:.1f}_{activation}_{model_type}.vtu")
 
 print("NOTE THAT 'Warp By Vector' DOES NOT WORK HERE AS THE Z-DIMENSION VALUES ARE ILL-DEFINED.")
 print("USE CALCULATION WITH 'displacement_X*iHat + displacement_Y*jHat + 0*kHat' AND THEN APPLY 'Warp By Vector'.")

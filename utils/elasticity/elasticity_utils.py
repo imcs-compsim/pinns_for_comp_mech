@@ -10,23 +10,6 @@ model_type = "plane_strain"
 model_complexity = "nonlinear"          #with "linear" --> linear strain defintion, everyhing else i.e. "hueicii" nonlinear
 green_lagrange_tensor_type = "second"    #type "first" is the formulation in question whether its right or not - "hviuvi" calls the second formulation
 
-
-def momentum_2d(x, y):    
-    # calculate strain terms (kinematics, small strain theory)
-
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
-
-    # governing equation
-    sigma_xx_x = dde.grad.jacobian(sigma_xx, x, i=0, j=0)
-    sigma_yy_y = dde.grad.jacobian(sigma_yy, x, i=0, j=1)
-    sigma_xy_x = dde.grad.jacobian(sigma_xy, x, i=0, j=0)
-    sigma_xy_y = dde.grad.jacobian(sigma_xy, x, i=0, j=1)
-
-    momentum_x = sigma_xx_x + sigma_xy_y
-    momentum_y = sigma_yy_y + sigma_xy_x
-
-    return [momentum_x, momentum_y]
-
 def deformation_gradient(x, y):
 
     f_xx = dde.grad.jacobian(y, x, i=0, j=0) + 1
@@ -104,8 +87,21 @@ def first_piola_stress_tensor(x,y):
 
     return p_xx, p_yy, p_xy, p_yx
 
-def momentum_2d_firstpiola(x, y):    
-    # calculate strain terms (kinematics, small strain theory)
+def cauchy_stress(x, y):
+    
+    f_xx, f_yy, f_xy, f_yx = deformation_gradient(x, y)
+    p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor(x,y)
+    
+    det_F = 1/(f_xx * f_yy - f_xy * f_yx)
+    
+    T_xx = det_F * (p_xx * f_xx + p_xy * f_xy)      #Alternative formulation
+    T_xy = det_F * (p_xx * f_yx + p_xy * f_yy)
+    T_yx = det_F * (p_yx * f_xx + p_yy * f_xy)
+    T_yy = det_F * (p_xy * f_yx + p_yy * f_yy)
+    
+    return T_xx, T_yy, T_xy, T_yx
+
+def momentum_2d_firstpiola(x, y):                           # independet of plane strain and stress as this is applied via S -> P
 
     p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor(x,y)
 
@@ -120,19 +116,21 @@ def momentum_2d_firstpiola(x, y):
 
     return [momentum_x, momentum_y]
 
-def cauchy_stress(x, y):
-    
-    f_xx, f_yy, f_xy, f_yx = deformation_gradient(x, y)
-    p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor(x,y)
-    
-    det_F = 1/(f_xx * f_yy - f_xy * f_yx)
-    
-    T_xx = det_F * (p_xx * f_xx + p_xy * f_xy)      #Alternative formulation
-    T_xy = det_F * (p_xx * f_yx + p_xy * f_yy)
-    T_yx = det_F * (p_yx * f_xx + p_yy * f_xy)
-    T_yy = det_F * (p_xy * f_yx + p_yy * f_yy)
-    
-    return T_xx, T_yy, T_xy, T_yx
+def momentum_2d_plane_strain(x, y):    
+    # calculate strain terms (kinematics, small strain theory)
+
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
+
+    # governing equation
+    sigma_xx_x = dde.grad.jacobian(sigma_xx, x, i=0, j=0)
+    sigma_yy_y = dde.grad.jacobian(sigma_yy, x, i=0, j=1)
+    sigma_xy_x = dde.grad.jacobian(sigma_xy, x, i=0, j=0)
+    sigma_xy_y = dde.grad.jacobian(sigma_xy, x, i=0, j=1)
+
+    momentum_x = sigma_xx_x + sigma_xy_y
+    momentum_y = sigma_yy_y + sigma_xy_x
+
+    return [momentum_x, momentum_y]
 
 def momentum_2d_plane_stress(x, y):    
     # calculate strain terms (kinematics, small strain theory)
@@ -172,7 +170,6 @@ def elastic_strain_2d(x,y):
     nu = lame/(2*(lame+shear))
     return eps_xx, eps_yy, eps_xy
 
-
 def problem_parameters():
     '''
     Calculates the elastic properties for given Lame and shear modulus.
@@ -198,7 +195,6 @@ def problem_parameters():
     "lambda_ = (nu * e_modul)/(1 - nu - 2*nu^(2))" "Lame ist lambda und shear ist mü"
     
     return nu, lame, shear, e_modul
-
 
 def stress_plane_strain(x,y):
     '''
@@ -226,7 +222,6 @@ def stress_plane_strain(x,y):
     sigma_xy = e_modul/((1+nu)*(1-2*nu))*((1-2*nu)*eps_xy)
 
     return sigma_xx, sigma_yy, sigma_xy
-
 
 def stress_plane_stress(x,y):
     '''
@@ -587,6 +582,40 @@ def piola_stress_to_traction_2d(p_xx, p_yy, p_xy, p_yx, normals, cond):
 
     return Tx, Ty, Tn, Tt
 
+def cauchy_stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond):
+    '''
+    Calculates the traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential)).
+
+    Parameters
+    -----------
+        sigma_xx (any): Stress component in x direction
+        sigma_yy (any): Stress component in y direction
+        sigma_xy (any): Stress component in xy direction (shear)
+        normals (vector): Normal vectors
+        cond (boolean): Dimensions of stresses and and normals have to match. Normals are calculated on the boundary, while stresses are calculated everywhere.
+
+    Returns
+    -------
+        Tx, Ty, Tn, Tt: any
+            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
+    '''
+    
+    nx = normals[:,0:1]
+    ny = normals[:,1:2]
+
+    sigma_xx_n_x = sigma_xx[cond]*nx
+    sigma_xy_n_y = sigma_xy[cond]*ny
+
+    sigma_yx_n_x = sigma_xy[cond]*nx
+    sigma_yy_n_y = sigma_yy[cond]*ny
+    
+    Tx = sigma_xx_n_x + sigma_xy_n_y
+    Ty = sigma_yx_n_x + sigma_yy_n_y
+    Tn = Tx*nx + Ty*ny
+    Tt = -Tx*ny + Ty*nx # Direction is clockwise --> if you go from normal tangetial
+
+    return Tx, Ty, Tn, Tt
+
 def calculate_traction_mixed_from_piola_formulation(x, y, X):
     '''
     Calculates traction components in the mixed formulation. 
@@ -639,7 +668,7 @@ def calculate_traction_mixed_from_cauchy_stress_formulation(x, y, X):
     
     normals, cond = calculate_boundary_normals(X,geom)
 
-    Tx, Ty, Tn, Tt = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, sigma_xy, normals, cond)
+    Tx, Ty, Tn, Tt = cauchy_stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
     return Tx, Ty, Tn, Tt
 
@@ -690,6 +719,64 @@ def zero_neumann_y_mixed_formulation(x, y, X):
     _, Ty, _, _ = calculate_traction_mixed_from_cauchy_stress_formulation(x, y, X)
 
     return Ty
+
+# Consistency function: ideas
+
+def momentum_mixed(x,y):
+    '''
+    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation
+
+    Parameters
+    ----------
+    x : tensor
+        the input arguments
+    y: tensor
+        the network output
+
+    Returns
+    -------
+    momentum_x, momentum_y, term_x, term_y, term_xy: tensor
+        momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses
+        term_x, term_y, term_xy: difference between predicted stresses and calculated stresses in X, Y and XY direction
+    '''
+    # governing equation
+    T_xx_x = dde.grad.jacobian(y, x, i=2, j=0)
+    T_yy_y = dde.grad.jacobian(y, x, i=3, j=1)
+    T_xy_x = dde.grad.jacobian(y, x, i=4, j=0)
+    T_xy_y = dde.grad.jacobian(y, x, i=4, j=1)
+
+    momentum_x = T_xx_x + T_xy_y
+    momentum_y = T_yy_y + T_xy_x
+    
+    # material law
+    term_x, term_y, term_xy = iso_elasticity(x,y)
+
+    return [momentum_x, momentum_y, term_x, term_y, term_xy]
+
+def iso_elasticity(x,y):
+    '''
+    Calculates the difference between predicted T and calculated T based on isotropic material law and predicted displacements
+
+    Parameters
+    ----------
+    x : tensor
+        the input arguments
+    y: tensor
+        the network output
+
+    Returns
+    -------
+    term_x, term_y, term_xy: tensor
+        difference between predicted stresses and calculated stresses in X, Y and XY direction 
+    '''
+    
+    T_xx, T_yy, T_xy, T_yx = cauchy_stress(x,y)
+    
+    term_x = T_xx - y[:, 2:3]
+    term_y = T_yy - y[:, 3:4]
+    term_xy = T_xy - y[:, 4:5]
+    
+    return term_x, term_y, term_xy
 
 #################################################################################################################################################################################
 # Equations for 3D elasticity
