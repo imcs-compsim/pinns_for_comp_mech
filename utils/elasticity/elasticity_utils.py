@@ -636,7 +636,7 @@ def calculate_traction_mixed_from_piola_formulation(x, y, X):
             Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
     '''
 
-    p_xx, p_yy, p_xy, p_yx = y[:, 2:3], y[:, 3:4], y[:, 4:5], y[:5:6]
+    p_xx, p_yy, p_xy, p_yx = y[:, 2:3], y[:, 3:4], y[:, 4:5], y[:, 5:6]
     
     normals, cond = calculate_boundary_normals(X,geom)
 
@@ -672,7 +672,55 @@ def calculate_traction_mixed_from_cauchy_stress_formulation(x, y, X):
 
     return Tx, Ty, Tn, Tt
 
-def zero_neumann_x_mixed_formulation(x, y, X):
+def zero_neumann_x_mixed_P_formulation(x, y, X):
+    '''
+    Calculates/Enforces x component of traction vector in the mixed formulation. This is also known as zero Neumann boundary conditions in x direction.  
+    
+    Parameters
+    -----------
+        x : tensor
+            Network input
+        y: tensor
+            Network output
+        X : np array
+            Network input as numpy array
+
+    Returns
+    -------
+        Tx: any
+            x component of traction vector
+    '''
+    
+    
+    Tx, _, _, _ = calculate_traction_mixed_from_piola_formulation(x, y, X)
+
+    return Tx
+
+def zero_neumann_y_mixed_P_formulation(x, y, X):
+    '''
+    Calculates/Enforces y component of traction vector in the mixed formulation. This is also known as zero Neumann boundary conditions in y direction.  
+    
+    Parameters
+    -----------
+        x : tensor
+            Network input
+        y: tensor
+            Network output
+        X : np array
+            Network input as numpy array
+
+    Returns
+    -------
+        Ty: any
+            y component of traction vector
+    '''
+    
+    
+    _, Ty, _, _ = calculate_traction_mixed_from_piola_formulation(x, y, X)
+
+    return Ty
+
+def zero_neumann_x_mixed_T_formulation(x, y, X):
     '''
     Calculates/Enforces x component of traction vector in the mixed formulation. This is also known as zero Neumann boundary conditions in x direction.  
     
@@ -696,7 +744,7 @@ def zero_neumann_x_mixed_formulation(x, y, X):
 
     return Tx
 
-def zero_neumann_y_mixed_formulation(x, y, X):
+def zero_neumann_y_mixed_T_formulation(x, y, X):
     '''
     Calculates/Enforces y component of traction vector in the mixed formulation. This is also known as zero Neumann boundary conditions in y direction.  
     
@@ -720,9 +768,10 @@ def zero_neumann_y_mixed_formulation(x, y, X):
 
     return Ty
 
+
 # Consistency function: ideas
 
-def momentum_mixed(x,y):
+def momentum_mixed_T(x,y):
     '''
     Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation
 
@@ -749,11 +798,11 @@ def momentum_mixed(x,y):
     momentum_y = T_yy_y + T_xy_x
     
     # material law
-    term_x, term_y, term_xy = iso_elasticity(x,y)
+    term_x, term_y, term_xy = iso_elasticity_T(x,y)
 
     return [momentum_x, momentum_y, term_x, term_y, term_xy]
 
-def iso_elasticity(x,y):
+def iso_elasticity_T(x,y):
     '''
     Calculates the difference between predicted T and calculated T based on isotropic material law and predicted displacements
 
@@ -777,6 +826,63 @@ def iso_elasticity(x,y):
     term_xy = T_xy - y[:, 4:5]
     
     return term_x, term_y, term_xy
+
+def momentum_mixed_P(x,y):
+    '''
+    Calculates the momentum equation using predicted 1st piola k stresses and generates the terms for pde of the mixed-variable formulation
+
+    Parameters
+    ----------
+    x : tensor
+        the input arguments
+    y: tensor
+        the network output
+
+    Returns
+    -------
+    momentum_x, momentum_y, term_x, term_y, term_xy, term_yx: tensor
+        momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses
+        term_x, term_y, term_xy, term_yx: difference between predicted stresses and calculated stresses in X, Y, XY and YX direction
+    '''
+    # governing equation
+    P_xx_x = dde.grad.jacobian(y, x, i=2, j=0)
+    P_yy_y = dde.grad.jacobian(y, x, i=3, j=1)
+    P_xy_y = dde.grad.jacobian(y, x, i=4, j=1)
+    P_yx_x = dde.grad.jacobian(y, x, i=5, j=0)
+
+    momentum_x = P_xx_x + P_xy_y
+    momentum_y = P_yy_y + P_yx_x
+    
+    # material law
+    term_x, term_y, term_xy, term_yx = iso_elasticity_P(x,y)
+
+    return [momentum_x, momentum_y, term_x, term_y, term_xy, term_yx]
+
+def iso_elasticity_P(x,y):
+    '''
+    Calculates the difference between predicted T and calculated T based on isotropic material law and predicted displacements
+
+    Parameters
+    ----------
+    x : tensor
+        the input arguments
+    y: tensor
+        the network output
+
+    Returns
+    -------
+    term_x, term_y, term_xy: tensor
+        difference between predicted stresses and calculated stresses in X, Y and XY direction 
+    '''
+    
+    p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor(x,y)
+    
+    term_x = p_xx - y[:, 2:3]
+    term_y = p_yy - y[:, 3:4]
+    term_xy = p_xy - y[:, 4:5]
+    term_yx = p_yx - y[:, 5:6]
+    
+    return term_x, term_y, term_xy, term_yx
 
 #################################################################################################################################################################################
 # Equations for 3D elasticity
