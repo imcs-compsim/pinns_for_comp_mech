@@ -1,6 +1,7 @@
 import deepxde as dde
 from utils.geometry.geometry_utils import calculate_boundary_normals, calculate_boundary_normals_3D
 import deepxde.backend as bkd
+import numpy as np
 
 # global variables
 lame = 1        # Lame ist lambda
@@ -91,6 +92,20 @@ def cauchy_stress(x, y):
     
     f_xx, f_yy, f_xy, f_yx = deformation_gradient(x, y)
     p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor(x,y)
+    
+    det_F = 1/(f_xx * f_yy - f_xy * f_yx)
+    
+    T_xx = det_F * (p_xx * f_xx + p_xy * f_xy)      #Alternative formulation
+    T_xy = det_F * (p_xx * f_yx + p_xy * f_yy)
+    T_yx = det_F * (p_yx * f_xx + p_yy * f_xy)
+    T_yy = det_F * (p_xy * f_yx + p_yy * f_yy)
+    
+    return T_xx, T_yy, T_xy, T_yx
+
+def cauchy_stress_mixed_P(x, y):
+
+    f_xx, f_yy, f_xy, f_yx = deformation_gradient(x, y)
+    p_xx, p_yy, p_xy, p_yx = y[:, 2:3] ,y[:, 3:4] ,y[:, 4:5], y[:, 5:6]
     
     det_F = 1/(f_xx * f_yy - f_xy * f_yx)
     
@@ -883,6 +898,11 @@ def iso_elasticity_P(x,y):
     term_yx = p_yx - y[:, 5:6]
     
     return term_x, term_y, term_xy, term_yx
+
+def compute_relative_l2_error(fem_data, pinn_data, column):
+    numerator = np.sum((fem_data[:, column:column+1] - pinn_data[:, column:column+1])**2)
+    denominator = np.sum(fem_data[:, column:column+1]**2)
+    return np.sqrt(numerator / denominator)
 
 #################################################################################################################################################################################
 # Equations for 3D elasticity
