@@ -27,7 +27,7 @@ https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.504.4507&rep=rep1&type
 
 height = 1
 width = 5
-applied_displacement = -0.1
+applied_displacement = -1.5
 elasticity_utils.model_complexity = "nonlinear"     #with "linear" --> linear strain definition, everyhing else i.e. "hueicii" nonlinear
 elasticity_utils.model_type = "plane_strain"        #with "plane_strain" --> plane strain, everyhing else i.e. "hueicii" plane stress
 model_type = elasticity_utils.model_type 
@@ -100,34 +100,30 @@ data = dde.data.PDE(
 def output_transform(x, y):
     u = y[:, 0:1]       #x-displacement
     v = y[:, 1:2]       #y-displacement
-    x_loc = x[:, 0:1] 
-    print(x_loc)                  
+    P_xx, P_yy, P_xy, P_yx = y[:, 2:3], y[:, 3:4], y[:, 4:5], y[:, 5:6]
+     
+    x_loc = x[:, 0:1]          
     y_loc = x[:, 1:2]
     left_side = (width/2+x_loc)
     right_side = (width/2-x_loc)
-    return bkd.concat([(u)*width, (v)/e_modul], axis=1)
-    #return bkd.concat([(u*left_side/(e_modul**2*width)), (v*left_side/(e_modul))], axis=1)
+    top_bottom = (y_loc-width/2)*(y_loc+width/2)
+    return bkd.concat([(u)*width, (v)/e_modul, P_xx, P_yy, P_xy, P_yx], axis=1)
+    # return bkd.concat([(u*left_side/(e_modul**2*width)), (v*left_side/(e_modul)), P_xx, P_yy, P_xy, P_yx], axis=1)
+    # return bkd.concat([(u)*width, (v)/e_modul, P_xx*left_side, P_yy*top_bottom, P_xy*top_bottom, P_yx*left_side], axis=1)                     # Hard enforcement NBC top, bottom, right
+    # return bkd.concat([(u*left_side/(e_modul**2*width)), (v*left_side/(e_modul)), P_xx*left_side/(e_modul**2*width), P_yy*top_bottom/(e_modul), P_xy*top_bottom/(e_modul), P_yx*left_side/(e_modul**2*width)], axis=1)    # Hard enforcement DBC left_side and NBC top, bottom, right
     # return bkd.concat([(u*left_side)/e_modul, (v*right_side*left_side+left_side*-1.5/width)/e_modul], axis=1)                                  #Hard enforcement of DBC on the right
-
-# in case hard Dirichlet is desired (no scaling!! so it must be tested)
-# def output_transform(x, y):
-#     x_loc = x[:,0:1]
-#     y_loc = x[:,1:2]
-#     u_x_analy = y[:,0:1]*shear_y*y_loc/(6*e_modul*Inertia)*((6*l-3*x_loc)*x_loc + (2+nu)*(y_loc**2-h**2/4))
-#     u_y_analy = -y[:,1:2]*shear_y/(6*e_modul*Inertia)*(3*nu*y_loc**2*(l-x_loc) + (4+5*nu)*h**2*x_loc/4 + (3*l-x_loc)*x_loc**2)
-#     return tf.concat([ u_x_analy, u_y_analy], axis=1)
 
 # two inputs x and y, output is ux, uy, Pxx, Pyy, Pxy, Pyx
 layer_size = [2] + [50] * 3 + [6]
 activation = "swish"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
-# net.apply_output_transform(output_transform)
+net.apply_output_transform(output_transform)
 loss_weights=[1,1,1,1,1,1,1,1,1,1,1]
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, loss_weights=None)
-losshistory, train_state = model.train(epochs=5000, display_every=200)
+losshistory, train_state = model.train(epochs=7000, display_every=200)
 
 model.compile("L-BFGS",loss_weights=None)
 model.train()
@@ -190,6 +186,12 @@ relative_l2_error_stress_xy = compute_relative_l2_error(stress_fem[:, columns], 
 print(relative_l2_error_stress_xx)
 print(relative_l2_error_stress_yy)
 print(relative_l2_error_stress_xy)
+
+data.field_data['relative_error_disp_x'] = relative_l2_error_disp_x
+data.field_data['relative_error_disp_y'] = relative_l2_error_disp_y
+data.field_data['relative_l2_error_stress_xx'] = relative_l2_error_stress_xx
+data.field_data['relative_l2_error_stress_yy'] = relative_l2_error_stress_yy
+data.field_data['relative_l2_error_stress_xy'] = relative_l2_error_stress_xy
 
 data.point_data['pointwise_cauchystress_error'] = error_stress
 #data.point_data['pointwise_cauchystress_error'].column_names
