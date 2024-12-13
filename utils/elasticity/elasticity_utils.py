@@ -2,6 +2,7 @@ import deepxde as dde
 from utils.geometry.geometry_utils import calculate_boundary_normals, calculate_boundary_normals_3D
 import deepxde.backend as bkd
 import numpy as np
+import tensorflow as tf
 
 # global variables
 lame = 1        # Lame ist lambda
@@ -56,24 +57,40 @@ def second_piola_stress_tensor(x, y):
     
     # Check the value of model_typedef second_piola_stress_tensor(x, y):
     
-    if model_type == "plane_strain":                                            
+    if model_type == "plane_strain":                            # based on linear neo hookean material behavior (small-moderate deformations)               
         e_yx = e_xy
-        # s_xx = e_xx * (lame + 2 * shear) + lame * e_yy
-        # s_yy = e_yy * (lame + 2 * shear) + lame * e_xx
-        # s_xy = 2 * shear * e_xy                         
-        # s_yx = 2 * shear * e_yx 
         
         # calculate stress terms (constitutive law - plane strain)
         s_xx = e_modul/((1+nu)*(1-2*nu))*((1-nu)*e_xx+nu*e_yy)
         s_yy = e_modul/((1+nu)*(1-2*nu))*(nu*e_xx+(1-nu)*e_yy)
         s_xy = e_modul/((1+nu)*(1-2*nu))*((1-2*nu)*e_xy)
         s_yx = s_xy
-    else:           #plane_stress
+        
+    elif model_type == "plane_stress":
+        
         s_xx = e_modul / (1 - nu**2) * (e_xx + nu * e_yy)
         s_yy = e_modul / (1 - nu**2) * (nu * e_xx + e_yy)
         s_xy = e_modul / (1 - nu**2) * (1 - nu) * e_xy
         s_yx = s_xy
     
+    else:   # Hyperelastic second piola based on neo hookean model but modified
+        
+        nu, lame, shear, e_modul = problem_parameters()
+        
+        f_xx, f_yy, f_xy, f_yx = deformation_gradient(x, y)
+        determinant_deform_grad = matrix_determinant_2D(f_xx, f_yy, f_xy, f_yx)
+        
+        C_xx, C_yy, C_xy, C_yx = right_cauchy_green_2D(f_xx, f_yy, f_xy, f_yx)
+        C_xx_inv, C_yy_inv, C_xy_inv, C_yx_inv = matrix_inverse_2D(C_xx, C_yy, C_xy, C_yx)
+        
+        s_xx = lame / 2 * (determinant_deform_grad**2 - 1) * C_xx_inv + shear * (1 - C_xx_inv)
+        
+        s_yy = lame / 2 * (determinant_deform_grad**2 - 1) * C_yy_inv + shear * (1 - C_yy_inv)
+        
+        s_xy = lame / 2 * (determinant_deform_grad**2 - 1) * C_xy_inv + shear * (1 - C_xy_inv)
+        
+        s_yx = lame / 2 * (determinant_deform_grad**2 - 1) * C_yx_inv + shear * (1 - C_yx_inv)
+        
     return s_xx, s_yy, s_xy, s_yx
 
 def first_piola_stress_tensor(x,y):
@@ -93,7 +110,9 @@ def cauchy_stress(x, y):
     f_xx, f_yy, f_xy, f_yx = deformation_gradient(x, y)
     p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor(x,y)
     
-    det_F = 1/(f_xx * f_yy - f_xy * f_yx)
+    #det_F = 1/(f_xx * f_yy - f_xy * f_yx)
+    
+    det_F = 1/matrix_determinant_2D(f_xx, f_yy, f_xy, f_yx)
     
     T_xx = det_F * (p_xx * f_xx + p_xy * f_xy)      #Alternative formulation
     T_xy = det_F * (p_xx * f_yx + p_xy * f_yy)
@@ -107,7 +126,9 @@ def cauchy_stress_mixed_P(x, y):
     f_xx, f_yy, f_xy, f_yx = deformation_gradient(x, y)
     p_xx, p_yy, p_xy, p_yx = y[:, 2:3] ,y[:, 3:4] ,y[:, 4:5], y[:, 5:6]
     
-    det_F = 1/(f_xx * f_yy - f_xy * f_yx)
+    # det_F = 1/(f_xx * f_yy - f_xy * f_yx)
+    
+    det_F = 1/matrix_determinant_2D(f_xx, f_yy, f_xy, f_yx)
     
     T_xx = det_F * (p_xx * f_xx + p_xy * f_xy)      #Alternative formulation
     T_xy = det_F * (p_xx * f_yx + p_xy * f_yy)
@@ -597,7 +618,7 @@ def piola_stress_to_traction_2d(p_xx, p_yy, p_xy, p_yx, normals, cond):
 
     return Tx, Ty, Tn, Tt
 
-def cauchy_stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond):
+def cauchy_stress_to_traction_2d(x, y, T_xx, T_yy, T_xy, normals, cond):
     '''
     Calculates the traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential)).
 
@@ -615,21 +636,31 @@ def cauchy_stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond):
             Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
     '''
     
+    s_xx, s_yy, s_xy, s_yx = second_piola_stress_tensor(x, y)
+    
+    f_xx, f_yy, f_xy, f_yx = deformation_gradient(x, y)
+    
     nx = normals[:,0:1]
     ny = normals[:,1:2]
 
-    sigma_xx_n_x = sigma_xx[cond]*nx
-    sigma_xy_n_y = sigma_xy[cond]*ny
+    s_xx_n_x = s_xx[cond]*nx
+    s_xy_n_y = s_xy[cond]*ny
 
-    sigma_yx_n_x = sigma_xy[cond]*nx
-    sigma_yy_n_y = sigma_yy[cond]*ny
+    s_yx_n_x = s_xy[cond]*nx
+    s_yy_n_y = s_yy[cond]*ny
     
-    Tx = sigma_xx_n_x + sigma_xy_n_y
-    Ty = sigma_yx_n_x + sigma_yy_n_y
-    Tn = Tx*nx + Ty*ny
-    Tt = -Tx*ny + Ty*nx # Direction is clockwise --> if you go from normal tangetial
-
-    return Tx, Ty, Tn, Tt
+    T_xx_ = s_xx_n_x + s_xy_n_y
+    T_xy_ = s_yx_n_x + s_yy_n_y
+    
+    print("f_yx shape:", tf.shape(f_yx))
+    print("f_yy shape:", tf.shape(f_yx))
+    print("T_xx_ shape:", tf.shape(T_xx_))
+    print("T_xy_ shape:", tf.shape(T_xy_))
+    
+    t_0_x = f_xx * T_xx_ + f_xy * T_xy_
+    t_0_y = f_yx * T_xx_ + f_yy * T_xy_
+    
+    return t_0_x, t_0_y
 
 def calculate_traction_mixed_from_piola_formulation(x, y, X):
     '''
@@ -679,13 +710,13 @@ def calculate_traction_mixed_from_cauchy_stress_formulation(x, y, X):
             Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
     '''
 
-    sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5]
+    T_xx, T_yy, T_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5]
     
     normals, cond = calculate_boundary_normals(X,geom)
 
-    Tx, Ty, Tn, Tt = cauchy_stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
+    Tx, Ty = cauchy_stress_to_traction_2d(x, y, T_xx, T_yy, T_xy, normals, cond)
 
-    return Tx, Ty, Tn, Tt
+    return Tx, Ty
 
 def zero_neumann_x_mixed_P_formulation(x, y, X):
     '''
@@ -755,7 +786,7 @@ def zero_neumann_x_mixed_T_formulation(x, y, X):
     '''
     
     
-    Tx, _, _, _ = calculate_traction_mixed_from_cauchy_stress_formulation(x, y, X)
+    Tx, _ = calculate_traction_mixed_from_cauchy_stress_formulation(x, y, X)
 
     return Tx
 
@@ -779,7 +810,7 @@ def zero_neumann_y_mixed_T_formulation(x, y, X):
     '''
     
     
-    _, Ty, _, _ = calculate_traction_mixed_from_cauchy_stress_formulation(x, y, X)
+    _, Ty = calculate_traction_mixed_from_cauchy_stress_formulation(x, y, X)
 
     return Ty
 
@@ -903,6 +934,35 @@ def compute_relative_l2_error(fem_data, pinn_data, column):
     numerator = np.sum((fem_data[:, column:column+1] - pinn_data[:, column:column+1])**2)
     denominator = np.sum(fem_data[:, column:column+1]**2)
     return np.sqrt(numerator / denominator)
+
+def matrix_determinant_2D(a_11, a_22, a_12, a_21):
+    # Calculate the determinant of the 2x2 matrix
+    determinant = a_11 * a_22 - a_12 * a_21
+    return determinant
+
+def matrix_inverse_2D(a_11, a_22, a_12, a_21):
+    # Calculate the determinant
+    determinant = matrix_determinant_2D(a_11, a_22, a_12, a_21)
+    
+    # Check if the determinant is zero
+    if determinant == 0:
+        raise ValueError("The matrix is singular and does not have an inverse.")
+    
+    a_xx_new = a_22 / determinant
+    a_yy_new = a_11 / determinant
+    a_xy_new = -a_12 / determinant
+    a_yx_new = -a_21 / determinant
+    
+    return a_xx_new, a_yy_new, a_xy_new, a_yx_new
+
+def right_cauchy_green_2D(f_xx, f_yy, f_xy, f_yx):
+
+    C_xx = f_xx**2 + f_yx**2
+    C_yy = f_yy**2 + f_xy**2
+    C_xy = f_xx * f_xy + f_yx * f_yy
+    C_yx = f_xy * f_xx + f_yy * f_yx
+    
+    return C_xx, C_yy, C_xy, C_yx
 
 #################################################################################################################################################################################
 # Equations for 3D elasticity
