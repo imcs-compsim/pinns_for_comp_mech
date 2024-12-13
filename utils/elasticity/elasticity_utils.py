@@ -117,7 +117,7 @@ def cauchy_stress(x, y):
     T_xx = det_F * (p_xx * f_xx + p_xy * f_xy)      #Alternative formulation
     T_xy = det_F * (p_xx * f_yx + p_xy * f_yy)
     T_yx = det_F * (p_yx * f_xx + p_yy * f_xy)
-    T_yy = det_F * (p_xy * f_yx + p_yy * f_yy)
+    T_yy = det_F * (p_yx * f_yx + p_yy * f_yy)
     
     return T_xx, T_yy, T_xy, T_yx
 
@@ -133,7 +133,7 @@ def cauchy_stress_mixed_P(x, y):
     T_xx = det_F * (p_xx * f_xx + p_xy * f_xy)      #Alternative formulation
     T_xy = det_F * (p_xx * f_yx + p_xy * f_yy)
     T_yx = det_F * (p_yx * f_xx + p_yy * f_xy)
-    T_yy = det_F * (p_xy * f_yx + p_yy * f_yy)
+    T_yy = det_F * (p_yx * f_yx + p_yy * f_yy)
     
     return T_xx, T_yy, T_xy, T_yx
 
