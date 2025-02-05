@@ -930,9 +930,14 @@ def iso_elasticity_P(x,y):
     
     return term_x, term_y, term_xy, term_yx
 
-def compute_relative_l2_error(fem_data, pinn_data, column):
-    numerator = np.sum((fem_data[:, column:column+1] - pinn_data[:, column:column+1])**2)
-    denominator = np.sum(fem_data[:, column:column+1]**2)
+def compute_relative_l2_error(fem_data, pinn_data, column=0):
+    # Extract the specified column as a 1D array (flatten)
+    fem_col = fem_data[:, column] if fem_data.ndim > 1 else fem_data
+    pinn_col = pinn_data[:, column] if pinn_data.ndim > 1 else pinn_data
+
+    # Compute the relative L2 error
+    numerator = np.sum((fem_col - pinn_col) ** 2)
+    denominator = np.sum(fem_col ** 2)
     return np.sqrt(numerator / denominator)
 
 def matrix_determinant_2D(a_11, a_22, a_12, a_21):

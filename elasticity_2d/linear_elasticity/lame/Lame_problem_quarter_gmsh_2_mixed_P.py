@@ -32,7 +32,7 @@ model_complexity = elasticity_utils.model_complexity
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 quarter_circle_with_hole = QuarterCirclewithHole(center=[0,0,0], inner_radius=1, outer_radius=2, mesh_size=0.1, gmsh_options=gmsh_options)
 
-gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=False)
+gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=True)
 
 revert_curve_list = ["curve_2"]
 revert_normal_dir_list = [2,2,1,2]
@@ -135,15 +135,16 @@ def output_transform(x, y):
     v = y[:, 1:2]
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
+    P_xx, P_yy, P_xy, P_yx = y[:, 2:3], y[:, 3:4], y[:, 4:5], y[:, 5:6]
     
-    return bkd.concat([u*(x_loc)/e_modul,v*(y_loc)/e_modul], axis=1)
+    return bkd.concat([u*(x_loc)/e_modul,v*(y_loc)/e_modul, P_xx, P_yy, P_xy, P_yx], axis=1)
 
 # two inputs x and y, output is ux, uy, Pxx, Pyy, Pxy, Pyx
 layer_size = [2] + [50] * 3 + [6]
-activation = "tanh"
+activation = "swish"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
-#net.apply_output_transform(output_transform)
+net.apply_output_transform(output_transform)
 
 #model_path = str(Path(__file__).parent.parent.parent)+"/trained_models/lame/lame"
 #n_epochs = 3106 # trained model has 3106 iterations
@@ -152,7 +153,7 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 model = dde.Model(data, net)
 # if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
 model.compile("adam", lr=0.001)
-losshistory, train_state = model.train(epochs=2500, display_every=200) #, model_restore_path=None)
+losshistory, train_state = model.train(epochs=4000, display_every=200) #, model_restore_path=None)
 
 model.compile("L-BFGS")
 model.train(model_save_path=None, display_every=200)
@@ -161,108 +162,53 @@ model.train(model_save_path=None, display_every=200)
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
 
-file_path =  f"/home_student/kappen/Comparison_FE_to_PINN_in_paraview/ba-kappen-reference-results-main/lame_quarter_circle/{model_complexity}/lame_quarter_circle_{model_complexity}_{model_type}_E=20_pres=1.0-structure.pvd"
+file_path2 =  f"/home_student/kappen/Comparison_FE_to_PINN_in_paraview/ba-kappen-reference-results-main/lame_quarter_circle/{model_complexity}/lame_quarter_circle_{model_complexity}_{model_type}_E=20_pres=1.0-structure.pvd"
 
 # Convert the Path object to a string
-reader = pv.get_reader(file_path)
+reader = pv.get_reader(file_path2)
 
 reader.set_active_time_point(-1)
 data = reader.read()[0]
 
 X = data.points
 
-# #fem_path = str(Path(__file__).parent.parent.parent.parent.parent)+"/Comparison_FE_to_PINN_in_paraview/Lame/Set_5_PINN_with_FEM_mesh/small_grid_fem_spreadsheet.csv"
-# #df = pd.read_csv(fem_path)
-# #fem_results = df[["Points_0","Points_1","displacement_0","displacement_1","nodal_cauchy_stresses_xyz_0","nodal_cauchy_stresses_xyz_1","nodal_cauchy_stresses_xyz_3"]]
-# #fem_results = fem_results.to_numpy()
-# #node_coords_xy = fem_results[:,0:2]
+# disp_linear_fem_polar = np.sqrt(disp_linear_fem[:,0:1]**2 + disp_linear_fem[:,1:2]**2)
+# data.point_data['disp_linear_fem_polar'] = disp_linear_fem_polar
 
-# disp_fem = data.point_data['displacement']
-# stress_fem = data.point_data['nodal_cauchy_stresses_xyz']
-
-# #X = node_coords_xy
-# x = X[:,0].flatten()
-# y = X[:,1].flatten()
-# #z = np.zeros(y.shape)
-# triangles = tri.Triangulation(x, y)
-
-# triangle_coordinate_x = x[triangles.triangles]
-# triangle_coordinate_y = y[triangles.triangles]
-
-# # np.isclose(np.linalg.norm(x - center_outer, axis=-1), radius_outer)
-# calculate_norm = np.sqrt(triangle_coordinate_x**2+triangle_coordinate_y**2)
-# mask = np.isclose(calculate_norm,1)
-# dol_triangles = triangles.triangles[~mask.all(axis=1)]
-
-# # Calculate centroid radius of each triangle
-# triangle_centroids_x = x[triangles.triangles].mean(axis=1)
-# triangle_centroids_y = y[triangles.triangles].mean(axis=1)
-# centroid_radii = np.sqrt(triangle_centroids_x**2 + triangle_centroids_y**2)
-
-# # Define the inner and outer radii of your quarter-disc
-# inner_radius, outer_radius = 1.0, 2.0  # Adjust based on your domain's geometry
-
-# # Create a mask for triangles outside the radial bounds or in unwanted regions
-# mask = (centroid_radii < inner_radius) | (centroid_radii > outer_radius) | (triangle_centroids_x < 0) | (triangle_centroids_y < 0)
-# triangles.set_mask(mask)
-
-# # fem
-# displacement_fem = data.point_data['displacement']
-# stress_fem = data.point_data['nodal_cauchy_stresses_xyz']
-# sigma_rr_fem, sigma_theta_fem, sigma_rtheta_fem = polar_transformation_2d(stress_fem[:, 0], stress_fem[:, 1], stress_fem[:, 3], X)
-
-# combined_disp_fem = tuple(np.vstack((np.array(displacement_fem[:, 0].tolist()),np.array(displacement_fem[:, 1].tolist()),np.zeros(displacement_fem[:, 0].shape[0]))))
-# combined_stress_fem = tuple(np.vstack((np.array(stress_fem[:, 0].flatten().tolist()),np.array(stress_fem[:, 1].flatten().tolist()),np.array(stress_fem[:, 3].flatten().tolist()))))
-# combined_stress_polar_fem = tuple(np.vstack((np.array(sigma_rr_fem.tolist()),np.array(sigma_theta_fem.tolist()),np.array(sigma_rtheta_fem.tolist()))))
-
-# predictions = model.predict(X[:, 0:2])
-
-# u_pred, v_pred = predictions[:, 0], predictions[:, 1]
-# T_xx, T_yy, T_xy, T_yx = model.predict(X[:, 0:2], operator=cauchy_stress_mixed_P)                              # Original output sigma_xx, sigma_yy, sigma_xy
-# sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(T_xx, T_yy, T_xy, X)                  # sigma_rr, sigma_theta, sigma_rtheta left unchanged
-
-# p_xx, p_yy, p_xy, p_yx = predictions[:, 2], predictions[:, 3], predictions[:, 4], predictions[:, 5] 
-
-# combined_disp = tuple(np.vstack((np.array(u_pred.tolist()),np.array(v_pred.tolist()),np.zeros(u_pred.shape[0]))))
-# combined_cauchy_stress = tuple(np.vstack((np.array(T_xx.flatten().tolist()),np.array(T_yy.flatten().tolist()),np.array(T_xy.flatten().tolist()))))     # Original output sigma_xx, sigma_yy, sigma_xy
-# combined_stress_polar = tuple(np.vstack((np.array(sigma_rr.tolist()),np.array(sigma_theta.tolist()),np.array(sigma_rtheta.tolist()))))
-# combined_stress_p = tuple(np.vstack((np.array(p_xx.flatten().tolist()),np.array(p_yy.flatten().tolist()),np.array(p_xy.flatten().tolist()))))
-
-# # error_polar_stress_x = abs(np.array(sigma_rr.flatten().tolist()) - sigma_rr_fem.flatten())
-# # error_polar_stress_y =  abs(np.array(sigma_theta.flatten().tolist()) - sigma_theta_fem.flatten())
-# # error_polar_stress_xy =  abs(np.array(sigma_rtheta.flatten().tolist()) - sigma_rtheta_fem.flatten())
-# # combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
-
-# data.point_data['combined_disp'] = combined_disp
-# data.point_data['combined_cauchy_stress'] = combined_cauchy_stress
-# data.point_data['combined_stress_polar'] = combined_stress_polar
-# data.point_data['combined_stress_p'] = combined_stress_p
-# data.point_data['error_polar_stress_x'] = error_polar_stress_x
-# data.point_data['error_polar_stress_y'] = error_polar_stress_y
-# data.point_data['error_polar_stress_xy'] = error_polar_stress_xy
-# data.point_data['combined_error_polar_stress'] = combined_error_polar_stress
-
-# file_path = os.path.join(os.getcwd(), "Lame_quarter_gmsh_nicht_linear_convex_mesh_P_1")
-
-# x = X[:,0].flatten()
-# y = X[:,1].flatten()
-# z = np.zeros(y.shape)
-
-# #dol_triangles = dol_triangles
-# offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
-# cell_types = np.ones(dol_triangles.shape[0])*5
-
-# unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
-#                     cell_types, pointData = { "displacement" : combined_disp, "displacement_fem" : combined_disp_fem, "stress" : combined_stress, "stress_polar": combined_stress_polar, "stress_fem": combined_stress_fem, "stress_polar_fem": combined_stress_polar_fem, "1st piola stress": combined_stress_p, "error_disp_x": error_disp_x, "error_disp_y": error_disp_y, "combined_error_disp": combined_error_disp, 
-#                                              "error_stress_x": error_stress_x, "error_stress_y": error_stress_y, "error_stress_xy": error_stress_xy, "combined_error_stress": combined_error_stress, 
-                                            #  "error_polar_stress_x": error_polar_stress_x, "error_polar_stress_y": error_polar_stress_y, "error_polar_stress_xy": error_polar_stress_xy, "combined_error_polar_stress": combined_error_polar_stress})
+# T_rr_fe_linear, T_theta_fe_linear, T_rtheta_fe_linear = polar_transformation_2d(stress_linear_fem[:, 0:1], stress_linear_fem[:, 1:2], stress_linear_fem[:, 3:4], X)  
+# data.point_data['FEM_linear_Cauchy_stress_polar'] = np.column_stack((T_rr_fe_linear, T_theta_fe_linear, T_rtheta_fe_linear))
+# r_mesh = r_mesh.reshape((-1,1))
 
 # New part
 
+# analytical solution
 
+inner_radius = 1
+outer_radius = 2
+
+nu, lame, shear, e_modul = problem_parameters()
+    
+r = np.sqrt(X[:,0:1]**2 + X[:,1:2]**2)
+disp_pred_based_on_fe_mesh = model.predict(X[:, 0:2])       # is the same as: predictions = model.predict(X[:, 0:2])
+# theta = np.linspace(0, np.pi/2, 100)
+# r_mesh, theta_mesh = np.meshgrid(r, theta)
+# r_mesh = r_mesh.reshape(-1)
+# theta_mesh = theta_mesh.reshape((-1,1))
+# y = np.zeros(r.shape[0])
+
+dr2 = (outer_radius**2 - inner_radius**2)
+
+# Analytical stress and displacement
+T_rr_analytical = inner_radius**2 * pressure_inlet / dr2 * (r**2 - outer_radius**2) / r**2
+T_theta_analytical = inner_radius**2 * pressure_inlet / dr2 * (r**2 + outer_radius**2) / r**2
+u_rad_analytical = inner_radius**2 * pressure_inlet * r / (e_modul * (outer_radius**2 - inner_radius**2)) * (1 - nu + (outer_radius / r)**2 * (1 + nu))
 
 # Predict the outputs using the model
 predictions = model.predict(X[:, 0:2])  # Input the spatial points (x, y)
+
+#calculate arc length for each point
+arc_length = r
+data.point_data['arc_length'] = arc_length
 
 # Extract the Cauchy stresses (P_xx, P_yy, P_xy, P_yx) from the last four columns
 P_xx, P_yy, P_xy, P_yx = predictions[:, 2], predictions[:, 3], predictions[:, 4], predictions[:, 5]
@@ -282,29 +228,98 @@ data.point_data['pred_displacement'] = displacement_extended
 data.point_data['pred_stress'] = cauchy
 
 disp_fem = data.point_data['displacement']
-stress_fem = data.point_data['nodal_cauchy_stresses_xyz']
 
 error_disp = abs((disp_fem - displacement[:, 0:2]))
 
-# Compute errors for x and y displacements
-relative_l2_error_disp_x = compute_relative_l2_error(disp_fem, displacement, 0)
-relative_l2_error_disp_y = compute_relative_l2_error(disp_fem, displacement, 1)
-
-print(relative_l2_error_disp_x)
-print(relative_l2_error_disp_y)
-
 data.point_data['pointwise_displacement_error'] = error_disp
+
+disp_fem_polar = np.sqrt(disp_fem[:,0:1]**2 + disp_fem[:,1:2]**2)
+disp_pred_polar = np.sqrt(displacement[:,0:1]**2 + displacement[:,1:2]**2)
+
+data.point_data['disp_fem_nonlinear_polar'] = disp_fem_polar
+data.point_data['disp_pred_polar'] = disp_pred_polar
+
+T_rr, T_theta, T_rtheta = polar_transformation_2d(T_xx, T_yy, T_xy, X)   
+data.point_data['PINN_Cauchy_stress_polar'] = np.column_stack((T_rr, T_theta, T_rtheta))
+
+
 # select xx, yy, and xy component (1st, 2nd and 4th column)
+stress_fem = data.point_data['nodal_cauchy_stresses_xyz']
 columns = [0,1,3]
+
+T_rr_fe, T_theta_fe, T_rtheta_fe = polar_transformation_2d(stress_fem[:, 0:1], stress_fem[:, 1:2], stress_fem[:, 3:4], X)  
+data.point_data['FEM_Cauchy_stress_polar'] = np.column_stack((T_rr_fe, T_theta_fe, T_rtheta_fe))
+
 error_stress = abs((stress_fem[:, columns] - cauchy))
+
+
+error_cauchy_stress_polar_rr = abs(T_rr - T_rr_fe)
+error_cauchy_stress_polar_theta = abs(T_theta_fe - T_theta)
+error_cauchy_stress_polar_rtheta = abs(T_rtheta_fe - T_rtheta)
+
+data.point_data['PINN_Cauchy_stress_polar_error'] = np.column_stack((error_cauchy_stress_polar_rr, error_cauchy_stress_polar_theta, error_cauchy_stress_polar_rtheta))
+
+# relative L2-error cartesian PINN(nonlinear) relative to nonlinear FE solution
 
 relative_l2_error_stress_xx = compute_relative_l2_error(stress_fem[:, columns], cauchy, 0)
 relative_l2_error_stress_yy = compute_relative_l2_error(stress_fem[:, columns], cauchy, 1)
 relative_l2_error_stress_xy = compute_relative_l2_error(stress_fem[:, columns], cauchy, 2)
+relative_l2_error_disp_x = compute_relative_l2_error(disp_fem, displacement, 0)
+relative_l2_error_disp_y = compute_relative_l2_error(disp_fem, displacement, 1)
 
-print(relative_l2_error_stress_xx)
-print(relative_l2_error_stress_yy)
-print(relative_l2_error_stress_xy)
+print(f"Errors for cartesian comparison PINN({model_complexity}) to FE({model_complexity})")
+print(f"relative_l2_error_disp_x:{relative_l2_error_disp_x}")
+print(f"relative_l2_error_disp_y:{relative_l2_error_disp_y}")
+print(f"relative_l2_error_stress_xx:{relative_l2_error_stress_xx}")
+print(f"relative_l2_error_stress_yy:{relative_l2_error_stress_yy}")
+print(f"relative_l2_error_stress_xy:{relative_l2_error_stress_xy}")
+
+
+if elasticity_utils.model_complexity == "linear":
+    # relative L2-error polar PINN(linear) relative to analytical solution
+    print("Errors for polar comparison PINN(linear) to analytical")
+    
+    relative_l2_error_disp_polar = compute_relative_l2_error(u_rad_analytical, disp_pred_polar, 0)
+    relative_l2_error_stress_polar_rr_pred = compute_relative_l2_error(T_rr_analytical, T_rr, 0)
+    relative_l2_error_stress_polar_theta_pred = compute_relative_l2_error(T_theta_analytical, T_theta, 0)
+
+    print(f"relative_l2_error_disp_polar:{relative_l2_error_disp_polar}")
+    print(f"relative_l2_error_stress_polar_rr_pred:{relative_l2_error_stress_polar_rr_pred}")
+    print(f"relative_l2_error_stress_polar_theta_pred:{relative_l2_error_stress_polar_theta_pred}")
+    
+    # print("Errors for polar comparison FE(linear) to analytical")
+    
+    # relative_l2_error_stress_polar_theta_fe = compute_relative_l2_error(T_theta_analytical, T_theta_fe, 0)
+
+    # print(f"relative_l2_error_disp_polar_fe:{relative_l2_error_disp_polar_fe}")
+    # print(f"relative_l2_error_stress_polar_rr_fe:{relative_l2_error_stress_polar_rr_fe}")
+    # print(f"relative_l2_error_stress_polar_theta_fe:{relative_l2_error_stress_polar_theta_fe}")
+    
+
+elif elasticity_utils.model_complexity == "nonlinear":
+    # relative L2-error polar PINN(nonlinear) relative to FE(nonlinear)
+    print("Errors for polar comparison PINN(nonlinear) to FE(nonlinear)")
+    
+    relative_l2_error_disp_polar_nonlinear = compute_relative_l2_error(disp_fem_polar, disp_pred_polar, 0)
+    relative_l2_error_stress_polar_rr_nonlinear = compute_relative_l2_error(T_rr_fe, T_rr, 0)
+    relative_l2_error_stress_polar_theta_nonlinear = compute_relative_l2_error(T_theta_fe, T_theta, 0)
+
+    print(f"relative_l2_error_disp_polar_nonlinear:{relative_l2_error_disp_polar_nonlinear}")
+    print(f"relative_l2_error_stress_polar_rr_nonlinear:{relative_l2_error_stress_polar_rr_nonlinear}")
+    print(f"relative_l2_error_stress_polar_theta_nonlinear:{relative_l2_error_stress_polar_theta_nonlinear}")
+else: 
+    print("Cannot find right L2-Error formula")
+
+
+# # relative L2-error polar FE(linear) relative to analytical solution
+
+# relative_l2_error_disp_polar_linear_fem = compute_relative_l2_error(u_rad_analytical, disp_linear_fem_polar, 0)
+# relative_l2_error_stress_polar_rr_linear_fem = compute_relative_l2_error(T_rr_analytical, T_rr_fe_linear, 0)
+# relative_l2_error_stress_polar_theta_linear_fem = compute_relative_l2_error(T_theta_analytical, T_theta_fe_linear, 0)
+
+# print(f"relative_l2_error_disp_x:{relative_l2_error_disp_polar_linear_fem}")
+# print(f"relative_l2_error_disp_y:{relative_l2_error_stress_polar_rr_linear_fem}")
+# print(f"relative_l2_error_disp_y:{relative_l2_error_stress_polar_theta_linear_fem}")
 
 data.point_data['pointwise_cauchystress_error'] = error_stress
 #data.point_data['pointwise_cauchystress_error'].column_names

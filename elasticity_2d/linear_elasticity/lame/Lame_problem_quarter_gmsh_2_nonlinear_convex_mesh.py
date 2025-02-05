@@ -46,7 +46,7 @@ elasticity_utils.shear = 100/13    #25/13                  50/13                
 nu,lame,shear,e_modul = problem_parameters()
 
 # The applied pressure 
-pressure_inlet = 1  #1/0.9325*0.8325
+pressure_inlet = 1 #0.9101  #1/0.9325*0.8325
 
 def pressure_inner_x(x, y, X):
     
@@ -135,7 +135,7 @@ def output_transform(x, y):
 
 # two inputs x and y, output is ux and uy
 layer_size = [2] + [50] * 5 + [2]
-activation = "tanh"
+activation = "swish"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
@@ -147,7 +147,7 @@ model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
 model = dde.Model(data, net)
 # if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
 model.compile("adam", lr=0.001)
-losshistory, train_state = model.train(epochs=4000, display_every=200, model_restore_path=None)
+losshistory, train_state = model.train(epochs=2500, display_every=200, model_restore_path=None)
 
 model.compile("L-BFGS")
 model.train(model_save_path=model_path, display_every=200)
@@ -155,50 +155,6 @@ model.train(model_save_path=model_path, display_every=200)
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
-
-# def compareModelPredictionAndAnalyticalSolution(model):
-#     '''
-#     This function plots analytical solutions and the predictions. 
-#     '''
-
-#     nu,lame,shear,e_modul = problem_parameters()
-    
-#     r = np.linspace(radius_inner, radius_outer,100)
-#     y = np.zeros(r.shape[0])
-
-#     dr2 = (radius_outer**2 - radius_inner**2)
-
-#     sigma_rr_analytical = radius_inner**2*pressure_inlet/dr2*(r**2-radius_outer**2)/r**2
-#     sigma_theta_analytical = radius_inner**2*pressure_inlet/dr2*(r**2+radius_outer**2)/r**2
-#     u_rad = radius_inner**2*pressure_inlet*r/(e_modul*(radius_outer**2-radius_inner**2))*(1-nu+(radius_outer/r)**2*(1+nu))
-
-#     r_x = np.hstack((r.reshape(-1,1),y.reshape(-1,1)))
-#     disps = model.predict(r_x)
-#     u_pred, v_pred = disps[:,0:1], disps[:,1:2]
-#     u_rad_pred = np.sqrt(u_pred**2+v_pred**2)
-#     T_xx, T_yy, T_xy, T_yx  = model.predict(r_x, operator=cauchy_stress)                          # Original output sigma_xx, sigma_yy, sigma_xy
-#     sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(T_xx, T_yy, T_xy, r_x)          # sigma_rr, sigma_theta, sigma_rtheta left unchanged
-
-
-
-#     fig, axs = plt.subplots(1,2,figsize=(12,5))
-
-#     axs[0].plot(r/radius_inner, sigma_rr_analytical/radius_inner, label = r"Analytical $\sigma_{r}$")
-#     axs[0].plot(r/radius_inner, sigma_rr/radius_inner, label = r"Predicted $\sigma_{r}$")
-#     axs[0].plot(r/radius_inner, sigma_theta_analytical/radius_inner, label = r"Analytical $\sigma_{\theta}$")
-#     axs[0].plot(r/radius_inner, sigma_theta/radius_inner, label = r"Predicted $\sigma_{\theta}$")
-#     axs[0].set(ylabel="Normalized stress", xlabel = "r/a")
-#     axs[1].plot(r/radius_inner, u_rad/radius_inner, label = r"Analytical $u_r$")
-#     axs[1].plot(r/radius_inner, u_rad_pred/radius_inner, label = r"Predicted $u_r$")
-#     axs[1].set(ylabel="Normalized radial displacement", xlabel = "r/a")
-#     axs[0].legend()
-#     axs[0].grid()
-#     axs[1].legend()
-#     axs[1].grid()
-#     fig.tight_layout()
-
-#     plt.savefig("Lame_quarter_gmsh_nicht_linear")
-#     plt.show()
 
 def compareModelPredictionAndAnalyticalSolution(model):
     '''
@@ -268,7 +224,7 @@ def compareModelPredictionAndAnalyticalSolution(model):
     plt.savefig("Lame_quarter_gmsh_nicht_linear_with_strain_convex_mesh")
     plt.show()
 
-fem_path = str(Path(__file__).parent.parent.parent.parent.parent)+"/Comparison_FE_to_PINN_in_paraview/Set_5_PINN_with_FEM_mesh/small_grid_fem_spreadsheet.csv"
+fem_path = str(Path(__file__).parent.parent.parent.parent.parent)+"/Comparison_FE_to_PINN_in_paraview/Lame/Set_5_PINN_with_FEM_mesh/small_grid_fem_spreadsheet.csv"
 df = pd.read_csv(fem_path)
 fem_results = df[["Points_0","Points_1","displacement_0","displacement_1","nodal_cauchy_stresses_xyz_0","nodal_cauchy_stresses_xyz_1","nodal_cauchy_stresses_xyz_3"]]
 fem_results = fem_results.to_numpy()
@@ -339,7 +295,7 @@ error_polar_stress_xy =  abs(np.array(sigma_rtheta.flatten().tolist()) - sigma_r
 combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
 
 
-file_path = os.path.join(os.getcwd(), "Lame_quarter_gmsh_nicht_linear_convex_mesh")
+file_path = os.path.join(os.getcwd(), "Lame_quarter_gmsh_nicht_linear_convex_mesh_P_1")
 
 x = X[:,0].flatten()
 y = X[:,1].flatten()
@@ -349,46 +305,9 @@ z = np.zeros(y.shape)
 offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
 cell_types = np.ones(dol_triangles.shape[0])*5
 
-# unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
-#                       cell_types, pointData = { "displacement" : combined_disp, "displacement_fem" : combined_disp_fem, "stress" : combined_stress, "stress_polar": combined_stress_polar, "type_2_strain_polar": type_2_strain_polar, "type_1_strain_polar": type_1_strain_polar})
-
-
 unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
                     cell_types, pointData = { "displacement" : combined_disp, "displacement_fem" : combined_disp_fem, "stress" : combined_stress, "stress_polar": combined_stress_polar, "stress_fem": combined_stress_fem, "stress_polar_fem": combined_stress_polar_fem, "1st piola stress": combined_stress_p, "error_disp_x": error_disp_x, "error_disp_y": error_disp_y, "combined_error_disp": combined_error_disp, 
                                              "error_stress_x": error_stress_x, "error_stress_y": error_stress_y, "error_stress_xy": error_stress_xy, "combined_error_stress": combined_error_stress, 
                                              "error_polar_stress_x": error_polar_stress_x, "error_polar_stress_y": error_polar_stress_y, "error_polar_stress_xy": error_polar_stress_xy, "combined_error_polar_stress": combined_error_polar_stress})
-
-# X, offset, cell_types, dol_triangles = geom.get_mesh()
-
-# displacement = model.predict(X)
-# T_xx, T_yy, T_xy, T_yx = model.predict(X, operator=cauchy_stress)                                   # Original output sigma_xx, sigma_yy, sigma_xy
-# sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(T_xx, T_yy, T_xy, X)                  # sigma_rr, sigma_theta, sigma_rtheta left unchanged
-
-# e2_xx, e2_yy, e2_xy, e2_yx = model.predict(X, operator=green_lagrange_strain_tensor_2)
-# e1_xx, e1_yy, e1_xy, e1_yx = model.predict(X, operator=green_lagrange_strain_tensor_1)
-# e2_rr, e2_theta, e2_rtheta = polar_transformation_2d(e2_xx, e2_yy, e2_xy, X)
-# e1_rr, e1_theta, e1_rtheta = polar_transformation_2d(e1_xx, e1_yy, e1_xy, X)
-
-# combined_disp = tuple(np.vstack((np.array(displacement[:,0].tolist()),np.array(displacement[:,1].tolist()),np.zeros(displacement[:,0].shape[0]))))
-# combined_stress = tuple(np.vstack((np.array(T_xx.flatten().tolist()),np.array(T_yy.flatten().tolist()),np.array(T_xy.flatten().tolist()))))     # Original output sigma_xx, sigma_yy, sigma_xy
-# combined_stress_polar = tuple(np.vstack((np.array(sigma_rr.tolist()),np.array(sigma_theta.tolist()),np.array(sigma_rtheta.tolist()))))
-# # type_2_strain_polar = tuple(np.vstack((np.array(e2_rr.tolist()),np.array(e2_theta.tolist()),np.array(e2_rtheta.tolist()))))
-# # type_1_strain_polar = tuple(np.vstack((np.array(e1_rr.tolist()),np.array(e1_theta.tolist()),np.array(e1_rtheta.tolist()))))
-# type_2_strain = tuple(np.vstack((np.array(e2_xx.flatten().tolist()),np.array(e2_yy.flatten().tolist()),np.array(e2_xy.flatten().tolist()))))
-# type_1_strain = tuple(np.vstack((np.array(e1_xx.flatten().tolist()),np.array(e1_yy.flatten().tolist()),np.array(e1_xy.flatten().tolist()))))
-
-
-# file_path = os.path.join(os.getcwd(), "Lame_quarter_gmsh_nicht_linear_convex_mesh")
-
-# x = X[:,0].flatten()
-# y = X[:,1].flatten()
-# z = np.zeros(y.shape)
-
-# # unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
-# #                       cell_types, pointData = { "displacement" : combined_disp,"stress" : combined_stress, "stress_polar": combined_stress_polar, "type_2_strain_polar": type_2_strain_polar, "type_1_strain_polar": type_1_strain_polar})
-
-
-# unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
-#                       cell_types, pointData = { "displacement" : combined_disp,"stress" : combined_stress, "stress_polar": combined_stress_polar, "type_2_strain": type_2_strain, "type_1_strain": type_1_strain})
 
 compareModelPredictionAndAnalyticalSolution(model)

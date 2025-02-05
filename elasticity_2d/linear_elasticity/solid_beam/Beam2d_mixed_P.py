@@ -9,7 +9,9 @@ from pathlib import Path
 from matplotlib import tri
 import pyvista as pv
 
-from utils.elasticity.elasticity_utils import problem_parameters, first_piola_stress_tensor, cauchy_stress_mixed_P, momentum_mixed_P, problem_parameters, zero_neumann_x_mixed_P_formulation, zero_neumann_y_mixed_P_formulation, cauchy_stress, compute_relative_l2_error
+# exchange 'elasticity_utils' with 'elasticity_utils_3d_form' for 3d possibilty
+
+from utils.elasticity.elasticity_utils import problem_parameters, cauchy_stress_mixed_P, momentum_mixed_P, problem_parameters, zero_neumann_x_mixed_P_formulation, zero_neumann_y_mixed_P_formulation, cauchy_stress, compute_relative_l2_error
 from utils.geometry.geometry_utils import calculate_boundary_normals
 from utils.geometry.custom_geometry import GmshGeometryElement
 from utils.geometry.gmsh_models import Block_2D
@@ -27,7 +29,7 @@ https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.504.4507&rep=rep1&type
 
 height = 1
 width = 5
-applied_displacement = -1.5
+applied_displacement = -1.0
 elasticity_utils.model_complexity = "nonlinear"     #with "linear" --> linear strain definition, everyhing else i.e. "hueicii" nonlinear
 elasticity_utils.model_type = "plane_strain"        #with "plane_strain" --> plane strain, everyhing else i.e. "hueicii" plane stress
 model_type = elasticity_utils.model_type 
@@ -145,16 +147,18 @@ X = data.points
 # Predict the outputs using the model
 predictions = model.predict(X[:, 0:2])  # Input the spatial points (x, y)
 
-# Extract the Cauchy stresses (P_xx, P_yy, P_xy, P_yx) from the last four columns
+# Extract the Piola stresses (P_xx, P_yy, P_xy, P_yx) from the last four columns
 P_xx, P_yy, P_xy, P_yx = predictions[:, 2], predictions[:, 3], predictions[:, 4], predictions[:, 5]
 
 # Optionally, calculate Cauchy stress using the given operator
-T_xx, T_yy, T_xy, T_yx = model.predict(X[:, 0:2], operator=cauchy_stress_mixed_P)
+T_xx, T_yy, T_xy, T_yx = model.predict(X[:, 0:2], operator=cauchy_stress_mixed_P)  # Shape: (980, 3)
+# T_xx, T_yy, T_xy = T[:, 0], T[:, 1], T[:, 2]
+
+cauchy = np.column_stack((T_xx, T_yy, T_xy))
 
 displacement = predictions[:, :2]
 
 first_piola = np.column_stack((P_xx, P_yy, P_xy, P_yx))
-cauchy = np.column_stack((T_xx, T_yy, T_xy))
 
 displacement_extended = np.hstack((displacement, np.zeros_like(displacement[:,0:1])))
 
