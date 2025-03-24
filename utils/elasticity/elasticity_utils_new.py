@@ -4,6 +4,34 @@ import deepxde.backend as bkd
 from utils.linalg.linalg_utils import transpose
 
 
+def displacement_gradient(disp, coords):
+    """Compute a (batch of) displacement gradient tensor(s) from a (batch of) 
+    displacement field(s) and a (batch of) coordinate(s).
+    
+    Parameters
+    ----------
+    disp: Tensor
+        The (batch of) displacement field(s).
+    coords: Tensor
+        The (batch of) coordinate(s).
+    
+    Returns
+    -------
+    _disp_grad: Tensor
+        The (batch of) displacement gradient tensor(s).
+    """
+    assert bkd.ndim(disp) == 2, \
+        "displacement_gradient() requires the displacement field to be a batch of rank 1 tensors (vectors)."
+    assert bkd.ndim(coords) == 2, \
+        "displacement_gradient() requires the coordinates to be a batch of rank 1 tensors (vectors)."
+    _grad_list = []
+    for _i in range(bkd.shape(disp)[-1]):
+        _grad_i = dde.grad.jacobian(disp, coords, i=_i, j=None)
+        _grad_list.append(_grad_i)
+    _disp_grad = bkd.stack(_grad_list, axis=1)
+    return _disp_grad
+
+
 def deformation_gradient(disp, coords, i=0, j=None):
     """Compute a (batch of) deformation gradient tensor(s) from a (batch of) 
     displacement field(s) and a (batch of) coordinate(s).
@@ -20,7 +48,7 @@ def deformation_gradient(disp, coords, i=0, j=None):
     _deformation_gradient: Tensor
         The (batch of) deformation gradient tensor(s).
     """
-    _disp_grad = dde.grad.jacobian(disp, coords, i=i, j=j)
+    _disp_grad = displacement_gradient(disp, coords)
     _deformation_gradient = _disp_grad + bkd.lib.eye(bkd.shape(_disp_grad)[-1])
     return _deformation_gradient
 

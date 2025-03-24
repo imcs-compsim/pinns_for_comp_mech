@@ -5,6 +5,8 @@ import pytest
 from utils.linalg.linalg_utils import determinant, identity, identity_like, \
     inverse, transpose
 
+from conftest import to_numpy
+
 
 # --------------------- Fixtures ---------------------
 
@@ -128,8 +130,12 @@ def test_linalg_transpose(batch_of_tensors, batch_of_results, request):
     # transpose the batch of tensors
     batch_of_transposed_tensors = transpose(batch_of_tensors)
 
+    # convert the tensors to NumPy arrays
+    computed_transposed = to_numpy(batch_of_transposed_tensors)
+    expected_transposed = to_numpy(batch_of_results)
+
     # make sure the transposed tensors are correct
-    np.testing.assert_array_equal(batch_of_transposed_tensors, batch_of_results)
+    np.testing.assert_array_equal(computed_transposed, expected_transposed)
 
 
 @pytest.mark.parametrize(
@@ -149,8 +155,12 @@ def test_linalg_determinant(batch_of_tensors, batch_of_results, request):
     # compute the determinants of the batch of tensors
     batch_of_tensor_determinants = determinant(batch_of_tensors)
 
+    # convert the tensors to NumPy arrays
+    computed_determinants = to_numpy(batch_of_tensor_determinants)
+    expected_determinants = to_numpy(batch_of_results)
+
     # make sure the determinants are correct
-    np.testing.assert_allclose(batch_of_tensor_determinants, batch_of_results, rtol=1e-6)
+    np.testing.assert_allclose(computed_determinants, expected_determinants, rtol=1e-6)
 
 
 @pytest.mark.parametrize(
@@ -170,8 +180,12 @@ def test_linalg_inverse(batch_of_tensors, batch_of_results, request):
     # invert the batch of tensors
     batch_of_inverted_tensors = inverse(batch_of_tensors)
 
+    # convert the tensors to NumPy arrays
+    computed_inverse = to_numpy(batch_of_inverted_tensors)
+    expected_inverse = to_numpy(batch_of_results)
+
     # make sure the transposed tensors are correct
-    np.testing.assert_allclose(batch_of_inverted_tensors, batch_of_results, rtol=1e-6)
+    np.testing.assert_allclose(computed_inverse, expected_inverse, rtol=1e-6)
 
 
 @pytest.mark.parametrize(
@@ -190,8 +204,12 @@ def test_linalg_identity(dim, result, request):
     # generate the identity tensor
     identity_tensor = identity(dim)
 
+    # convert the tensors to NumPy arrays
+    computed_identity = to_numpy(identity_tensor)
+    expected_identity = to_numpy(result)
+
     # make sure the identity tensor is correct
-    np.testing.assert_array_equal(identity_tensor, result)
+    np.testing.assert_array_equal(computed_identity, expected_identity)
 
 
 @pytest.mark.parametrize(
@@ -211,5 +229,9 @@ def test_linalg_identity_like(batch_of_tensors, result, request):
     # generate the identity tensor
     identity_tensor = identity_like(batch_of_tensors)
 
+    # convert the tensors to NumPy arrays
+    computed_identity = to_numpy(identity_tensor)
+    expected_identity = to_numpy(result)
+
     # make sure the identity tensor is correct
-    np.testing.assert_array_equal(identity_tensor, result)
+    np.testing.assert_array_equal(computed_identity, expected_identity)

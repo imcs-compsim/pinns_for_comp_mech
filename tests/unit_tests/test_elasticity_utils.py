@@ -1,12 +1,75 @@
+import deepxde as dde
 import deepxde.backend as bkd
 import numpy as np
 import pytest
 
-from utils.elasticity.elasticity_utils_new import strain
+from utils.elasticity.elasticity_utils_new import displacement_gradient, strain
 from utils.linalg.linalg_utils import transpose
+
+from conftest import to_numpy
+
+
+# --------------------- Functions ---------------------    
+
+def linear_motion(coords):
+    """A simple linear motion field.
+    
+    Example 4.2 from "Nonlinear continuum mechanics for finite element analysis" 
+    by J. Bonet and R. D. Wood.
+    """
+    x1 = 0.25*(18.0 + 4.0*coords[:,0] + 6.0*coords[:,1])
+    x2 = 0.25*(14.0 + 6.0*coords[:,1])
+    return bkd.stack([x1, x2], axis=1)
+
+
+def displacement(coords):
+    if bkd.backend_name in ["tensorflow.compat.v1", "tensorflow"]:
+        with bkd.lib.GradientTape():
+            _disp = linear_motion(coords) - coords
+    return _disp
 
 
 # --------------------- Fixtures ---------------------
+
+@pytest.fixture
+def list_of_variables():
+    temp = bkd.as_tensor(
+        [
+            bkd.Variable([1.0, -1.0]),
+            bkd.Variable([1.0, 1.0]),
+            bkd.Variable([-1.0, 1.0]),
+            bkd.Variable([-1.0, -1.0]),
+        ]
+    )
+    return temp
+
+@pytest.fixture
+def list_of_2d_displacement_gradients():
+    """The displacement gradients as resulting from the motion defined above 
+    independent of the displacement (as it's a linear uniform motion)."""
+    temp = bkd.as_tensor(
+        [
+            [[0.0, 1.5], [0.0, 0.5]],
+            [[0.0, 1.5], [0.0, 0.5]],
+            [[0.0, 1.5], [0.0, 0.5]],
+            [[0.0, 1.5], [0.0, 0.5]],
+        ]
+    )
+    return temp
+
+@pytest.fixture
+def list_of_2d_deformation_gradients():
+    """The deformation gradients as resulting from the motion defined above 
+    independent of the displacement (as it's a linear uniform motion)."""
+    temp = bkd.as_tensor(
+        [
+            [[1.0, 1.5], [0.0, 1.5]],
+            [[1.0, 1.5], [0.0, 1.5]],
+            [[1.0, 1.5], [0.0, 1.5]],
+            [[1.0, 1.5], [0.0, 1.5]],
+        ]
+    )
+    return temp
 
 @pytest.fixture
 def list_of_2d_tensors():
@@ -44,6 +107,20 @@ def list_of_2d_linearized_strains():
 
 # --------------------- Tests ---------------------
 
+def test_elasticity_displacement_gradient(list_of_variables, list_of_2d_displacement_gradients):
+    # compute the displacement
+    disp = linear_motion(list_of_variables) - list_of_variables
+    # compute the displacement gradient
+    disp_grad = displacement_gradient(disp, list_of_variables)
+
+    # convert the tensors to NumPy arrays
+    computed_disp_grad = to_numpy(disp_grad)
+    expected_disp_grad = to_numpy(list_of_2d_displacement_gradients)
+    
+    # check whether the results are correct
+    np.testing.assert_allclose(computed_disp_grad, expected_disp_grad)
+
+
 @pytest.mark.parametrize(
         "batch_of_tensors, batch_of_results",
     [
@@ -61,8 +138,17 @@ def test_elasticity_strain(batch_of_tensors, batch_of_results, request):
     # compute the strains
     batch_of_strains = strain(batch_of_tensors)
 
+    # convert the tensors to NumPy arrays
+    computed_strains = to_numpy(batch_of_strains)
+    expected_strains = to_numpy(batch_of_results)
+
     # check whether the results are correct
-    np.testing.assert_allclose(batch_of_strains, batch_of_results)
+    np.testing.assert_allclose(computed_strains, expected_strains)
+
+    # make sure the results are symmetric
+    batch_of_transposed_strains = transpose(batch_of_strains)
+    computed_transposed_strains = to_numpy(batch_of_transposed_strains)
+    np.testing.assert_array_equal(computed_strains, computed_transposed_strains)
 
 
 @pytest.mark.parametrize(
@@ -82,8 +168,14 @@ def test_elasticity_strain_linearized(batch_of_tensors, batch_of_results, reques
     # compute the strains
     batch_of_strains = strain(batch_of_tensors, linearize=True)
 
+    # convert the tensors to NumPy arrays
+    computed_strains = to_numpy(batch_of_strains)
+    expected_strains = to_numpy(batch_of_results)
+
     # check whether the results are correct
-    np.testing.assert_allclose(batch_of_strains, batch_of_results)
+    np.testing.assert_allclose(computed_strains, expected_strains)
 
     # make sure the results are symmetric
-    np.testing.assert_array_equal(batch_of_strains, transpose(batch_of_strains))
+    batch_of_transposed_strains = transpose(batch_of_strains)
+    computed_transposed_strains = to_numpy(batch_of_transposed_strains)
+    np.testing.assert_array_equal(computed_strains, computed_transposed_strains)
