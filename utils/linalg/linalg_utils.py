@@ -13,7 +13,7 @@ def determinant(tensor):
     -------
     The (batch of) tensor determinant(s).
     """
-    assert len(bkd.shape(tensor)) == 3, "determinant() requires a batch of rank 2 tensors."
+    assert bkd.ndim(tensor) == 3, "determinant() requires a batch of rank 2 tensors."
     return bkd.lib.linalg.det(tensor)
 
 def identity(dim):
@@ -42,7 +42,7 @@ def identity_like(tensor):
     -------
     An identity tensor with the same shape as each tensor in the input batch.
     """
-    assert len(bkd.shape(tensor)) == 3, "identity_like() requires a batch of rank 2 tensors."
+    assert bkd.ndim(tensor) == 3, "identity_like() requires a batch of rank 2 tensors."
     return identity(bkd.shape(tensor)[-1])
 
 def inverse(tensor):
@@ -57,7 +57,7 @@ def inverse(tensor):
     -------
     The (batch of) inverted tensor(s).
     """
-    assert len(bkd.shape(tensor)) == 3, "inverse() requires a batch of rank 2 tensors."
+    assert bkd.ndim(tensor) == 3, "inverse() requires a batch of rank 2 tensors."
     return bkd.lib.linalg.inv(tensor)
 
 def transpose(tensor):
@@ -72,5 +72,5 @@ def transpose(tensor):
     -------
     The (batch of) transposed tensor(s).
     """
-    assert len(bkd.shape(tensor)) == 3, "transpose() requires a batch of rank 2 tensors."
+    assert bkd.ndim(tensor) == 3, "transpose() requires a batch of rank 2 tensors."
     return bkd.transpose(tensor, axes=[0, 2, 1])

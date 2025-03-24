@@ -24,7 +24,7 @@ def list_of_2d_tensors():
         [
             [[1.0, 2.0], [3.0, 4.0]],
             [[5.0, 6.0], [7.0, 8.0]],
-            [[9.0, 10.0], [11.0, 12.0]],
+            [[1.0, 1.5], [0.0, 1.5]],
         ]
     )
     return temp
@@ -35,7 +35,7 @@ def list_of_2d_tensors_determinant():
         [
             -2.0,
             -2.0,
-            -2.0,
+            1.5,
         ]
     )
     return temp
@@ -45,13 +45,11 @@ def list_of_2d_tensors_inverted(list_of_2d_tensors_determinant):
     # tensor with flipped signs on the off-diagonal entries
     temp = bkd.as_tensor(
         [
-            [[4.0, -2.0],[-3.0, 1.0]],
-            [[8.0, -6.0],[-7.0, 5.0]],
-            [[12.0, -10.0],[-11.0, 9.0]],
+            [[-2.0, 1.0],[1.5, -0.5]],
+            [[-4.0, 3.0],[3.5, -2.5]],
+            [[1.0, -1.0],[0.0, 2.0/3.0]],
         ]
     )
-    # scale with inverse of determinant to obtain the inverted tensor
-    temp /= bkd.reshape(list_of_2d_tensors_determinant, (-1, 1, 1))
     return temp
 
 @pytest.fixture
@@ -60,7 +58,7 @@ def list_of_2d_tensors_transposed():
         [
             [[1.0, 3.0], [2.0, 4.0]],
             [[5.0, 7.0], [6.0, 8.0]],
-            [[9.0, 11.0], [10.0, 12.0]],
+            [[1.0, 0.0], [1.5, 1.5]],
         ]
     )
     return temp
