@@ -3,7 +3,8 @@ import deepxde.backend as bkd
 import numpy as np
 import pytest
 
-from utils.elasticity.elasticity_utils_new import displacement_gradient, strain
+from utils.elasticity.elasticity_utils_new import deformation_gradient, \
+    displacement_gradient, strain
 from utils.linalg.linalg_utils import transpose
 
 from conftest import to_numpy
@@ -32,7 +33,7 @@ def displacement(coords):
 # --------------------- Fixtures ---------------------
 
 @pytest.fixture
-def list_of_variables():
+def list_of_coords():
     temp = bkd.as_tensor(
         [
             bkd.Variable([1.0, -1.0]),
@@ -107,11 +108,11 @@ def list_of_2d_linearized_strains():
 
 # --------------------- Tests ---------------------
 
-def test_elasticity_displacement_gradient(list_of_variables, list_of_2d_displacement_gradients):
+def test_elasticity_displacement_gradient(list_of_coords, list_of_2d_displacement_gradients):
     # compute the displacement
-    disp = linear_motion(list_of_variables) - list_of_variables
+    disp = linear_motion(list_of_coords) - list_of_coords
     # compute the displacement gradient
-    disp_grad = displacement_gradient(disp, list_of_variables)
+    disp_grad = displacement_gradient(disp, list_of_coords)
 
     # convert the tensors to NumPy arrays
     computed_disp_grad = to_numpy(disp_grad)
@@ -119,6 +120,20 @@ def test_elasticity_displacement_gradient(list_of_variables, list_of_2d_displace
     
     # check whether the results are correct
     np.testing.assert_allclose(computed_disp_grad, expected_disp_grad)
+
+
+def test_elasticity_deformation_gradient(list_of_coords, list_of_2d_deformation_gradients):
+    # compute the displacement
+    disp = linear_motion(list_of_coords) - list_of_coords
+    # compute the displacement gradient
+    def_grad = deformation_gradient(disp, list_of_coords)
+
+    # convert the tensors to NumPy arrays
+    computed_deformation_gradient = to_numpy(def_grad)
+    expected_deformation_gradient = to_numpy(list_of_2d_deformation_gradients)
+    
+    # check whether the results are correct
+    np.testing.assert_allclose(computed_deformation_gradient, expected_deformation_gradient)
 
 
 @pytest.mark.parametrize(

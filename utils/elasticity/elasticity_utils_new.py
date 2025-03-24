@@ -28,6 +28,8 @@ def displacement_gradient(disp, coords):
     for _i in range(bkd.shape(disp)[-1]):
         _grad_i = dde.grad.jacobian(disp, coords, i=_i, j=None)
         _grad_list.append(_grad_i)
+    # consider the computed gradients as column vectors of the displacement 
+    # gradient matrix and stack them accordingly
     _disp_grad = bkd.stack(_grad_list, axis=1)
     return _disp_grad
 
