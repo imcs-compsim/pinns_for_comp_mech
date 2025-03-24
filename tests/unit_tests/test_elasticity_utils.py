@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from utils.elasticity.elasticity_utils_new import deformation_gradient, \
-    displacement_gradient, strain
+    displacement_gradient, left_cauchy_green, right_cauchy_green, Strain, strain
 from utils.linalg.linalg_utils import transpose
 
 from conftest import to_numpy
@@ -77,8 +77,7 @@ def list_of_2d_tensors():
     temp = bkd.as_tensor(
         [
             [[1.0, 3.0], [2.0, 1.0]],
-            # [[5.0, 6.0], [7.0, 8.0]],
-            # [[9.0, 10.0], [11.0, 12.0]],
+            [[1.0, 1.5], [0.0, 1.5]],
         ]
     )
     return temp
@@ -87,9 +86,8 @@ def list_of_2d_tensors():
 def list_of_2d_strains():
     temp = bkd.as_tensor(
         [
-            [[3.5, 5.0], [5.0, 6.0]],
-            # [[5.0, 6.0], [7.0, 8.0]],
-            # [[9.0, 10.0], [11.0, 12.0]],
+            [[2.0, 2.5], [2.5, 4.5]],
+            [[0.0, 0.75], [0.75, 1.75]],
         ]
     )
     return temp
@@ -98,9 +96,28 @@ def list_of_2d_strains():
 def list_of_2d_linearized_strains():
     temp = bkd.as_tensor(
         [
-            [[1.0, 2.5], [2.5, 1.0]],
-            # [[5.0, 6.0], [7.0, 8.0]],
-            # [[9.0, 10.0], [11.0, 12.0]],
+            [[0.0, 2.5], [2.5, 0.0]],
+            [[0.0, 0.75], [0.75, 0.5]],
+        ]
+    )
+    return temp
+
+@pytest.fixture
+def list_of_2d_right_cauchy_green_tensors():
+    temp = bkd.as_tensor(
+        [
+            [[5.0, 5.0], [5.0, 10.0]],
+            [[1.0, 1.5], [1.5, 4.5]],
+        ]
+    )
+    return temp
+
+@pytest.fixture
+def list_of_2d_left_cauchy_green_tensors():
+    temp = bkd.as_tensor(
+        [
+            [[10.0, 5.0], [5.0, 5.0]],
+            [[3.25, 2.25], [2.25, 2.25]],
         ]
     )
     return temp
@@ -126,7 +143,9 @@ def test_elasticity_deformation_gradient(list_of_coords, list_of_2d_deformation_
     # compute the displacement
     disp = linear_motion(list_of_coords) - list_of_coords
     # compute the displacement gradient
-    def_grad = deformation_gradient(disp, list_of_coords)
+    disp_grad = displacement_gradient(disp, list_of_coords)
+    # compute the deformation gradient
+    def_grad = deformation_gradient(disp_grad)
 
     # convert the tensors to NumPy arrays
     computed_deformation_gradient = to_numpy(def_grad)
@@ -134,6 +153,30 @@ def test_elasticity_deformation_gradient(list_of_coords, list_of_2d_deformation_
     
     # check whether the results are correct
     np.testing.assert_allclose(computed_deformation_gradient, expected_deformation_gradient)
+
+
+def test_elasticity_right_cauchy_green(list_of_2d_tensors, list_of_2d_right_cauchy_green_tensors):
+    # compute the right Cauchy-Green tensor
+    rcg = right_cauchy_green(list_of_2d_tensors)
+
+    # convert the tensors to NumPy arrays
+    computed_rcg = to_numpy(rcg)
+    expected_rcg = to_numpy(list_of_2d_right_cauchy_green_tensors)
+    
+    # check whether the results are correct
+    np.testing.assert_allclose(computed_rcg, expected_rcg)
+
+
+def test_elasticity_left_cauchy_green(list_of_2d_tensors, list_of_2d_left_cauchy_green_tensors):
+    # compute the left Cauchy-Green tensor
+    lcg = left_cauchy_green(list_of_2d_tensors)
+
+    # convert the tensors to NumPy arrays
+    computed_lcg = to_numpy(lcg)
+    expected_lcg = to_numpy(list_of_2d_left_cauchy_green_tensors)
+    
+    # check whether the results are correct
+    np.testing.assert_allclose(computed_lcg, expected_lcg)
 
 
 @pytest.mark.parametrize(
@@ -151,6 +194,7 @@ def test_elasticity_strain(batch_of_tensors, batch_of_results, request):
     batch_of_results = request.getfixturevalue(batch_of_results)
 
     # compute the strains
+    strain.select(Strain.GreenLagrange)
     batch_of_strains = strain(batch_of_tensors)
 
     # convert the tensors to NumPy arrays
@@ -181,6 +225,7 @@ def test_elasticity_strain_linearized(batch_of_tensors, batch_of_results, reques
     batch_of_results = request.getfixturevalue(batch_of_results)
 
     # compute the strains
+    strain.select(Strain.GreenLagrange)
     batch_of_strains = strain(batch_of_tensors, linearize=True)
 
     # convert the tensors to NumPy arrays
