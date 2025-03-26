@@ -60,6 +60,25 @@ def inverse(tensor):
     assert bkd.ndim(tensor) == 3, "inverse() requires a batch of rank 2 tensors."
     return bkd.lib.linalg.inv(tensor)
 
+def trace(tensor):
+    """Calculates the trace of a given tensor.
+    
+    Parameters
+    ----------
+    tensor: Tensor
+        The (batch of) tensor(s) for which a trace is supposed to be computed.
+    
+    Returns
+    -------
+    The (batch of) tensor trace(s).
+    """
+    assert bkd.ndim(tensor) == 3, "trace() requires a batch of rank 2 tensors."
+    _dim = bkd.shape(tensor)[-1]
+    _trace = tensor[..., 0, 0]
+    for _i in range(1, _dim):
+        _trace += tensor[..., _i, _i]
+    return _trace
+
 def transpose(tensor):
     """Calculates the transpose of a given tensor.
 
