@@ -73,11 +73,7 @@ def trace(tensor):
     The (batch of) tensor trace(s).
     """
     assert bkd.ndim(tensor) == 3, "trace() requires a batch of rank 2 tensors."
-    _dim = bkd.shape(tensor)[-1]
-    _trace = tensor[..., 0, 0]
-    for _i in range(1, _dim):
-        _trace += tensor[..., _i, _i]
-    return _trace
+    return bkd.lib.einsum("...ii->...", tensor)
 
 def transpose(tensor):
     """Calculates the transpose of a given tensor.
