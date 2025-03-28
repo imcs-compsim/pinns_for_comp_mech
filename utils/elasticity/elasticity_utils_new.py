@@ -1,7 +1,12 @@
+from abc import ABC, abstractmethod
+
 import deepxde as dde
 import deepxde.backend as bkd
 
-from utils.linalg.linalg_utils import identity_like, transpose
+from utils.linalg.linalg_utils import \
+    identity_like as _identity_like, \
+    trace as _trace, \
+    transpose as _transpose
 
 
 def displacement_gradient(disp, coords):
@@ -56,7 +61,7 @@ def deformation_gradient(disp_grad):
     _deformation_gradient: Tensor
         The (batch of) deformation gradient tensor(s).
     """
-    _def_grad = disp_grad + identity_like(disp_grad)
+    _def_grad = disp_grad + _identity_like(disp_grad)
     return _def_grad
 
 
@@ -78,7 +83,7 @@ def right_cauchy_green(def_grad):
     _right_cauchy_green: Tensor
         The (batch of) right Cauchy-Green tensor(s).
     """
-    _rcg = bkd.matmul(transpose(def_grad), def_grad)
+    _rcg = bkd.matmul(_transpose(def_grad), def_grad)
     return _rcg
 
 
@@ -100,24 +105,38 @@ def left_cauchy_green(def_grad):
     _left_cauchy_green: Tensor
         The (batch of) left Cauchy-Green tensor(s).
     """
-    _lcg = bkd.matmul(def_grad, transpose(def_grad))
+    _lcg = bkd.matmul(def_grad, _transpose(def_grad))
     return _lcg
 
 
 class Strain:
-    """Class for strain computations."""
+    r"""Class for strain computations.
+    
+    The class provides a general interface for evaluating the strain tensor.
+    The convention for this class is that the strain tensor is a function of 
+    the deformation gradient tensor, i.e.,
 
-    def __init__(self):
+    .. math::
+
+            \mathbf{E} = \mathbf{E}(\mathbf{F})
+
+    Attributes
+    ----------
+    _measure: Callable
+        The method for evaluating the strain tensor.
+    """
+
+    def __init__(self, measure=None):
         """Initialize the class."""
-        self._evaluation_method = None
+        self._measure = measure
 
-    def __call__(self, *args, **kwds):
+    def __call__(self, def_grad, **kwds):
         """General interface for evaluating the strain tensor.
         
-        Passes all arguments to member :py:attr:`_evaluation_method` which 
+        Passes all arguments to member :py:attr:`_measure` which 
         implements the actual computation of the strain tensor.
         """
-        return self._evaluation_method(*args, **kwds)
+        return self._measure(def_grad, **kwds)
 
     def select(self, method):
         """Select the method for evaluating the strain tensor.
@@ -127,10 +146,10 @@ class Strain:
         method: Callable
             The method to evaluate the strain tensor.
         """
-        self._evaluation_method = method
+        self._measure = method
 
     @staticmethod
-    def GreenLagrange(def_grad, linearize=False):
+    def GreenLagrange(def_grad, linearized_gl=False):
         """Compute a (batch of) Green-Lagrange strain tensor(s) from a 
         (batch of) deformation gradient(s).
         
@@ -138,7 +157,7 @@ class Strain:
         ----------
         def_grad: Tensor
             The (batch of) deformation gradient tensor(s).
-        linearize: bool
+        linearized_gl: bool
             A flag indicating whether to use the linearized definition of the 
             Green-Lagrange strain tensor.
         
@@ -147,14 +166,113 @@ class Strain:
         _strain: Tensor
             The (batch of) strain tensor(s).
         """
-        if linearize:
-            _def_grad_T = transpose(def_grad)
-            _strain = 0.5 * (def_grad + _def_grad_T - 2.0 * identity_like(def_grad))
+        if linearized_gl:
+            _def_grad_T = _transpose(def_grad)
+            _strain = 0.5 * (def_grad + _def_grad_T - 2.0 * _identity_like(def_grad))
         else:
             _rcg = right_cauchy_green(def_grad)
-            _strain = 0.5 * (_rcg - identity_like(_rcg))
+            _strain = 0.5 * (_rcg - _identity_like(_rcg))
         return _strain
     
 
 # define the global variables which will be used in the equations
 strain = Strain()
+
+
+class Stress:
+    """Class for stress computations."""
+
+    def __init__(self):
+        """Initialize the class."""
+        self._material_law = None
+
+    def __call__(self, def_grad, **kwds):
+        """General interface for evaluating the stress tensor provided a 
+        deformation gradient.
+        
+        Passes all arguments to member :py:attr:`_material_law` which 
+        implements the actual computation of the stress tensor.
+        """
+        return self._material_law(def_grad, **kwds)
+
+    def select(self, law):
+        """Select the law for evaluating the stress tensor.
+        
+        Parameters
+        ----------
+        method: StressLawInterface
+            The method to evaluate the stress tensor.
+        """
+        self._material_law = law
+
+
+# define the global variables which will be used in the equations
+stress = Stress()
+
+
+class StressLawInterface(ABC):
+
+    def __init__(self):
+        """Initialize the class.
+        
+        Here you can provide the material parameters if necessary.
+        """
+        pass
+
+    def __call__(self, def_grad, **kwds):
+        """Public interface for computing the 2nd Piola Kirchhoff stress tensor 
+        from the deformation gradient.
+        
+        Parameters
+        ----------
+        def_grad: Tensor
+            The (batch of) deformation gradient tensor(s).
+        
+        Returns
+        -------
+        _stress: Tensor
+            The (batch of) stress tensor(s).
+        """
+        return self._2pk(def_grad, **kwds)
+
+    @abstractmethod
+    def _2pk(self, def_grad, **kwds):
+        """Compute the 2nd Piola Kirchhoff stress tensor from the deformation 
+        gradient.
+
+        This method has to be implemented by the derived classes.
+        
+        Parameters
+        ----------
+        def_grad: Tensor
+            The (batch of) deformation gradient tensor(s).
+        
+        Returns
+        -------
+        _stress: Tensor
+            The (batch of) stress tensor(s).
+        """
+        pass
+
+class StVenantKirchhoff(StressLawInterface):
+
+    def __init__(self, lamb, mu):
+        """Initialize the class."""
+        self._lamb = lamb
+        self._mu = mu
+
+    def _2pk(self, def_grad, **kwds):
+        """Compute the 2nd Piola Kirchhoff stress tensor for a St. Venant Kirchhoff 
+        material from the deformation gradient.
+        """
+        # compute the strain from the deformation gradient
+        _strain = strain(def_grad, **kwds)
+        # compute the stress from the strain
+        # HINT: Since the trace operation is batched but the identity tensor 
+        # is NOT batched for efficiency reasons, we have to perform an outer 
+        # vector-matrix product here to broadcast the result of the 
+        # multiplication to the correct dimensions
+        _stress = self._lamb * bkd.lib.einsum('i,jk->ijk', _trace(_strain), _identity_like(_strain)) 
+        _stress += 2.0 * self._mu * _strain
+        return _stress
+    
