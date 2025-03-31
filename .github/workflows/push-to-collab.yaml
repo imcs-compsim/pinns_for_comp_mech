@@ -1,0 +1,41 @@
+name: Automatic synchronization of ongoing work with collaboration repository
+
+on:
+  push:
+    branches:
+      - release-4-collab
+
+jobs:
+  sync-to-collab-repo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source repo (this one)
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: release-4-collab
+
+      - name: Clone the collaboration repository
+        run: |
+          git clone https://x-access-token:${{ secrets.COLLAB_PUSH_TOKEN }}@github.com/imcs-compsim/collab-ansys-ml4contact.git ../collab-repo
+
+      - name: Rsync selected folders into collaboration repo
+        run: |
+          rsync -av --delete elasticity_2d/ ../collab-repo/examples/elasticity_2d/
+          rsync -av --delete utils/ ../collab-repo/utils/
+        # `--delete` ensures removed files are also deleted in the target
+
+      - name: Commit and push changes to collab repo
+        working-directory: ../collab-repo
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          
+          git add examples/ utils/
+          if ! git diff --cached --quiet; then
+            git commit -m "Sync from release-4-collab branch"
+            git push origin main
+          else
+            echo "No changes to commit"
+          fi
