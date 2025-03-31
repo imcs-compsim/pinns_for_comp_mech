@@ -1,0 +1,7 @@
+deepxde
+pyevtk
+triangle
+gmsh
+pytest
+pytest-cov
+pytest-xdist
