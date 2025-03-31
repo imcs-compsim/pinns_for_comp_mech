@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from utils.linalg.linalg_utils import determinant, identity, identity_like, \
-    inverse, trace, transpose
+    inverse, outer_vec_mat_prod, trace, transpose
 
 from conftest import to_numpy
 
@@ -11,14 +11,22 @@ from conftest import to_numpy
 # --------------------- Fixtures ---------------------
 
 @pytest.fixture
-def identity_2d():
+def identity2d():
     temp = bkd.as_tensor([[1.0, 0.0], [0.0, 1.0]])
     return temp
 
 @pytest.fixture
-def identity_3d():
+def identity3d():
     temp = bkd.as_tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
     return temp
+
+@pytest.fixture
+def vector2d():
+    return bkd.as_tensor([-1.0, 2.0])
+
+@pytest.fixture
+def tensor2d(list_of_2d_tensors):
+    return list_of_2d_tensors[0]
 
 @pytest.fixture
 def list_of_2d_tensors():
@@ -62,7 +70,6 @@ def list_of_2d_tensors_transposed():
         ]
     )
     return temp
-
 
 @pytest.fixture
 def list_of_3d_tensors():
@@ -109,6 +116,16 @@ def list_of_3d_tensors_transposed():
         [
             [[1.0, 0.0, 4.0], [0.0, 3.0, 0.0], [2.0, 0.0, 5.0]],
             [[1.0, 0.0, 0.0], [2.0, 4.0, 0.0], [3.0, 5.0, 6.0]],
+        ]
+    )
+    return temp
+
+@pytest.fixture
+def outer_vec_mat_prod_res():
+    temp = bkd.as_tensor(
+        [
+            [[-1.0, -2.0], [-3.0, -4.0]],
+            [[2.0, 4.0], [6.0, 8.0]]
         ]
     )
     return temp
@@ -194,8 +211,8 @@ def test_linalg_inverse(batch_of_tensors, batch_of_results, request):
 @pytest.mark.parametrize(
     "dim, result",
     [
-        (2, "identity_2d"),
-        (3, "identity_3d"),
+        (2, "identity2d"),
+        (3, "identity3d"),
     ]
 )
 def test_linalg_identity(dim, result, request):
@@ -218,8 +235,8 @@ def test_linalg_identity(dim, result, request):
 @pytest.mark.parametrize(
     "batch_of_tensors, result",
     [
-        ("list_of_2d_tensors", "identity_2d"),
-        ("list_of_3d_tensors", "identity_3d"),
+        ("list_of_2d_tensors", "identity2d"),
+        ("list_of_3d_tensors", "identity3d"),
     ]
 )
 def test_linalg_identity_like(batch_of_tensors, result, request):
@@ -263,3 +280,28 @@ def test_linalg_trace(batch_of_tensors, batch_of_results, request):
 
     # make sure the identity tensor is correct
     np.testing.assert_array_equal(computed_traces, expected_traces)
+
+
+@pytest.mark.parametrize(
+    "vector, matrix, result",
+    [
+        ("vector2d", "tensor2d", "outer_vec_mat_prod_res"),
+    ]
+)
+def test_linalg_outer_vec_mat_prod(vector, matrix, result, request):
+    # since fixtures can't be passed in parameterized tests directly, we need 
+    # to provide the name of the fixture as string and then retrieve their 
+    # values by using the special request fixture which is provided by pytest
+    vector = request.getfixturevalue(vector)
+    matrix = request.getfixturevalue(matrix)
+    result = request.getfixturevalue(result)
+
+    # compute the outer product of the batch of vectors with the batch of matrices
+    outer_product = outer_vec_mat_prod(vector, matrix)
+
+    # convert the tensors to NumPy arrays
+    computed_outer_product = to_numpy(outer_product)
+    expected_outer_product = to_numpy(result)
+
+    # make sure the outer products are correct
+    np.testing.assert_array_equal(computed_outer_product, expected_outer_product)

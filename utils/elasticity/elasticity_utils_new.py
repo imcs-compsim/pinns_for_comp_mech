@@ -5,6 +5,7 @@ import deepxde.backend as bkd
 
 from utils.linalg.linalg_utils import \
     identity_like as _identity_like, \
+    outer_vec_mat_prod as _outer_vec_mat_prod, \
     trace as _trace, \
     transpose as _transpose
 
@@ -272,7 +273,7 @@ class StVenantKirchhoff(StressLawInterface):
         # is NOT batched for efficiency reasons, we have to perform an outer 
         # vector-matrix product here to broadcast the result of the 
         # multiplication to the correct dimensions
-        _stress = self._lamb * bkd.lib.einsum('i,jk->ijk', _trace(_strain), _identity_like(_strain)) 
+        _stress = self._lamb * _outer_vec_mat_prod(_trace(_strain), _identity_like(_strain)) 
         _stress += 2.0 * self._mu * _strain
         return _stress
     

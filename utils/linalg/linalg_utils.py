@@ -60,6 +60,36 @@ def inverse(tensor):
     assert bkd.ndim(tensor) == 3, "inverse() requires a batch of rank 2 tensors."
     return bkd.lib.linalg.inv(tensor)
 
+def outer_vec_mat_prod(vec, mat):
+    r"""Calculates the outer product of a vector with a matrix.
+
+    Given a vector :math:`\mathbf{v}\in\mathbb{R}^l` and a matrix 
+    :math:`\mathbf{m}\in\mathbb{R}^{m\times n}`, this function computes the 
+    outer product resulting in the tensor 
+    :math:`\mathbf{T}\in\mathbb{R}^{l\times m\times n}` with components
+    .. math::
+            T_{ijk} = v_i m_{jk}.
+    
+    .. note::
+            In theory this function should also account for a batched outer 
+            product, but this functionality is not tested yet and thus disabled
+            for now.
+
+    Parameters
+    ----------
+    vec: Tensor
+        The vector to be multiplied.
+    mat: Tensor
+        The matrix to be multiplied.
+    
+    Returns
+    -------
+    The (batch of) outer product(s) of the vector(s) with the matrix(s).
+    """
+    assert bkd.ndim(vec) == 1 or bkd.ndim(vec) == 2, "outer_vec_mat_prod() requires a (batch of) rank 1 tensors (vectors)."
+    assert bkd.ndim(mat) == 2 or bkd.ndim(mat) == 3, "outer_vec_mat_prod() requires (a batch of) rank 2 tensors (matrices)."
+    return bkd.lib.einsum("...i,...jk->...ijk", vec, mat)
+
 def trace(tensor):
     """Calculates the trace of a given tensor.
     
