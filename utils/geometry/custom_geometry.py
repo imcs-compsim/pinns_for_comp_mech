@@ -948,6 +948,13 @@ class GmshGeometryElement(Geometry):
 
         if self.external_dim_size:
             node_coords_x = self.add_external_dim(node_coords_x)
+        # If not entire mesh is not desired to be used for calculations
+        if not (n==1):
+            if n>node_coords_x.shape[0]:
+                raise Warning(f"The number o desired samples (num_domain={n}) cannot be larger than total number of total points inside of the domain ({node_coords_x.shape[0]})")
+            np.random.seed(42)
+            random_indices = np.random.choice(node_coords_x.shape[0], size=n, replace=False)
+            node_coords_x = node_coords_x[random_indices]
 
         return node_coords_x.astype(config.real(np))
     
