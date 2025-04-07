@@ -2,7 +2,7 @@ import deepxde.backend as bkd
 import numpy as np
 import pytest
 
-from utils.linalg.linalg_utils import determinant, identity, identity_like, \
+from utils.math.linalg_utils import determinant, identity, identity_like, \
     inverse, outer_vec_mat_prod, trace, transpose
 
 from conftest import to_numpy
@@ -140,7 +140,7 @@ def outer_vec_mat_prod_res():
         ("list_of_3d_tensors", "list_of_3d_tensors_transposed"),
     ]
 )
-def test_linalg_transpose(batch_of_tensors, batch_of_results, request):
+def test_math_linalg_transpose(batch_of_tensors, batch_of_results, request):
     # since fixtures can't be passed in parameterized tests directly, we need 
     # to provide the name of the fixture as string and then retrieve their 
     # values by using the special request fixture which is provided by pytest
@@ -165,7 +165,7 @@ def test_linalg_transpose(batch_of_tensors, batch_of_results, request):
         ("list_of_3d_tensors", "list_of_3d_tensors_determinant"),
     ]
 )
-def test_linalg_determinant(batch_of_tensors, batch_of_results, request):
+def test_math_linalg_determinant(batch_of_tensors, batch_of_results, request):
     # since fixtures can't be passed in parameterized tests directly, we need 
     # to provide the name of the fixture as string and then retrieve their 
     # values by using the special request fixture which is provided by pytest
@@ -190,7 +190,7 @@ def test_linalg_determinant(batch_of_tensors, batch_of_results, request):
         ("list_of_3d_tensors", "list_of_3d_tensors_inverted"),
     ]
 )
-def test_linalg_inverse(batch_of_tensors, batch_of_results, request):
+def test_math_linalg_inverse(batch_of_tensors, batch_of_results, request):
     # since fixtures can't be passed in parameterized tests directly, we need 
     # to provide the name of the fixture as string and then retrieve their 
     # values by using the special request fixture which is provided by pytest
@@ -215,7 +215,7 @@ def test_linalg_inverse(batch_of_tensors, batch_of_results, request):
         (3, "identity3d"),
     ]
 )
-def test_linalg_identity(dim, result, request):
+def test_math_linalg_identity(dim, result, request):
     # since fixtures can't be passed in parameterized tests directly, we need 
     # to provide the name of the fixture as string and then retrieve their 
     # values by using the special request fixture which is provided by pytest
@@ -239,7 +239,7 @@ def test_linalg_identity(dim, result, request):
         ("list_of_3d_tensors", "identity3d"),
     ]
 )
-def test_linalg_identity_like(batch_of_tensors, result, request):
+def test_math_linalg_identity_like(batch_of_tensors, result, request):
     # since fixtures can't be passed in parameterized tests directly, we need 
     # to provide the name of the fixture as string and then retrieve their 
     # values by using the special request fixture which is provided by pytest
@@ -264,7 +264,7 @@ def test_linalg_identity_like(batch_of_tensors, result, request):
         ("list_of_3d_tensors", "list_of_3d_tensors_traces"),
     ]
 )
-def test_linalg_trace(batch_of_tensors, batch_of_results, request):
+def test_math_linalg_trace(batch_of_tensors, batch_of_results, request):
     # since fixtures can't be passed in parameterized tests directly, we need 
     # to provide the name of the fixture as string and then retrieve their 
     # values by using the special request fixture which is provided by pytest
@@ -288,7 +288,7 @@ def test_linalg_trace(batch_of_tensors, batch_of_results, request):
         ("vector2d", "tensor2d", "outer_vec_mat_prod_res"),
     ]
 )
-def test_linalg_outer_vec_mat_prod(vector, matrix, result, request):
+def test_math_linalg_outer_vec_mat_prod(vector, matrix, result, request):
     # since fixtures can't be passed in parameterized tests directly, we need 
     # to provide the name of the fixture as string and then retrieve their 
     # values by using the special request fixture which is provided by pytest

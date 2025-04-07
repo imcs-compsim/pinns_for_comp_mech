@@ -3,7 +3,9 @@ from abc import ABC, abstractmethod
 import deepxde as dde
 import deepxde.backend as bkd
 
-from utils.linalg.linalg_utils import \
+from utils.math.differential_utils import \
+    vector_jacobian as _vector_jacobian
+from utils.math.linalg_utils import \
     identity_like as _identity_like, \
     outer_vec_mat_prod as _outer_vec_mat_prod, \
     trace as _trace, \
@@ -30,17 +32,7 @@ def displacement_gradient(disp, coords):
     _disp_grad: Tensor
         The (batch of) displacement gradient tensor(s).
     """
-    assert bkd.ndim(disp) == 2, \
-        "displacement_gradient() requires the displacement field to be a batch of rank 1 tensors (vectors)."
-    assert bkd.ndim(coords) == 2, \
-        "displacement_gradient() requires the coordinates to be a batch of rank 1 tensors (vectors)."
-    _grad_list = []
-    for _i in range(bkd.shape(disp)[-1]):
-        _grad_i = dde.grad.jacobian(disp, coords, i=_i, j=None)
-        _grad_list.append(_grad_i)
-    # consider the computed gradients as column vectors of the displacement 
-    # gradient matrix and stack them accordingly
-    _disp_grad = bkd.stack(_grad_list, axis=1)
+    _disp_grad = _vector_jacobian(disp, coords)
     return _disp_grad
 
 
@@ -89,7 +81,7 @@ def right_cauchy_green(def_grad):
 
 
 def left_cauchy_green(def_grad):
-    """Compute a (batch of) left Cauchy-Green tensor(s) from a (batch of) 
+    r"""Compute a (batch of) left Cauchy-Green tensor(s) from a (batch of) 
     deformation gradient(s).
 
     .. math::

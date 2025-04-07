@@ -30,6 +30,9 @@ def to_numpy(tensor):
             return tensor.numpy()
         else:
             with tf.compat.v1.Session() as sess:
+                # Initialize all variables in the session (which does not 
+                # happen automatically when running in tf.compat.v1 mode)
+                sess.run(tf.compat.v1.global_variables_initializer())
                 return sess.run(tensor)
     elif backend == "pytorch":
         return tensor.detach().cpu().numpy()

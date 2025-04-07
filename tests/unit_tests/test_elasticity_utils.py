@@ -1,4 +1,3 @@
-import deepxde as dde
 import deepxde.backend as bkd
 import numpy as np
 import pytest
@@ -6,7 +5,7 @@ import pytest
 from utils.elasticity.elasticity_utils_new import deformation_gradient, \
     displacement_gradient, left_cauchy_green, right_cauchy_green, Strain, \
     strain, stress, StVenantKirchhoff
-from utils.linalg.linalg_utils import transpose
+from utils.math.linalg_utils import transpose
 
 from conftest import to_numpy
 
