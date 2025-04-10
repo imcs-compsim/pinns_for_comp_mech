@@ -34,7 +34,8 @@ dependencies = [
   "gmsh",
   "pandas",
   "pyevtk",
-  "seaborn"
+  "seaborn",
+  "triangle",
 ]
 
 [project.optional-dependencies]
