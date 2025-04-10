@@ -32,6 +32,8 @@ requires-python = ">= 3.8"
 dependencies = [
   "deepxde",
   "gmsh",
+  "matplotlib",
+  "numpy",
   "pandas",
   "pyevtk",
   "seaborn",
@@ -59,7 +61,8 @@ packages = [
   "utils.contact_mech",
   "utils.elasticity",
   "utils.geometry",
-  "utils.postprocess"
+  "utils.postprocess",
+  "utils.vpinns",
 ]
 
 
