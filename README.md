@@ -17,7 +17,8 @@ Implementation of Physics-Informed Neural Networks (PINNs) for computational mec
 
 This framework relies on the `deepxde` package for training PINNs.
 
-> **Note**: `deepXDE` needs one of the following packages for the backend-calculation. Read [their website](https://deepxde.readthedocs.io/en/latest/user/installation.html) for more info. 
+> **Note**: `deepxde` needs one of the following packages for the backend-calculation. 
+> Read [their website](https://deepxde.readthedocs.io/en/latest/user/installation.html) for more info. 
 > 
 > - Tensorflow
 > - Pytorch
@@ -41,6 +42,7 @@ $ pip install -e ".[tf,dev]"
 ### Setup with `conda` 
 This repository also comes with an `env.yaml` file to directly create a `conda` environment with all dependencies. 
 The provided `conda` environment is configured to include the development dependencies and use `tensorflow` as backend for PINN training.
+Here we leverage an installation via `conda-forge` to be able to install specific versions that are tailored to the available hardware.
 To create an environment, run 
 ```bash
 $ conda env create -f env.yaml
@@ -51,7 +53,8 @@ in the top-level repository folder after cloning.
 
 ## Testing
 
-This repo has `integration_tests` (testing for examples/frameworks) and `unittests` (testing for specific functions). Testing is done by `pytest` and tests are configured in the `setup.cfg` file. 
+This repo has `integration_tests` (testing for examples/frameworks) and `unittests` (testing for specific functions). 
+Testing is done by `pytest` and tests are configured in the `pyproject.toml` file. 
 
 To run tests, type on the terminal:
 ```bash
