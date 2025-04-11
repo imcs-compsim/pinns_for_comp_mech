@@ -20,13 +20,6 @@ description = "A library for PINNs on Computational Mechanics"
 keywords = ["physics-informed neural networks", "computational mechanics", "contact mechanics"]
 readme = "README.md"
 
-# Online references about the project
-[project.urls]
-Homepage = "https://github.com/imcs-compsim/pinns_for_comp_mech"
-Repository = "https://github.com/imcs-compsim/pinns_for_comp_mech.git"
-Issues = "https://github.com/imcs-compsim/pinns_for_comp_mech/issues"
-"Bug Tracker" = "https://github.com/imcs-compsim/pinns_for_comp_mech/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug"
-
 # Dependencies of the project that need to be installed to use this project properly
 requires-python = ">= 3.8"
 dependencies = [
@@ -55,6 +48,13 @@ torch = [
   "torch"
 ]
 
+# Online references about the project
+[project.urls]
+Homepage = "https://github.com/imcs-compsim/pinns_for_comp_mech"
+Repository = "https://github.com/imcs-compsim/pinns_for_comp_mech.git"
+Issues = "https://github.com/imcs-compsim/pinns_for_comp_mech/issues"
+"Bug Tracker" = "https://github.com/imcs-compsim/pinns_for_comp_mech/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug"
+
 [tool.hatch.build.targets.wheel]
 packages = [
   "utils",
@@ -65,8 +65,7 @@ packages = [
   "utils.vpinns",
 ]
 
-
-# Unit test relateed settings
+# Unit test related settings
 [tool.pytest.ini_options]
 addopts = "-ra -v"
 testpaths = [
