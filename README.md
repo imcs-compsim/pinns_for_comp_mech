@@ -17,11 +17,15 @@ Implementation of Physics-Informed Neural Networks (PINNs) for computational mec
 
 This framework relies on the `deepxde` package for training PINNs.
 
-> **Note**: `deepxde` needs one of the following packages for the backend-calculation. 
-> Read [their website](https://deepxde.readthedocs.io/en/latest/user/installation.html) for more info. 
-> 
-> - Tensorflow
-> - Pytorch
+> **Note**: If you want to be able to debug your PINN training code and step 
+> into functions provided by `deepxde`, you might want to skip the following
+> instructions and instead install it from source in editable mode.
+> Read [their website](https://deepxde.readthedocs.io/en/latest/user/installation.html) 
+> for instructions on how to do that.
+
+`deepxde` needs one of the following packages for the backend-calculation.  
+- Tensorflow
+- Pytorch
 
 You can specify your backend of choice when seting up this framework by running
 * for Tensorflow
