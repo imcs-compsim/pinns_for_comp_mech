@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+# General metadata for the project
+[project]
+name = "pinns-for-comp-mech"
+version = "2025.0.0"
+license = { text = "MIT" }
+authors = [
+  {name = "Tarik Sahin", email = "tarik.sahin@unibw.de"},
+  {name = "Max von Danwitz", email = "max.danwitz@unibw.de"},
+  {name = "Daniel Wolff", email = "d.wolff@unibw.de"},
+]
+maintainers = [
+  {name = "Tarik Sahin", email = "tarik.sahin@unibw.de"},
+  {name = "Daniel Wolff", email = "d.wolff@unibw.de"},
+]
+description = "A library for PINNs on Computational Mechanics"
+keywords = ["physics-informed neural networks", "computational mechanics", "contact mechanics"]
+readme = "README.md"
+
+# Dependencies of the project that need to be installed to use this project properly
+requires-python = ">= 3.8"
+dependencies = [
+  "deepxde",
+  "gmsh",
+  "matplotlib",
+  "numpy",
+  "pandas",
+  "pyevtk",
+  "seaborn",
+  "triangle",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "pytest-xdist",
+  "sphinx"
+]
+tf = [
+  "tensorflow",
+  "tensorflow-probability[tf]"
+]
+torch = [
+  "torch"
+]
+
+# Online references about the project
+[project.urls]
+Homepage = "https://github.com/imcs-compsim/pinns_for_comp_mech"
+Repository = "https://github.com/imcs-compsim/pinns_for_comp_mech.git"
+Issues = "https://github.com/imcs-compsim/pinns_for_comp_mech/issues"
+"Bug Tracker" = "https://github.com/imcs-compsim/pinns_for_comp_mech/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  "utils",
+  "utils.contact_mech",
+  "utils.elasticity",
+  "utils.geometry",
+  "utils.postprocess",
+  "utils.vpinns",
+]
+
+# Unit test related settings
+[tool.pytest.ini_options]
+addopts = "-ra -v"
+testpaths = [
+    "tests/integration_tests/beams"
+]
