@@ -21,8 +21,9 @@ keywords = ["physics-informed neural networks", "computational mechanics", "cont
 readme = "README.md"
 
 # Dependencies of the project that need to be installed to use this project properly
-requires-python = ">= 3.8"
+requires-python = "==3.8.15"
 dependencies = [
+  "scipy==1.7.3",
   "deepxde",
   "gmsh",
   "matplotlib",
@@ -41,8 +42,7 @@ dev = [
   "sphinx"
 ]
 tf = [
-  "tensorflow",
-  "tensorflow-probability[tf]"
+  "tensorflow==2.7.0",
 ]
 torch = [
   "torch"
