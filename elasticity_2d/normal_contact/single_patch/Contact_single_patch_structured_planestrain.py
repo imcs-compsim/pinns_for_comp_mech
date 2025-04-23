@@ -16,6 +16,8 @@ from utils.contact_mech.contact_utils import zero_complementarity_function_based
 from utils.elasticity import elasticity_utils
 from utils.contact_mech import contact_utils
 
+dde.config.set_default_float("float64")
+
 '''
 Single patch-test for testing contact conditions. It is a simple block under compression. Check problem_figures/Contact_patch.png for details.
 
@@ -75,7 +77,7 @@ def boundary_contact(x, on_boundary):
     return on_boundary and np.isclose(x[1],0)
 
 method_list = ["KKT_inequality_sign", "KKT_inequality_sigmoid", "complementarity_popp", "fisher_burmeister"]
-method_name = "KKT_inequality_sigmoid"
+method_name = "fisher_burmeister"
 
 # Karush-Kuhn-Tucker conditions for frictionless contact
 # gn>=0 (positive_normal_gap), Pn<=0 (negative_normal_traction), Tt=0 (zero_tangential_traction) and gn.Pn=0 (zero_complimentary)
@@ -165,7 +167,7 @@ net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
 
-restore_model = True
+restore_model = False
 # store the model
 model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/patch/{method_name}/{method_name}"
 
@@ -174,7 +176,7 @@ n_epoch_dict = {"KKT_inequality_sign": 2265, "KKT_inequality_sigmoid": 2272, "fi
 
 if not restore_model:
     model.compile("adam", lr=0.001)
-    losshistory, train_state = model.train(epochs=2000, display_every=100, model_save_path=model_path)
+    losshistory, train_state = model.train(epochs=2000, display_every=100)#, model_save_path=model_path)
 
     model.compile("L-BFGS")
     losshistory, train_state = model.train(display_every=200, model_save_path=model_path)

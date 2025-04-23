@@ -20,6 +20,8 @@ from utils.geometry.custom_geometry import GmshGeometryElement
 from utils.geometry.gmsh_models import QuarterCirclewithHole
 from utils.elasticity import elasticity_utils
 
+dde.config.set_default_float("float64")
+
 '''
 Solves a hollow quarter cylinder under internal pressure (Lame problem)
 
@@ -147,15 +149,16 @@ net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
 
-restore_model = True
+restore_model = False
 model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/lame_structured/lame"
 
 if not restore_model:
     model.compile("adam", lr=0.001)
-    losshistory, train_state = model.train(epochs=2000, display_every=100)
+    losshistory, train_state = model.train(iterations=200, display_every=100)
 
+    # dde.optimizers.set_LBFGS_options(ftol=1E-8)
     model.compile("L-BFGS")
-    losshistory, train_state = model.train(display_every=200)
+    losshistory, train_state = model.train(iterations=4000, display_every=10)
     
     dde.saveplot(losshistory, train_state, issave=True, isplot=False)
 else:
