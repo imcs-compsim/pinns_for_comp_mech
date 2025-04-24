@@ -20,7 +20,6 @@ from utils.geometry.custom_geometry import GmshGeometryElement
 from utils.geometry.gmsh_models import QuarterCirclewithHole
 from utils.elasticity import elasticity_utils
 
-dde.config.set_default_float("float64")
 
 '''
 Solves a hollow quarter cylinder under internal pressure (Lame problem)
@@ -32,8 +31,10 @@ Reference for PINNs formulation:
 A physics-informed deep learning framework for inversion and surrogate modeling in solid mechanics
 
 @author: tsahin
+@author: svoelkl
 '''
 
+# Prepare the model geometry using gmsh
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 quarter_circle_with_hole = QuarterCirclewithHole(center=[0,0,0], inner_radius=1, outer_radius=2, mesh_size=0.1, gmsh_options=gmsh_options)
 
@@ -48,14 +49,13 @@ center_inner = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.cent
 radius_outer = quarter_circle_with_hole.outer_radius
 center_outer = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.center[1]]
 
-# change global variables in elasticity_utils
+# Change global variables in elasticity_utils
 elasticity_utils.geom = geom
-# change global variables in elasticity_utils
 elasticity_utils.lame = 1153.846
-elasticity_utils.shear = 769.23
+elasticity_utils.shear = 769.23  # resulting in emodul = 2000 and nu = 0.3
 nu,lame,shear,e_modul = problem_parameters()
 
-# The applied pressure 
+# Definition of applied pressure and BCs
 pressure_inlet = 1
 
 def pressure_inner_x(x, y, X):
@@ -140,8 +140,9 @@ def output_transform(x, y):
     y_loc = x[:, 1:2]
     
     return tf.concat([u*(x_loc)/e_modul,v*(y_loc)/e_modul, sigma_xx, sigma_yy, sigma_xy*x_loc*y_loc], axis=1)
-# two inputs x and y, output is ux and uy
-layer_size = [2] + [30] * 5 + [5]
+# Definition of Neural Network
+# two inputs x and y, output is ux, uy, sigma_xx, sigma_yy, sigma_xy
+layer_size = [2] + [30] * 5 + [5] # two inputs, 5 hidden layers with 30 neurons each, and 5 outputs
 activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
@@ -149,24 +150,23 @@ net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
 
-restore_model = False
+restore_model = True # Flag to restore the model from a saved simulation or compute a new one
 model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/lame_structured/lame"
 
 if not restore_model:
     model.compile("adam", lr=0.001)
-    losshistory, train_state = model.train(iterations=200, display_every=100)
+    losshistory, train_state = model.train(iterations=2000, display_every=100)
 
-    # dde.optimizers.set_LBFGS_options(ftol=1E-8)
     model.compile("L-BFGS")
-    losshistory, train_state = model.train(iterations=4000, display_every=10)
+    losshistory, train_state = model.train(display_every=200)
     
-    dde.saveplot(losshistory, train_state, issave=True, isplot=False)
+    dde.saveplot(losshistory, train_state, issave=False, isplot=False)
 else:
     n_epochs = 5484 
     model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
     
     model.compile("adam", lr=0.001)
-    model.restore(save_path=model_restore_path)
+    model.restore(save_path=model_restore_path, verbose=1)
 
 def calculate_loss():
     losses = np.hstack(
@@ -187,7 +187,7 @@ def calculate_loss():
 
 def compareModelPredictionAndAnalyticalSolution(model):
     '''
-    This function plots analytical solutions and the predictions. 
+    This function plots analytical solutions and the predictions through the PINN. 
     '''
     nu,lame,shear,e_modul = problem_parameters()
     
