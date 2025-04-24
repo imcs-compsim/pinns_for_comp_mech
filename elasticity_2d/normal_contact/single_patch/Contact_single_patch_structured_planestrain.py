@@ -16,7 +16,7 @@ from utils.contact_mech.contact_utils import zero_complementarity_function_based
 from utils.elasticity import elasticity_utils
 from utils.contact_mech import contact_utils
 
-dde.config.set_default_float("float64")
+
 
 '''
 Single patch-test for testing contact conditions. It is a simple block under compression. Check problem_figures/Contact_patch.png for details.
@@ -32,11 +32,10 @@ In this script, four different methods are described to enforce the Karush-Kuhn-
    - ref: https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf
 
 @author: tsahin
-
-@author: tsahin
+@author: svoelkl
 '''
 
-# Define GMSH and geometry parameters
+# Prepare the model geometry using gmsh
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 coord_left_corner=[-0,-0.]
 coord_right_corner=[1,1]
@@ -51,10 +50,16 @@ revert_curve_list = []
 revert_normal_dir_list = [1,1,1,1]
 geom = GmshGeometry2D(gmsh_model, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
 
-# The applied pressure 
+# Definition of applied pressure and BCs
 ext_traction = -0.1
+# define contact boundary points
+def boundary_contact(x, on_boundary):
+    return on_boundary and np.isclose(x[1],0)
 
-# how far above the block from ground
+bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_contact)
+
+#  Assign values for the different KKT methods
+#  how far above the block from ground
 distance = 0
 
 # complementarity parameter c
@@ -72,17 +77,10 @@ contact_utils.delta_pressure = delta_pressure
 elasticity_utils.geom = geom
 contact_utils.geom = geom
 
-# define contact boundary points
-def boundary_contact(x, on_boundary):
-    return on_boundary and np.isclose(x[1],0)
-
-method_list = ["KKT_inequality_sign", "KKT_inequality_sigmoid", "complementarity_popp", "fisher_burmeister"]
-method_name = "fisher_burmeister"
-
 # Karush-Kuhn-Tucker conditions for frictionless contact
 # gn>=0 (positive_normal_gap), Pn<=0 (negative_normal_traction), Tt=0 (zero_tangential_traction) and gn.Pn=0 (zero_complimentary)
-
-bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_contact)
+method_list = ["KKT_inequality_sign", "KKT_inequality_sigmoid", "complementarity_popp", "fisher_burmeister"] # different implemented methods to enforce KKT conditions
+method_name = "fisher_burmeister" # flag for the method to be used
 
 if method_name == "KKT_inequality_sign":
     bc_positive_normal_gap = dde.OperatorBC(geom, positive_normal_gap_sign, boundary_contact)
@@ -158,8 +156,9 @@ def output_transform(x, y):
     
     return tf.concat([u*(x_loc),v, sigma_xx*(l_beam-x_loc), ext_traction + sigma_yy*(h_beam-y_loc),sigma_xy*(l_beam-x_loc)*(x_loc)*(h_beam-y_loc)], axis=1)
 
-# two inputs x and y, 5 outputs are ux, uy, sigma_xx, sigma_yy and sigma_xy
-layer_size = [2] + [50] * 5 + [5]
+# Definition of Neural Network
+# two inputs x and y, output is ux, uy, sigma_xx, sigma_yy, sigma_xy
+layer_size = [2] + [50] * 5 + [5] # two inputs, 5 hidden layers with 30 neurons each, and 5 outputs
 activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
@@ -167,8 +166,7 @@ net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
 
-restore_model = False
-# store the model
+restore_model = False # Flag to restore the model from a saved simulation or compute a new one
 model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/patch/{method_name}/{method_name}"
 
 # number epochs required for restoring model
@@ -176,12 +174,12 @@ n_epoch_dict = {"KKT_inequality_sign": 2265, "KKT_inequality_sigmoid": 2272, "fi
 
 if not restore_model:
     model.compile("adam", lr=0.001)
-    losshistory, train_state = model.train(epochs=2000, display_every=100)#, model_save_path=model_path)
+    losshistory, train_state = model.train(epochs=2000, display_every=100)
 
     model.compile("L-BFGS")
-    losshistory, train_state = model.train(display_every=200, model_save_path=model_path)
+    losshistory, train_state = model.train(display_every=200)
 else:
-    n_epochs = n_epoch_dict[method_name] # trained model has 3106 iterations
+    n_epochs = n_epoch_dict[method_name]
     model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
     
     model.compile("adam", lr=0.001)
@@ -239,8 +237,6 @@ x = X[:,0].flatten()
 y = X[:,1].flatten()
 z = np.zeros(y.shape)
 
-#np.savetxt("Lame_inverse_large", X=np.hstack((X,output[:,0:2])))
-
 unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
                       cell_types, pointData = { "displacement" : combined_disp,"stress" : combined_stress, "analy_stress" : combined_stress_analytical, "analy_disp" : combined_disp_analytical
                                                ,"error_disp":combined_error_disp, "error_stress":combined_error_stress})
@@ -255,17 +251,3 @@ rel_err_l2_disp = np.linalg.norm(u_combined_pred - u_combined_analytical) / np.l
 print("Relative L2 error for disp: ", rel_err_l2_disp)
 rel_err_l2_stress = np.linalg.norm(s_combined_pred - s_combined_analytical) / np.linalg.norm(s_combined_analytical)
 print("Relative L2 error for stress: ", rel_err_l2_stress)
-
-# adopted sign
-# Relative L2 error for disp:  0.003821093510421621
-# Relative L2 error for stress:  0.001537474850331165
-
-# sigmoid
-# Relative L2 error for disp:  0.0009028400465172404
-# Relative L2 error for stress:  0.0009412639930073679
-
-# fb
-# Relative L2 error for disp:  0.0002480401972722835
-# Relative L2 error for stress:  0.00030554812293575304
-
-

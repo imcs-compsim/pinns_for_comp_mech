@@ -140,6 +140,7 @@ def output_transform(x, y):
     y_loc = x[:, 1:2]
     
     return tf.concat([u*(x_loc)/e_modul,v*(y_loc)/e_modul, sigma_xx, sigma_yy, sigma_xy*x_loc*y_loc], axis=1)
+
 # Definition of Neural Network
 # two inputs x and y, output is ux, uy, sigma_xx, sigma_yy, sigma_xy
 layer_size = [2] + [30] * 5 + [5] # two inputs, 5 hidden layers with 30 neurons each, and 5 outputs
@@ -168,7 +169,7 @@ else:
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path, verbose=1)
 
-def calculate_loss():
+def calculate_loss(): # for visualization purposes
     losses = np.hstack(
             (
                 np.array(losshistory.steps)[:, None],
