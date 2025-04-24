@@ -7,6 +7,11 @@ from deepxde.backend import tf
 from utils.elasticity.elasticity_utils import stress_plane_strain, momentum_2d 
 from utils.postprocess.elasticity_postprocessing import meshGeometry, postProcess
 
+import os
+from utils.geometry.geometry_utils import polar_transformation_2d
+import matplotlib.tri as tri
+from pyevtk.hl import unstructuredGridToVTK
+distance = 0
 
 geom_rectangle = dde.geometry.Rectangle(xmin=[0, 0], xmax=[2, 1])
 geom_disk = dde.geometry.Disk([1, 1], 1)
@@ -127,7 +132,9 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, loss_weights=[1,1,1,1,1,1,1,1]) # loss_weights=[1,1,1,1,100,100,100,1]
-losshistory, train_state = model.train(epochs=3000, display_every=500)
+losshistory, train_state = model.train(epochs=2000, display_every=100)
+model.compile("L-BFGS")
+losshistory, train_state = model.train(display_every=200)
 
 
 ###################################################################################
@@ -140,43 +147,43 @@ postProcess(model, X, triangles, output_name="displacement")
 
 # The rest of the command is used to put a block to visualize the the results more realistic
 
-# X = geom.random_points(1000, random="Sobol")
-# boun = geom.uniform_boundary_points(200)
-# X = np.vstack((X,boun))
+X = geom.random_points(1000, random="Sobol")
+boun = geom.uniform_boundary_points(200)
+X = np.vstack((X,boun))
 
-# displacement = model.predict(X)
-# sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_strain)
-# sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, X)
+displacement = model.predict(X)
+sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_strain)
+sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, X)
 
-# # combined_disp = tuple(np.vstack((np.array(displacement[:,0].tolist()),np.array(displacement[:,1].tolist()),np.zeros(displacement[:,0].shape[0]))))
-# # combined_stress = tuple(np.vstack((np.array(sigma_xx.flatten().tolist()),np.array(sigma_yy.flatten().tolist()),np.array(sigma_xy.flatten().tolist()))))
-# # combined_stress_polar = tuple(np.vstack((np.array(sigma_rr.tolist()),np.array(sigma_theta.tolist()),np.array(sigma_rtheta.tolist()))))
-
-# x = X[:,0].flatten()
-# y = X[:,1].flatten()
-# z = np.zeros(y.shape)
-# triang = tri.Triangulation(x, y)
-# #dol_triangles = triang.triangles
-# #offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1])
-# #cell_types = np.ones(dol_triangles.shape[0])*5
-
-# x = np.hstack((x,[0,0,2,2]))
-# y = np.hstack((y,[0-distance,-1-distance,-1-distance,0-distance]))
-# z = np.hstack((z,4*[0]))
-# block_triangle = np.array([[1200,1201,1202],[1200,1202,1203]])
-# dol_triangles = triang.triangles
-# dol_triangles = np.vstack((dol_triangles,block_triangle))
-# displacement = np.vstack((displacement, np.zeros((4,2))))
 # combined_disp = tuple(np.vstack((np.array(displacement[:,0].tolist()),np.array(displacement[:,1].tolist()),np.zeros(displacement[:,0].shape[0]))))
 # combined_stress = tuple(np.vstack((np.array(sigma_xx.flatten().tolist()),np.array(sigma_yy.flatten().tolist()),np.array(sigma_xy.flatten().tolist()))))
 # combined_stress_polar = tuple(np.vstack((np.array(sigma_rr.tolist()),np.array(sigma_theta.tolist()),np.array(sigma_rtheta.tolist()))))
 
-# offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1])
-# cell_types = np.ones(dol_triangles.shape[0])*5
+x = X[:,0].flatten()
+y = X[:,1].flatten()
+z = np.zeros(y.shape)
+triang = tri.Triangulation(x, y)
+#dol_triangles = triang.triangles
+#offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1])
+#cell_types = np.ones(dol_triangles.shape[0])*5
 
-# file_path = os.path.join(os.getcwd(),"default_result_name")
+x = np.hstack((x,[0,0,2,2]))
+y = np.hstack((y,[0-distance,-1-distance,-1-distance,0-distance]))
+z = np.hstack((z,4*[0]))
+block_triangle = np.array([[1200,1201,1202],[1200,1202,1203]])
+dol_triangles = triang.triangles
+dol_triangles = np.vstack((dol_triangles,block_triangle))
+displacement = np.vstack((displacement, np.zeros((4,2))))
+combined_disp = tuple(np.vstack((np.array(displacement[:,0].tolist()),np.array(displacement[:,1].tolist()),np.zeros(displacement[:,0].shape[0]))))
+combined_stress = tuple(np.vstack((np.array(sigma_xx.flatten().tolist()),np.array(sigma_yy.flatten().tolist()),np.array(sigma_xy.flatten().tolist()))))
+combined_stress_polar = tuple(np.vstack((np.array(sigma_rr.tolist()),np.array(sigma_theta.tolist()),np.array(sigma_rtheta.tolist()))))
 
+offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1])
+cell_types = np.ones(dol_triangles.shape[0])*5
+
+file_path = os.path.join(os.getcwd(),"default_result_name")
+
+unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
+                      cell_types, pointData = { "displacement" : combined_disp})
 # unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
-#                       cell_types, pointData = { "displacement" : combined_disp})
-# # unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
-# #                       cell_types, pointData = { "displacement" : combined_disp,"stress_polar" : combined_stress_polar, "stress": combined_stress})
+#                       cell_types, pointData = { "displacement" : combined_disp,"stress_polar" : combined_stress_polar, "stress": combined_stress})
