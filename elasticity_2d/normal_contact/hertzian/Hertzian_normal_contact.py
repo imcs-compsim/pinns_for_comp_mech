@@ -1,6 +1,11 @@
+### Quarter disc hertzian contact problem
+### @author: svoelkl, dwolff, apopp
+### based on the work of tsahin
+# Import required libraries
 import deepxde as dde
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import os
 from pathlib import Path
 from deepxde.backend import tf
@@ -8,52 +13,45 @@ import matplotlib.tri as tri
 from pyevtk.hl import unstructuredGridToVTK
 import time
 
+# Import custom modules
 from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import QuarterDisc
 from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, stress_to_traction_2d
 from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from utils.elasticity import elasticity_utils
 
-#dde.config.set_default_float("float64")
 
-'''
-@author: tsahin
-'''
-#dde.config.real.set_float64()
-
-gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
+## Create geometry
+# Dimensions of disk
 radius = 1
 center = [0,0]
-
+# Create the quarter disk using gmsh
+gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 Quarter_Disc = QuarterDisc(radius=radius, center=center, mesh_size=0.005, angle=265, refine_times=1, gmsh_options=gmsh_options)
-
 gmsh_model, x_loc_partition, y_loc_partition = Quarter_Disc.generateGmshModel(visualize_mesh=False)
-
+# Modifications to define a proper outer normal
 revert_curve_list = []
 revert_normal_dir_list = [1,2,2,1]
 geom = GmshGeometry2D(gmsh_model, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
 
-# # change global variables in elasticity_utils, they are used for getting the material properties for analytical model
+## Adjust material parameters
+# We want to have e_modul=200 and nu=0.3
 lame = 115.38461538461539
 shear = 76.92307692307692
 elasticity_utils.lame = lame
 elasticity_utils.shear = shear
-nu,lame,shear,e_modul = problem_parameters() # with dimensions, will be used for analytical solution
-# This will lead to e_modul=200 and nu=0.3
+nu,lame,shear,e_modul = problem_parameters()
 
-# The applied pressure 
-ext_traction = -0.5
 
-# zero neumann BC functions need the geom variable to be 
+## Preliminary calculations for contact conditions
 elasticity_utils.geom = geom
-
 distance = 0
 
 def calculate_gap_in_normal_direction(x,y,X):
     '''
     Calculates the gap in normal direction
     '''
-    # calculate the gap in y direction    
+    # Calculate the gap in y direction    
     gap_y = x[:,1:2] + y[:,1:2] + radius + distance
 
     # calculate the boundary normals
@@ -78,12 +76,16 @@ def calculate_traction(x, y, X):
 
     return Tx, Ty, Tn, Tt
 
-# Karush-Kuhn-Tucker conditions for frictionless contact
-# gn>=0 (positive_normal_gap), Pn<=0 (negative_normal_traction), Tt=0 (zero_tangential_traction) and gn.Pn=0 (zero_complimentary)
+## Enforce Karush-Kuhn-Tucker conditions for frictionless contact
+#      gn >= 0 (positive_normal_gap)
+#      Pn <= 0 (negative_normal_traction)
+# gn * Pn  = 0 (zero_complimentary)
+#       Tt = 0 (zero_tangential_traction)
 
 def positive_normal_gap(x, y, X):
     '''
     Enforces normal gap (gn) to be positive.
+    gn >= 0, first condition of KarushKuhnTucker-KKT.
     '''
     gn = calculate_gap_in_normal_direction(x, y, X)
 
@@ -93,28 +95,35 @@ def positive_normal_gap(x, y, X):
 def negative_normal_traction(x,y,X):
     '''
     Enforces normal part of contact traction (Pn) to be negative.
+    Pn <= 0, second condition of KarushKuhnTucker-KKT.
     '''
     Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
 
     # If Pn is positive, it will create contributions to overall loss. Aims is to get negative normal traction
     return (1.0+tf.math.sign(Pn))*Pn
 
-def zero_tangential_traction(x,y,X):
-    '''
-    Enforces tangential part of contact traction (Tt) to be zero.
-    '''
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
-
-    return Tt
-
 def zero_complimentary(x,y,X):
     '''
     Enforces complimentary term to be zero.
+    gn * Pn = 0, third condition of KarushKuhnTucker-KKT.
     '''
     Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
     gn = calculate_gap_in_normal_direction(x, y, X)
 
     return gn*Pn
+
+def zero_tangential_traction(x,y,X):
+    '''
+    Enforces tangential part of contact traction (Tt) to be zero.
+    Tt = 0, Frictionless contact.
+    '''
+    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
+
+    return Tt
+
+## Define BCs
+# Applied pressure 
+ext_traction = -0.5
 
 def zero_neumann_x(x,y,X):
     '''
@@ -159,6 +168,7 @@ data = dde.data.PDE(
     train_distribution = "Sobol"
 )
 
+## Use output transformation
 def output_transform(x, y):
     '''
     Hard BCs:
@@ -195,24 +205,21 @@ def output_transform(x, y):
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
     
-    #return tf.concat([u*(-x_loc), ext_dips + v*(-y_loc), sigma_xx, sigma_yy, sigma_xy*(x_loc)*(y_loc)], axis=1)
     return tf.concat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
 
-# 2 inputs: x and y, 5 outputs: ux, uy, sigma_xx, sigma_yy and sigma_xy
-layer_size = [2] + [50] * 5 + [5]
+## Define the neural network
+layer_size = [2] + [50] * 5 + [5] # 2 inputs: x and y, 5 hidden layers with 50 neurons each, 5 outputs: ux, uy, sigma_xx, sigma_yy and sigma_xy
 activation = "tanh"
-# more inside https://cs230.stanford.edu/section/4/#xavier-initialization
-# The goal of Xavier Initialization is to initialize the weights such that the variance of the activations are the same across every layer. 
-# This constant variance helps prevent the gradient from exploding or vanishing.
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
 
-# weights due to PDE
+## Adjust weights in the loss function
+# Weights due to PDE
 w_pde_1,w_pde_2,w_pde_3,w_pde_4,w_pde_5 = 1e0,1e0,1e0,1e0,1e0
-# weights due to Neumann BC
+# Weights due to Neumann BC
 w_zero_traction_x, w_zero_traction_y = 1e0,1e0
-# weights due to Contact BC
+# Weights due to Contact BC
 w_positive_normal_gap = 1e4
 w_negative_normal_traction = 1e0
 w_zero_tangential_traction = 1e0
@@ -221,16 +228,66 @@ w_zero_complimentary = 1e2
 loss_weights = [w_pde_1,w_pde_2,w_pde_3,w_pde_4,w_pde_5,w_zero_traction_x,w_zero_traction_y,w_positive_normal_gap,w_negative_normal_traction,w_zero_tangential_traction,w_zero_complimentary]
 
 model = dde.Model(data, net)
-model.compile("adam", lr=0.001, loss_weights=loss_weights)
-losshistory, train_state = model.train(epochs=2000, display_every=100) 
 
-model.compile("L-BFGS-B", loss_weights=loss_weights)
-losshistory, train_state = model.train(display_every=200)
+## Train the model or use a pre-trained model
+restore_model = False
+model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian_normal_contact/pure/"
+simulation_case = f"pure_hertzian"
+adam_iterations = 2000
 
-###################################################################################
-############################## VISUALIZATION PARTS ################################
-###################################################################################
+if not restore_model:
+    model.compile("adam", lr=0.001, loss_weights=loss_weights)
+    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
 
+    model.compile("L-BFGS-B", loss_weights=loss_weights)
+    losshistory, train_state = model.train(display_every=200)
+   
+    dde.saveplot(losshistory, train_state, issave=False, isplot=False)
+    def calculate_loss():
+        losses = np.hstack(
+                (
+                    np.array(losshistory.steps)[:, None],
+                    np.array(losshistory.loss_train),
+                )
+            )
+        steps = losses[:,0]
+        pde_loss = losses[:,1:5].sum(axis=1)
+        neumann_loss = losses[:,6:9].sum(axis=1)
+        
+        return steps, pde_loss, neumann_loss
+else:
+    n_iterations = 8717 
+    model_restore_path = model_path + simulation_case + "-"+ str(n_iterations) + ".ckpt"
+    model_loss_path = model_path + simulation_case + "-"+ str(n_iterations) + "_loss.dat"
+    
+    model.compile("adam", lr=0.001)
+    model.restore(save_path=model_restore_path)
+    def calculate_loss():
+        losses = np.loadtxt(model_loss_path),
+        steps = losses[0][:,0]
+        pde_loss = losses[0][:,1:5].sum(axis=1)
+        neumann_loss = losses[0][:,6:9].sum(axis=1)
+        
+        return steps, pde_loss, neumann_loss
+
+
+## Visualize the loss
+steps, pde_loss, neumann_loss = calculate_loss()
+plt.plot(steps, pde_loss/5, color='b', lw=2, label="PDE")
+plt.plot(steps, neumann_loss/4, color='r', lw=2,label="NBC")
+plt.vlines(x=adam_iterations,ymin=0, ymax=1, linestyles='--', colors="k")
+plt.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,0.5],   ha='center', va='top', size=13)
+plt.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,0.5], ha='center', va='top', size=13)
+plt.tick_params(axis="both", labelsize=12)
+plt.xlabel("Iterations", size=17)
+plt.ylabel("MSE", size=17)
+plt.yscale('log')
+plt.legend(fontsize=13)
+plt.grid()
+plt.show()
+
+## Create a comparison with FEM results
+# Load the FEM results
 fem_path = str(Path(__file__).parent.parent.parent)+"/Hertzian_fem/Hertzian_fem_fine_mesh.csv"
 df = pd.read_csv(fem_path)
 fem_results = df[["Points_0","Points_1","displacement_0","displacement_1","nodal_cauchy_stresses_xyz_0","nodal_cauchy_stresses_xyz_1","nodal_cauchy_stresses_xyz_3"]]
@@ -245,7 +302,7 @@ y = X[:,1].flatten()
 z = np.zeros(y.shape)
 triangles = tri.Triangulation(x, y)
 
-# predictions
+# Predictions at FEM nodes
 start_time_calc = time.time()
 output = model.predict(X)
 end_time_calc = time.time()
@@ -260,7 +317,6 @@ combined_disp_pred = tuple(np.vstack((np.array(u_pred.tolist()),np.array(v_pred.
 combined_stress_pred = tuple(np.vstack((np.array(sigma_xx_pred.flatten().tolist()),np.array(sigma_yy_pred.flatten().tolist()),np.array(sigma_xy_pred.flatten().tolist()))))
 combined_stress_polar_pred = tuple(np.vstack((np.array(sigma_rr_pred.tolist()),np.array(sigma_theta_pred.tolist()),np.array(sigma_rtheta_pred.tolist()))))
 
-# fem
 u_fem, v_fem = displacement_fem[:,0], displacement_fem[:,1]
 sigma_xx_fem, sigma_yy_fem, sigma_xy_fem = stress_fem[:,0:1], stress_fem[:,1:2], stress_fem[:,2:3]
 sigma_rr_fem, sigma_theta_fem, sigma_rtheta_fem = polar_transformation_2d(sigma_xx_fem, sigma_yy_fem, sigma_xy_fem, X)
@@ -269,7 +325,7 @@ combined_disp_fem = tuple(np.vstack((np.array(u_fem.tolist()),np.array(v_fem.tol
 combined_stress_fem = tuple(np.vstack((np.array(sigma_xx_fem.flatten().tolist()),np.array(sigma_yy_fem.flatten().tolist()),np.array(sigma_xy_fem.flatten().tolist()))))
 combined_stress_polar_fem = tuple(np.vstack((np.array(sigma_rr_fem.tolist()),np.array(sigma_theta_fem.tolist()),np.array(sigma_rtheta_fem.tolist()))))
 
-# error
+# Compute difference error of PINNs
 error_disp_x = abs(np.array(u_pred.tolist()) - u_fem.flatten())
 error_disp_y =  abs(np.array(v_pred.tolist()) - v_fem.flatten())
 combined_error_disp = tuple(np.vstack((error_disp_x, error_disp_y,np.zeros(error_disp_x.shape[0]))))
@@ -284,6 +340,7 @@ error_polar_stress_y =  abs(np.array(sigma_theta_pred.flatten().tolist()) - sigm
 error_polar_stress_xy =  abs(np.array(sigma_rtheta_pred.flatten().tolist()) - sigma_rtheta_fem.flatten())
 combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
 
+# Output results to VTK
 file_path = os.path.join(os.getcwd(), "Hertzian_fem_pinns")
 
 dol_triangles = triangles.triangles

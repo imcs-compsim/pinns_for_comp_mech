@@ -4,7 +4,7 @@ from deepxde import config
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-
+#remove
 class GmshGeometry3D(Geometry):
     def __init__(self, gmsh_model, external_dim_size=None, target_surface_ids=None):
         self.gmsh_model = gmsh_model

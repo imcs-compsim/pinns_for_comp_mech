@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/a11bsivo/Documents/Programing/pinns_for_comp_mech/elasticity_2d/trained_models/hertzian_normal_contact/pure/pure_hertzian-8717.ckpt"
+all_model_checkpoint_paths: "/home/a11bsivo/Documents/Programing/pinns_for_comp_mech/elasticity_2d/trained_models/hertzian_normal_contact/pure/pure_hertzian-8717.ckpt"
