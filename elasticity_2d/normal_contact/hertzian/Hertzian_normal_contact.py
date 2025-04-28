@@ -20,7 +20,6 @@ from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plan
 from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from utils.elasticity import elasticity_utils
 
-
 ## Create geometry
 # Dimensions of disk
 radius = 1
@@ -125,6 +124,7 @@ def zero_tangential_traction(x,y,X):
 # Applied pressure 
 ext_traction = -0.5
 
+### maybe replace with zero_neumann_*_mixed_formulation ###remove
 def zero_neumann_x(x,y,X):
     '''
     Enforces x component of zero Neumann BC to be zero.
@@ -156,16 +156,18 @@ bc_positive_normal_gap = dde.OperatorBC(geom, positive_normal_gap, boundary_circ
 bc_negative_normal_traction = dde.OperatorBC(geom, negative_normal_traction, boundary_circle_contact)
 bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_circle_contact)
 bc_zero_complimentary = dde.OperatorBC(geom, zero_complimentary, boundary_circle_contact)
+bcs = [bc_zero_traction_x,bc_zero_traction_y,bc_positive_normal_gap,bc_negative_normal_traction,bc_zero_tangential_traction,bc_zero_complimentary]
 
+# Setup the data object
 n_dummy = 1
 data = dde.data.PDE(
     geom,
     pde_mixed_plane_strain,
-    [bc_zero_traction_x,bc_zero_traction_y,bc_positive_normal_gap,bc_negative_normal_traction,bc_zero_tangential_traction,bc_zero_complimentary],
+    bcs,
     num_domain=n_dummy,
     num_boundary=n_dummy,
     num_test=n_dummy,
-    train_distribution = "Sobol"
+    train_distribution="Sobol"
 )
 
 ## Use output transformation
@@ -216,21 +218,26 @@ net.apply_output_transform(output_transform)
 
 ## Adjust weights in the loss function
 # Weights due to PDE
-w_pde_1,w_pde_2,w_pde_3,w_pde_4,w_pde_5 = 1e0,1e0,1e0,1e0,1e0
+w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5 = 1e0, 1e0, 1e0, 1e0, 1e0
 # Weights due to Neumann BC
-w_zero_traction_x, w_zero_traction_y = 1e0,1e0
+w_zero_traction_x, w_zero_traction_y = 1e0, 1e0
 # Weights due to Contact BC
 w_positive_normal_gap = 1e4
 w_negative_normal_traction = 1e0
 w_zero_tangential_traction = 1e0
 w_zero_complimentary = 1e2
 
-loss_weights = [w_pde_1,w_pde_2,w_pde_3,w_pde_4,w_pde_5,w_zero_traction_x,w_zero_traction_y,w_positive_normal_gap,w_negative_normal_traction,w_zero_tangential_traction,w_zero_complimentary]
+loss_weights = [w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5,
+                w_zero_traction_x, w_zero_traction_y,
+                w_positive_normal_gap,
+                w_negative_normal_traction,
+                w_zero_tangential_traction,
+                w_zero_complimentary]
 
-model = dde.Model(data, net)
 
 ## Train the model or use a pre-trained model
-restore_model = False
+model = dde.Model(data, net)
+restore_model = True
 model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian_normal_contact/pure/"
 simulation_case = f"pure_hertzian"
 adam_iterations = 2000
@@ -256,7 +263,7 @@ if not restore_model:
         
         return steps, pde_loss, neumann_loss
 else:
-    n_iterations = 8717 
+    n_iterations = 11581
     model_restore_path = model_path + simulation_case + "-"+ str(n_iterations) + ".ckpt"
     model_loss_path = model_path + simulation_case + "-"+ str(n_iterations) + "_loss.dat"
     
@@ -273,18 +280,20 @@ else:
 
 ## Visualize the loss
 steps, pde_loss, neumann_loss = calculate_loss()
-plt.plot(steps, pde_loss/5, color='b', lw=2, label="PDE")
-plt.plot(steps, neumann_loss/4, color='r', lw=2,label="NBC")
-plt.vlines(x=adam_iterations,ymin=0, ymax=1, linestyles='--', colors="k")
-plt.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,0.5],   ha='center', va='top', size=13)
-plt.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,0.5], ha='center', va='top', size=13)
-plt.tick_params(axis="both", labelsize=12)
-plt.xlabel("Iterations", size=17)
-plt.ylabel("MSE", size=17)
-plt.yscale('log')
-plt.legend(fontsize=13)
-plt.grid()
-plt.show()
+fig1, ax1 = plt.subplots(figsize=(10,8))
+ax1.plot(steps, pde_loss/5, color='b', lw=2, label="PDE")
+ax1.plot(steps, neumann_loss/4, color='r', lw=2,label="NBC")
+ax1.vlines(x=adam_iterations,ymin=0, ymax=1, linestyles='--', colors="k")
+ax1.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,0.5],   ha='center', va='top', size=15)
+ax1.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,0.5], ha='center', va='top', size=15)
+ax1.set_xlabel("Iterations", size=17)
+ax1.set_ylabel("MSE", size=17)
+ax1.set_yscale('log')
+ax1.tick_params(axis="both", labelsize=15)
+ax1.legend(fontsize=17)
+ax1.grid()
+plt.tight_layout()
+fig1.savefig("pure_hertzian_loss_plot.png", dpi=300)
 
 ## Create a comparison with FEM results
 # Load the FEM results
@@ -341,7 +350,7 @@ error_polar_stress_xy =  abs(np.array(sigma_rtheta_pred.flatten().tolist()) - si
 combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
 
 # Output results to VTK
-file_path = os.path.join(os.getcwd(), "Hertzian_fem_pinns")
+file_path = os.path.join(os.getcwd(), "pure_hertzian_pinn")
 
 dol_triangles = triangles.triangles
 offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
@@ -358,3 +367,33 @@ unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset,
                                                "error_stress" : combined_error_stress, 
                                                "error_polar_stress" : combined_error_polar_stress
                                             })
+
+## Plot the normal traction on contact domain, analytical vs predicted
+nu,lame,shear,e_modul = problem_parameters()
+X, _, _, _ = geom.get_mesh()
+
+output = model.predict(X)
+sigma_xx_pred, sigma_yy_pred, sigma_xy_pred = output[:,2:3], output[:,3:4], output[:,4:5]
+sigma_rr_pred, sigma_theta_pred, sigma_rtheta_pred = polar_transformation_2d(sigma_xx_pred, sigma_yy_pred, sigma_xy_pred, X)
+
+x_contact_lim = 2*np.sqrt(2*radius**2*abs(ext_traction)*(1-nu**2)/(e_modul*np.pi))
+x_contact_cond = np.logical_and(np.isclose(np.linalg.norm(X - center, axis=-1), radius), X[:,0]>-x_contact_lim)
+node_coords_x_contact = X[x_contact_cond][:,0]
+node_coords_x_contact = abs(node_coords_x_contact)
+
+pc_analytical = 4*radius*abs(ext_traction)/(np.pi*x_contact_lim**2)*np.sqrt(x_contact_lim**2-node_coords_x_contact**2)
+pc_predicted = -sigma_rr_pred[x_contact_cond]
+
+fig2, ax2 = plt.subplots(figsize=(10,8))
+
+ax2.scatter(node_coords_x_contact,pc_analytical,label="Analytical solution")
+ax2.scatter(node_coords_x_contact,pc_predicted,label="Prediction")
+
+ax2.set_xlabel("|x|", fontsize=17)
+ax2.set_ylabel(r"$P_n$", fontsize=17)
+ax2.tick_params(axis='both', which='major', labelsize=15)
+ax2.legend(fontsize=17)
+ax2.grid()
+plt.tight_layout()
+fig2.savefig("pure_hertzian_pressure_distribution.png", dpi=300)
+plt.show()
