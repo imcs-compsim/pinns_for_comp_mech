@@ -147,7 +147,7 @@ bcs = [bc_zero_traction_x,bc_zero_traction_y,bc_zero_fisher_burmeister,bc_zero_t
 
 ## Add external data for the prediction
 # Load external data
-fem_path = str(Path(__file__).parent.parent.parent)+"/Hertzian_fem/Hertzian_fem_fine_mesh.csv"
+fem_path = str(Path(__file__).parent.parent)+"/fem_reference/Hertzian_fem_fine_mesh.csv"
 df = pd.read_csv(fem_path)
 fem_results = df[["Points_0","Points_1","displacement_0","displacement_1","nodal_cauchy_stresses_xyz_0","nodal_cauchy_stresses_xyz_1","nodal_cauchy_stresses_xyz_3"]]
 fem_results = fem_results.to_numpy()
@@ -267,12 +267,12 @@ loss_weights = [w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5,
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
 restore_model = False
-model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian_normal_contact/inverse/"
-parameter_file_name = model_path+"identified_pressure.dat"
+model_path = str(Path(__file__).parent)
+parameter_file_name = model_path + "/" + "identified_pressure.dat"
 external_var_list = [ext_traction_predicted]
 prediction_output_step_size = 1
 variable = dde.callbacks.VariableValue(external_var_list, period=prediction_output_step_size, filename=parameter_file_name, precision=8)
-simulation_case = f"inverse_hertzian"
+simulation_case = f"inverse"
 adam_iterations = 2000
 
 if not restore_model:
@@ -284,9 +284,9 @@ if not restore_model:
     losshistory, train_state = model.train(callbacks=[variable], display_every=200)
    
 else:
-    n_iterations = 10827
-    model_restore_path = model_path + simulation_case + "-"+ str(n_iterations) + ".ckpt"
-    model_loss_path = model_path + simulation_case + "-"+ str(n_iterations) + "_loss.dat"
+    n_iterations = 10827 ## update
+    model_restore_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + ".ckpt"
+    model_loss_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + "_loss.dat"
     
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path)
@@ -310,5 +310,5 @@ ax1.tick_params(axis="both", labelsize=15)
 ax1.legend(fontsize=17)
 ax1.grid()
 plt.tight_layout()
-fig1.savefig("inverse_hertzian_pressure_prediction_plot.png", dpi=300)
+fig1.savefig(simulation_case+"_pressure_prediction_plot.png", dpi=300)
 plt.show()
