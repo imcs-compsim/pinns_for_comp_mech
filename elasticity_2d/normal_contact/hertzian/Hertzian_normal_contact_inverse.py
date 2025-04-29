@@ -1,4 +1,4 @@
-### Quarter disc hertzian contact problem enhanced with external data
+### Quarter disc hertzian contact problem finding external pressure with external data
 ### @author: svoelkl, dwolff, apopp
 ### based on the work of tsahin
 # Import required libraries
@@ -42,6 +42,9 @@ elasticity_utils.lame = lame
 elasticity_utils.shear = shear
 nu,lame,shear,e_modul = problem_parameters()
 
+## Define the parameters we want to predict
+ext_traction_actual = -0.5 
+ext_traction_predicted= dde.Variable(-0.1, dtype=tf.float64)
 
 ## Preliminary calculations for contact conditions
 elasticity_utils.geom = geom
@@ -142,7 +145,7 @@ bc_zero_fisher_burmeister = dde.OperatorBC(geom, zero_fisher_burmeister, boundar
 bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_circle_contact)
 bcs = [bc_zero_traction_x,bc_zero_traction_y,bc_zero_fisher_burmeister,bc_zero_tangential_traction]
 
-## Add external data to enhance the training
+## Add external data for the prediction
 # Load external data
 fem_path = str(Path(__file__).parent.parent.parent)+"/Hertzian_fem/Hertzian_fem_fine_mesh.csv"
 df = pd.read_csv(fem_path)
@@ -234,7 +237,7 @@ def output_transform(x, y):
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
     
-    return tf.concat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
+    return tf.concat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction_predicted + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
 
 ## Define the neural network
 layer_size = [2] + [50] * 5 + [5] # 2 inputs: x and y, 5 hidden layers with 50 neurons each, 5 outputs: ux, uy, sigma_xx, sigma_yy and sigma_xy
@@ -264,30 +267,22 @@ loss_weights = [w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5,
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
 restore_model = False
-model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian_normal_contact/data_enhanced/"
-simulation_case = f"data_enhanced_hertzian"
+model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian_normal_contact/inverse/"
+parameter_file_name = model_path+"identified_pressure.dat"
+external_var_list = [ext_traction_predicted]
+prediction_output_step_size = 1
+variable = dde.callbacks.VariableValue(external_var_list, period=prediction_output_step_size, filename=parameter_file_name, precision=8)
+simulation_case = f"inverse_hertzian"
 adam_iterations = 2000
 
 if not restore_model:
-    model.compile("adam", lr=0.001, loss_weights=loss_weights)
-    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
+    
+    model.compile("adam", lr=0.001, loss_weights=loss_weights, external_trainable_variables=external_var_list)
+    losshistory, train_state = model.train(iterations=adam_iterations, callbacks=[variable], display_every=100)
 
-    model.compile("L-BFGS-B", loss_weights=loss_weights)
-    losshistory, train_state = model.train(display_every=200)
+    model.compile("L-BFGS-B", loss_weights=loss_weights, external_trainable_variables=external_var_list)
+    losshistory, train_state = model.train(callbacks=[variable], display_every=200)
    
-    dde.saveplot(losshistory, train_state, issave=False, isplot=False)
-    def calculate_loss():
-        losses = np.hstack(
-                (
-                    np.array(losshistory.steps)[:, None],
-                    np.array(losshistory.loss_train),
-                )
-            )
-        steps = losses[:,0]
-        pde_loss = losses[:,1:5].sum(axis=1)
-        neumann_loss = losses[:,6:9].sum(axis=1)
-        
-        return steps, pde_loss, neumann_loss
 else:
     n_iterations = 10827
     model_restore_path = model_path + simulation_case + "-"+ str(n_iterations) + ".ckpt"
@@ -295,131 +290,25 @@ else:
     
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path)
-    def calculate_loss():
-        losses = np.loadtxt(model_loss_path),
-        steps = losses[0][:,0]
-        pde_loss = losses[0][:,1:5].sum(axis=1)
-        neumann_loss = losses[0][:,6:9].sum(axis=1)
-        
-        return steps, pde_loss, neumann_loss
 
-
-## Visualize the loss
-steps, pde_loss, neumann_loss = calculate_loss()
+## Visualize the predicted pressure
+steps = []
+pressure_predicted = []
+with open(parameter_file_name) as f:
+    for line in f:
+        a, b = line.split()
+        steps.append(float(a))
+        pressure_predicted.append(float(b.strip("[]")))
 fig1, ax1 = plt.subplots(figsize=(10,8))
-ax1.plot(steps, pde_loss/5, color='b', lw=2, label="PDE")
-ax1.plot(steps, neumann_loss/4, color='r', lw=2,label="NBC")
-ax1.vlines(x=adam_iterations,ymin=0, ymax=1, linestyles='--', colors="k")
-ax1.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,0.5],   ha='center', va='top', size=15)
-ax1.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,0.5], ha='center', va='top', size=15)
+ax1.plot(steps, pressure_predicted, color='b', lw=2, label="Predicted pressure")
+ax1.axhline(y=ext_traction_actual, color='r', lw=2,label="Actual pressure")
+ax1.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,max(pressure_predicted)],   ha='center', va='bottom', size=15)
+ax1.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,max(pressure_predicted)], ha='center', va='bottom', size=15)
 ax1.set_xlabel("Iterations", size=17)
-ax1.set_ylabel("MSE", size=17)
-ax1.set_yscale('log')
+ax1.set_ylabel("Pressure", size=17)
 ax1.tick_params(axis="both", labelsize=15)
 ax1.legend(fontsize=17)
 ax1.grid()
 plt.tight_layout()
-fig1.savefig("data_enhanced_hertzian_loss_plot.png", dpi=300)
-
-## Create a comparison with FEM results
-# Load the FEM results
-fem_path = str(Path(__file__).parent.parent.parent)+"/Hertzian_fem/Hertzian_fem_fine_mesh.csv"
-df = pd.read_csv(fem_path)
-fem_results = df[["Points_0","Points_1","displacement_0","displacement_1","nodal_cauchy_stresses_xyz_0","nodal_cauchy_stresses_xyz_1","nodal_cauchy_stresses_xyz_3"]]
-fem_results = fem_results.to_numpy()
-node_coords_xy = fem_results[:,0:2]
-displacement_fem = fem_results[:,2:4]
-stress_fem = fem_results[:,4:7]
-
-X = node_coords_xy
-x = X[:,0].flatten()
-y = X[:,1].flatten()
-z = np.zeros(y.shape)
-triangles = tri.Triangulation(x, y)
-
-# Predictions at FEM nodes
-start_time_calc = time.time()
-output = model.predict(X)
-end_time_calc = time.time()
-final_time = f'Prediction time: {(end_time_calc - start_time_calc):.3f} seconds'
-print(final_time)
-
-u_pred, v_pred = output[:,0], output[:,1]
-sigma_xx_pred, sigma_yy_pred, sigma_xy_pred = output[:,2:3], output[:,3:4], output[:,4:5]
-sigma_rr_pred, sigma_theta_pred, sigma_rtheta_pred = polar_transformation_2d(sigma_xx_pred, sigma_yy_pred, sigma_xy_pred, X)
-
-combined_disp_pred = tuple(np.vstack((np.array(u_pred.tolist()),np.array(v_pred.tolist()),np.zeros(u_pred.shape[0]))))
-combined_stress_pred = tuple(np.vstack((np.array(sigma_xx_pred.flatten().tolist()),np.array(sigma_yy_pred.flatten().tolist()),np.array(sigma_xy_pred.flatten().tolist()))))
-combined_stress_polar_pred = tuple(np.vstack((np.array(sigma_rr_pred.tolist()),np.array(sigma_theta_pred.tolist()),np.array(sigma_rtheta_pred.tolist()))))
-
-u_fem, v_fem = displacement_fem[:,0], displacement_fem[:,1]
-sigma_xx_fem, sigma_yy_fem, sigma_xy_fem = stress_fem[:,0:1], stress_fem[:,1:2], stress_fem[:,2:3]
-sigma_rr_fem, sigma_theta_fem, sigma_rtheta_fem = polar_transformation_2d(sigma_xx_fem, sigma_yy_fem, sigma_xy_fem, X)
-
-combined_disp_fem = tuple(np.vstack((np.array(u_fem.tolist()),np.array(v_fem.tolist()),np.zeros(u_fem.shape[0]))))
-combined_stress_fem = tuple(np.vstack((np.array(sigma_xx_fem.flatten().tolist()),np.array(sigma_yy_fem.flatten().tolist()),np.array(sigma_xy_fem.flatten().tolist()))))
-combined_stress_polar_fem = tuple(np.vstack((np.array(sigma_rr_fem.tolist()),np.array(sigma_theta_fem.tolist()),np.array(sigma_rtheta_fem.tolist()))))
-
-# Compute difference error of PINNs
-error_disp_x = abs(np.array(u_pred.tolist()) - u_fem.flatten())
-error_disp_y =  abs(np.array(v_pred.tolist()) - v_fem.flatten())
-combined_error_disp = tuple(np.vstack((error_disp_x, error_disp_y,np.zeros(error_disp_x.shape[0]))))
-
-error_stress_x = abs(np.array(sigma_xx_pred.flatten().tolist()) - sigma_xx_fem.flatten())
-error_stress_y =  abs(np.array(sigma_yy_pred.flatten().tolist()) - sigma_yy_fem.flatten())
-error_stress_xy =  abs(np.array(sigma_xy_pred.flatten().tolist()) - sigma_xy_fem.flatten())
-combined_error_stress = tuple(np.vstack((error_stress_x, error_stress_y, error_stress_xy)))
-
-error_polar_stress_x = abs(np.array(sigma_rr_pred.flatten().tolist()) - sigma_rr_fem.flatten())
-error_polar_stress_y =  abs(np.array(sigma_theta_pred.flatten().tolist()) - sigma_theta_fem.flatten())
-error_polar_stress_xy =  abs(np.array(sigma_rtheta_pred.flatten().tolist()) - sigma_rtheta_fem.flatten())
-combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
-
-# Output results to VTK
-file_path = os.path.join(os.getcwd(), "data_enhanced_hertzian_pinn")
-
-dol_triangles = triangles.triangles
-offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
-cell_types = np.ones(dol_triangles.shape[0])*5
-
-unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
-                      cell_types, pointData = {"displacement_pred" : combined_disp_pred,
-                                               "displacement_fem" : combined_disp_fem,
-                                               "stress_pred" : combined_stress_pred, 
-                                               "stress_fem" : combined_stress_fem, 
-                                               "polar_stress_pred" : combined_stress_polar_pred, 
-                                               "polar_stress_fem" : combined_stress_polar_fem, 
-                                               "error_disp" : combined_error_disp, 
-                                               "error_stress" : combined_error_stress, 
-                                               "error_polar_stress" : combined_error_polar_stress
-                                            })
-
-## Plot the normal traction on contact domain, analytical vs predicted
-nu,lame,shear,e_modul = problem_parameters()
-X, _, _, _ = geom.get_mesh()
-
-output = model.predict(X)
-sigma_xx_pred, sigma_yy_pred, sigma_xy_pred = output[:,2:3], output[:,3:4], output[:,4:5]
-sigma_rr_pred, sigma_theta_pred, sigma_rtheta_pred = polar_transformation_2d(sigma_xx_pred, sigma_yy_pred, sigma_xy_pred, X)
-
-x_contact_lim = 2*np.sqrt(2*radius**2*abs(ext_traction)*(1-nu**2)/(e_modul*np.pi))
-x_contact_cond = np.logical_and(np.isclose(np.linalg.norm(X - center, axis=-1), radius), X[:,0]>-x_contact_lim)
-node_coords_x_contact = X[x_contact_cond][:,0]
-node_coords_x_contact = abs(node_coords_x_contact)
-
-pc_analytical = 4*radius*abs(ext_traction)/(np.pi*x_contact_lim**2)*np.sqrt(x_contact_lim**2-node_coords_x_contact**2)
-pc_predicted = -sigma_rr_pred[x_contact_cond]
-
-fig2, ax2 = plt.subplots(figsize=(10,8))
-
-ax2.scatter(node_coords_x_contact,pc_analytical,label="Analytical solution")
-ax2.scatter(node_coords_x_contact,pc_predicted,label="Prediction")
-
-ax2.set_xlabel("|x|", fontsize=17)
-ax2.set_ylabel(r"$P_n$", fontsize=17)
-ax2.tick_params(axis='both', which='major', labelsize=15)
-ax2.legend(fontsize=17)
-ax2.grid()
-plt.tight_layout()
-fig2.savefig("data_enhanced_hertzian_pressure_distribution.png", dpi=300)
+fig1.savefig("inverse_hertzian_pressure_prediction_plot.png", dpi=300)
 plt.show()
