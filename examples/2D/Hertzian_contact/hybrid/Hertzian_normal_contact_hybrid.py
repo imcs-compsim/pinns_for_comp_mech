@@ -3,7 +3,7 @@
 ### based on the work of tsahin
 # Import required libraries
 import deepxde as dde
-dde.config.set_default_float('float64')
+dde.config.set_default_float('float64') # use double precision (needed for L-BFGS)
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -80,13 +80,13 @@ def calculate_traction(x, y, X):
 #      gn >= 0
 #      Pn <= 0
 # gn * Pn  = 0
-# using nonlinear complementarity problem function Fisher-Burmeister
-# f(a,b) = a + b - sqrt(a^2 + b^2) (zero_fisher_burmeister)
+# using nonlinear complimentarity problem function Fischer-Burmeister
+# f(a,b) = a + b - sqrt(a^2 + b^2) (zero_fischer_burmeister)
 # where a = gn, b = -Pn
 #       Tt = 0 (zero_tangential_traction)
-def zero_fisher_burmeister(x,y,X):
+def zero_fischer_burmeister(x,y,X):
     '''
-    Enforces KKT conditions using Fisher-Burmeister equation
+    Enforces KKT conditions using Fischer-Burmeister equation
     '''
     # ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf
     Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
@@ -138,9 +138,9 @@ bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x, boundary_circle_not_co
 bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y, boundary_circle_not_contact)
 
 # Contact BC
-bc_zero_fisher_burmeister = dde.OperatorBC(geom, zero_fisher_burmeister, boundary_circle_contact)
+bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_fischer_burmeister, boundary_circle_contact)
 bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_circle_contact)
-bcs = [bc_zero_traction_x,bc_zero_traction_y,bc_zero_fisher_burmeister,bc_zero_tangential_traction]
+bcs = [bc_zero_traction_x,bc_zero_traction_y,bc_zero_fischer_burmeister,bc_zero_tangential_traction]
 
 ## Add external data to enhance the training
 # Load external data
@@ -249,21 +249,21 @@ w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5 = 1e0, 1e0, 1e0, 1e0, 1e0
 # Weights due to Neumann BC
 w_zero_traction_x, w_zero_traction_y = 1e0, 1e0
 # Weights due to Contact BC
-w_zero_fisher_burmeister = 1e4
+w_zero_fischer_burmeister = 1e4
 w_zero_tangential_traction = 1e0
 # Weights due to external data
 w_ext_u, w_ext_v, w_ext_sigma_xx, w_ext_sigma_yy, w_ext_sigma_xy = 1e4, 1e4, 1e-1, 1e-1, 1e-1
 
 loss_weights = [w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5,
                 w_zero_traction_x, w_zero_traction_y,
-                w_zero_fisher_burmeister,
+                w_zero_fischer_burmeister,
                 w_zero_tangential_traction,
                 w_ext_u, w_ext_v, w_ext_sigma_xx, w_ext_sigma_yy, w_ext_sigma_xy]
 
 
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
-restore_model = False
+restore_model = True
 model_path = str(Path(__file__).parent)
 simulation_case = f"hybrid"
 adam_iterations = 2000
@@ -389,6 +389,21 @@ unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset,
                                                "error_stress" : combined_error_stress, 
                                                "error_polar_stress" : combined_error_polar_stress
                                             })
+
+
+## Calculate the l2-error between FEM and PINN results
+u_combined_pred = np.asarray(combined_disp_pred).T
+s_combined_pred = np.asarray(combined_stress_pred).T
+u_combined_fem = np.asarray(combined_disp_fem).T
+s_combined_fem = np.asarray(combined_stress_fem).T
+
+rel_err_l2_disp = np.linalg.norm(u_combined_pred - u_combined_fem) / np.linalg.norm(u_combined_fem)
+print("Relative L2 error for displacement: ", rel_err_l2_disp)
+rel_err_l2_stress = np.linalg.norm(s_combined_pred - s_combined_fem) / np.linalg.norm(s_combined_fem)
+print("Relative L2 error for stress:       ", rel_err_l2_stress)
+with open("L2_error_norm.txt", "w") as text_file:
+    print(f"Relative L2 error for displacement: {rel_err_l2_disp:.8e}",   file=text_file)
+    print(f"Relative L2 error for stress:       {rel_err_l2_stress:.8e}", file=text_file)
 
 ## Plot the normal traction on contact domain, analytical vs predicted
 nu,lame,shear,e_modul = problem_parameters()

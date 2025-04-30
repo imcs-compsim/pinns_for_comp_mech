@@ -3,7 +3,7 @@
 ### based on the work of tsahin
 # Import required libraries
 import deepxde as dde
-dde.config.set_default_float('float64')
+dde.config.set_default_float('float64') # use double precision (needed for L-BFGS)
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -44,7 +44,7 @@ nu,lame,shear,e_modul = problem_parameters()
 
 ## Define the parameters we want to predict
 ext_traction_actual = -0.5 
-ext_traction_predicted= dde.Variable(-0.1, dtype=tf.float64)
+ext_traction_predicted= dde.Variable(-0.1, dtype=tf.float64) # start value
 
 ## Preliminary calculations for contact conditions
 elasticity_utils.geom = geom
@@ -83,13 +83,13 @@ def calculate_traction(x, y, X):
 #      gn >= 0
 #      Pn <= 0
 # gn * Pn  = 0
-# using nonlinear complementarity problem function Fisher-Burmeister
-# f(a,b) = a + b - sqrt(a^2 + b^2) (zero_fisher_burmeister)
+# using nonlinear complimentarity problem function Fischer-Burmeister
+# f(a,b) = a + b - sqrt(a^2 + b^2) (zero_fischer_burmeister)
 # where a = gn, b = -Pn
 #       Tt = 0 (zero_tangential_traction)
-def zero_fisher_burmeister(x,y,X):
+def zero_fischer_burmeister(x,y,X):
     '''
-    Enforces KKT conditions using Fisher-Burmeister equation
+    Enforces KKT conditions using Fischer-Burmeister equation
     '''
     # ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf
     Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
@@ -141,9 +141,9 @@ bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x, boundary_circle_not_co
 bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y, boundary_circle_not_contact)
 
 # Contact BC
-bc_zero_fisher_burmeister = dde.OperatorBC(geom, zero_fisher_burmeister, boundary_circle_contact)
+bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_fischer_burmeister, boundary_circle_contact)
 bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_circle_contact)
-bcs = [bc_zero_traction_x,bc_zero_traction_y,bc_zero_fisher_burmeister,bc_zero_tangential_traction]
+bcs = [bc_zero_traction_x,bc_zero_traction_y,bc_zero_fischer_burmeister,bc_zero_tangential_traction]
 
 ## Add external data for the prediction
 # Load external data
@@ -252,28 +252,28 @@ w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5 = 1e0, 1e0, 1e0, 1e0, 1e0
 # Weights due to Neumann BC
 w_zero_traction_x, w_zero_traction_y = 1e0, 1e0
 # Weights due to Contact BC
-w_zero_fisher_burmeister = 1e4
+w_zero_fischer_burmeister = 1e4
 w_zero_tangential_traction = 1e0
 # Weights due to external data
 w_ext_u, w_ext_v, w_ext_sigma_xx, w_ext_sigma_yy, w_ext_sigma_xy = 1e4, 1e4, 1e-1, 1e-1, 1e-1
 
 loss_weights = [w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5,
                 w_zero_traction_x, w_zero_traction_y,
-                w_zero_fisher_burmeister,
+                w_zero_fischer_burmeister,
                 w_zero_tangential_traction,
                 w_ext_u, w_ext_v, w_ext_sigma_xx, w_ext_sigma_yy, w_ext_sigma_xy]
 
 
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
-restore_model = False
+restore_model = True
 model_path = str(Path(__file__).parent)
+simulation_case = f"inverse"
+adam_iterations = 2000
 parameter_file_name = model_path + "/" + "identified_pressure.dat"
 external_var_list = [ext_traction_predicted]
 prediction_output_step_size = 1
 variable = dde.callbacks.VariableValue(external_var_list, period=prediction_output_step_size, filename=parameter_file_name, precision=8)
-simulation_case = f"inverse"
-adam_iterations = 2000
 
 if not restore_model:
     

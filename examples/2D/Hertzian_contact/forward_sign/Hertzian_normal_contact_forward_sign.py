@@ -3,7 +3,7 @@
 ### based on the work of tsahin
 # Import required libraries
 import deepxde as dde
-dde.config.set_default_float('float64')
+dde.config.set_default_float('float64') # use double precision (needed for L-BFGS)
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -47,6 +47,7 @@ nu,lame,shear,e_modul = problem_parameters()
 elasticity_utils.geom = geom
 distance = 0
 
+### maybe replace with calculate_gap_in_normal_direction ###remove
 def calculate_gap_in_normal_direction(x,y,X):
     '''
     Calculates the gap in normal direction
@@ -63,6 +64,7 @@ def calculate_gap_in_normal_direction(x,y,X):
     
     return gap_n
 
+### maybe replace with calculate_traction_mixed_formulation ###remove
 def calculate_traction(x, y, X):
     '''
     Calculates x component of any traction vector using by Cauchy stress tensor
@@ -238,7 +240,7 @@ loss_weights = [w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5,
 
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
-restore_model = False
+restore_model = True
 model_path = str(Path(__file__).parent)
 simulation_case = f"forward_sign"
 adam_iterations = 2000
@@ -264,7 +266,7 @@ if not restore_model:
         
         return steps, pde_loss, neumann_loss
 else:
-    n_iterations = 11581 ## update
+    n_iterations = 17844
     model_restore_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + ".ckpt"
     model_loss_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + "_loss.dat"
     
@@ -368,6 +370,21 @@ unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset,
                                                "error_stress" : combined_error_stress, 
                                                "error_polar_stress" : combined_error_polar_stress
                                             })
+
+
+## Calculate the l2-error between FEM and PINN results
+u_combined_pred = np.asarray(combined_disp_pred).T
+s_combined_pred = np.asarray(combined_stress_pred).T
+u_combined_fem = np.asarray(combined_disp_fem).T
+s_combined_fem = np.asarray(combined_stress_fem).T
+
+rel_err_l2_disp = np.linalg.norm(u_combined_pred - u_combined_fem) / np.linalg.norm(u_combined_fem)
+print("Relative L2 error for displacement: ", rel_err_l2_disp)
+rel_err_l2_stress = np.linalg.norm(s_combined_pred - s_combined_fem) / np.linalg.norm(s_combined_fem)
+print("Relative L2 error for stress:       ", rel_err_l2_stress)
+with open("L2_error_norm.txt", "w") as text_file:
+    print(f"Relative L2 error for displacement: {rel_err_l2_disp:.8e}",   file=text_file)
+    print(f"Relative L2 error for stress:       {rel_err_l2_stress:.8e}", file=text_file)
 
 ## Plot the normal traction on contact domain, analytical vs predicted
 nu,lame,shear,e_modul = problem_parameters()
