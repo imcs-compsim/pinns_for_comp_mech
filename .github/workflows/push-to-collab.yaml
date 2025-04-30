@@ -22,7 +22,7 @@ jobs:
 
       - name: Rsync selected folders into collaboration repo
         run: |
-          rsync -av --delete elasticity_2d/ ../collab-repo/examples/elasticity_2d/
+          rsync -av --delete examples/ ../collab-repo/examples/
           rsync -av --delete utils/ ../collab-repo/utils/
         # `--delete` ensures removed files are also deleted in the target
 
