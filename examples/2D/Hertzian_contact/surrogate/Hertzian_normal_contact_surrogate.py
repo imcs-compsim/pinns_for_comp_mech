@@ -287,7 +287,7 @@ for i in range(external_dim_size):
     ax[i].grid()
     l1, = ax[i].plot(x[i], pc[i], label="Analytical", lw=lw, zorder=2)
     ax[i].hlines(y=0, xmin=b[i], xmax=abs(x_lim), lw=lw, zorder=3)
-    l3 = ax[i].plot(-x_loc[i], pc_pred_list[i], label="Prediction", color = "tab:orange", lw=lw, zorder=4)
+    l3 = ax[i].plot(-x_loc[i], pc_pred_list[i], '--', label="Prediction", color = "tab:orange", lw=lw, zorder=4)
     ax[i].set_xlabel(r"$|x|$", fontsize=22)
     ax[i].xaxis.set_major_formatter(FormatStrFormatter("%.2f"))
     ax[i].tick_params(axis="both", which="major", labelsize=13)
