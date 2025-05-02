@@ -3,7 +3,7 @@
 ### based on the work of tsahin
 # Import required libraries
 import deepxde as dde
-dde.config.set_default_float('float64') # use double precision (needed for L-BFGS)
+dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ from pyevtk.hl import unstructuredGridToVTK
 from matplotlib.ticker import MaxNLocator
 from matplotlib.ticker import FormatStrFormatter
 import matplotlib as mpl
-mpl.rcParams['mathtext.fontset'] = 'stix'
+mpl.rcParams["mathtext.fontset"] = "stix"
 import time
 
 # Import custom modules
@@ -26,6 +26,10 @@ from utils.geometry.geometry_utils import polar_transformation_2d
 from utils.elasticity import elasticity_utils
 import utils.contact_mech.contact_utils as contact_utils
 from utils.contact_mech.contact_utils import zero_complimentarity_function_based_fischer_burmeister, zero_tangential_traction
+
+## Set custom Flag to either restore the model from pretrained
+## or simulate yourself
+restore_pretrained_model = True
 
 ## Create geometry
 # Dimensions of disk
@@ -74,7 +78,7 @@ bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y_mixed_formulation, boun
 # Contact BC
 bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_complimentarity_function_based_fischer_burmeister, boundary_circle_contact)
 bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_circle_contact)
-bcs = [bc_zero_traction_x,bc_zero_traction_y,bc_zero_fischer_burmeister,bc_zero_tangential_traction]
+bcs = [bc_zero_traction_x, bc_zero_traction_y, bc_zero_fischer_burmeister, bc_zero_tangential_traction]
 
 # Setup the data object
 n_dummy = 1
@@ -152,19 +156,36 @@ loss_weights = [w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5,
 
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
-restore_model = True
 model_path = str(Path(__file__).parent)
 simulation_case = f"surrogate"
 adam_iterations = 2000
 
-if not restore_model:
+if not restore_pretrained_model:
+    start_time_train = time.time()
+
     model.compile("adam", lr=0.001, loss_weights=loss_weights)
+    end_time_adam_compile = time.time()
     losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
+    end_time_adam_train = time.time()
 
     model.compile("L-BFGS-B", loss_weights=loss_weights)
-    losshistory, train_state = model.train(display_every=200)
-   
-    dde.saveplot(losshistory, train_state, issave=False, isplot=False)
+    end_time_LBFGS_compile = time.time()
+    losshistory, train_state = model.train(display_every=200, model_save_path=f"{model_path}/{simulation_case}")
+
+    end_time_train = time.time()
+    time_train = f"Total compilation and training time: {(end_time_train - start_time_train):.3f} seconds"
+    print(time_train)
+
+    # Retrieve the total number of iterations at the end of training
+    n_iterations = train_state.step
+
+    dde.saveplot(
+        losshistory, train_state, issave=True, isplot=False, output_dir=model_path, 
+        loss_fname=f"{simulation_case}-{n_iterations}_loss.dat", 
+        train_fname=f"{simulation_case}-{n_iterations}_train.dat", 
+        test_fname=f"{simulation_case}-{n_iterations}_test.dat"
+    )
+
     def calculate_loss():
         losses = np.hstack(
                 (
@@ -179,8 +200,8 @@ if not restore_model:
         return steps, pde_loss, neumann_loss
 else:
     n_iterations = 18702
-    model_restore_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + ".ckpt"
-    model_loss_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + "_loss.dat"
+    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
+    model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path)
@@ -195,19 +216,19 @@ else:
 ## Visualize the loss
 steps, pde_loss, neumann_loss = calculate_loss()
 fig1, ax1 = plt.subplots(figsize=(10,8))
-ax1.plot(steps, pde_loss/5, color='b', lw=2, label="PDE")
-ax1.plot(steps, neumann_loss/4, color='r', lw=2,label="NBC")
-ax1.vlines(x=adam_iterations,ymin=0, ymax=1, linestyles='--', colors="k")
-ax1.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,0.5],   ha='center', va='top', size=15)
-ax1.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,0.5], ha='center', va='top', size=15)
+ax1.plot(steps, pde_loss/5, color="b", lw=2, label="PDE")
+ax1.plot(steps, neumann_loss/4, color="r", lw=2,label="NBC")
+ax1.vlines(x=adam_iterations,ymin=0, ymax=1, linestyles="--", colors="k")
+ax1.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,0.5],   ha="center", va="top", size=15)
+ax1.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,0.5], ha="center", va="top", size=15)
 ax1.set_xlabel("Iterations", size=17)
 ax1.set_ylabel("MSE", size=17)
-ax1.set_yscale('log')
+ax1.set_yscale("log")
 ax1.tick_params(axis="both", labelsize=15)
 ax1.legend(fontsize=17)
 ax1.grid()
 plt.tight_layout()
-fig1.savefig(simulation_case+"_loss_plot.png", dpi=300)
+fig1.savefig(f"{model_path}/{simulation_case}-{n_iterations}_loss_plot.png", dpi=300)
 
 ## Visualize the pressure for different values
 # Define variable space
@@ -217,7 +238,7 @@ node_coords_xy = radius*X + center
 
 borders=[-0.45,-1.5]
 external_dim_size = 3
-p_applied = np.linspace(borders[0],borders[1],external_dim_size).reshape(-1,1).astype(np.dtype('f8'))
+p_applied = np.linspace(borders[0],borders[1],external_dim_size).reshape(-1,1).astype(np.dtype("f8"))
 R = radius
 p = abs(p_applied)
 
@@ -266,18 +287,19 @@ for i in range(external_dim_size):
     ax[i].grid()
     l1, = ax[i].plot(x[i], pc[i], label="Analytical", lw=lw, zorder=2)
     ax[i].hlines(y=0, xmin=b[i], xmax=abs(x_lim), lw=lw, zorder=3)
-    l3 = ax[i].plot(-x_loc[i], pc_pred_list[i], color = "tab:orange", lw=lw, zorder=4)
+    l3 = ax[i].plot(-x_loc[i], pc_pred_list[i], label="Prediction", color = "tab:orange", lw=lw, zorder=4)
     ax[i].set_xlabel(r"$|x|$", fontsize=22)
-    ax[i].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-    ax[i].tick_params(axis='both', which='major', labelsize=13)
+    ax[i].xaxis.set_major_formatter(FormatStrFormatter("%.2f"))
+    ax[i].tick_params(axis="both", which="major", labelsize=13)
     ax[i].yaxis.set_major_locator(MaxNLocator(integer=True))
     ax[i].yaxis.set_major_locator(plt.MaxNLocator(4))
     ax[i].set_title(titles[i], size=22)
 
 ax[0].set_ylabel(r"$p_c$", fontsize=22)
 fig.subplots_adjust(bottom=0.3, wspace=0.175)
+plt.legend()
 plt.tight_layout()
-fig.savefig(simulation_case+"_pressure_distribution.png", dpi=300)
+fig.savefig(f"{model_path}/{simulation_case}-{n_iterations}_pressure_distribution.png", dpi=300)
 
 ## Compute the error of the solutions
 def abs_error(actual, pred):
@@ -302,7 +324,7 @@ for i in range(external_dim_size):
     l2_error.append(l2_norm(pc_actual.flatten(), pc_pred.flatten()))
     print(f"Relative L2 error for pressure: {float(l2_error[i]):.2%}")
 
-with open("L2_error_norm.txt", "w") as text_file:
+with open(f"{model_path}/{simulation_case}-{n_iterations}_L2_error_norm.txt", "w") as text_file:
     for i in range(external_dim_size):
-        print(f"At an external pressure of {titles[i][1:-1]} the relative L2 error for contact pressure is {float(l2_error[i]):.8e}",   file=text_file)
+        print(f"At an external pressure of {titles[i][1:-1]} the relative L2 error for contact pressure is {float(l2_error[i]):.8e}", file=text_file)
 plt.show()

@@ -3,7 +3,7 @@
 ### based on the work of tsahin
 # Import required libraries
 import deepxde as dde
-dde.config.set_default_float('float64') # use double precision (needed for L-BFGS)
+dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -22,6 +22,10 @@ from utils.geometry.geometry_utils import polar_transformation_2d
 from utils.elasticity import elasticity_utils
 import utils.contact_mech.contact_utils as contact_utils
 from utils.contact_mech.contact_utils import positive_normal_gap_sign, negative_normal_traction_sign, zero_complimentary, zero_tangential_traction
+
+## Set custom Flag to either restore the model from pretrained
+## or simulate yourself
+restore_pretrained_model = True
 
 ## Create geometry
 # Dimensions of disk
@@ -68,7 +72,7 @@ bc_positive_normal_gap = dde.OperatorBC(geom, positive_normal_gap_sign, boundary
 bc_negative_normal_traction = dde.OperatorBC(geom, negative_normal_traction_sign, boundary_circle_contact)
 bc_zero_complimentary = dde.OperatorBC(geom, zero_complimentary, boundary_circle_contact)
 bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_circle_contact)
-bcs = [bc_zero_traction_x,bc_zero_traction_y,bc_positive_normal_gap,bc_negative_normal_traction,bc_zero_complimentary,bc_zero_tangential_traction]
+bcs = [bc_zero_traction_x, bc_zero_traction_y, bc_positive_normal_gap, bc_negative_normal_traction, bc_zero_complimentary, bc_zero_tangential_traction]
 
 # Setup the data object
 n_dummy = 1
@@ -146,22 +150,38 @@ loss_weights = [w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5,
                 w_zero_complimentary,
                 w_zero_tangential_traction]
 
-
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
-restore_model = True
 model_path = str(Path(__file__).parent)
 simulation_case = f"forward_sign"
 adam_iterations = 2000
 
-if not restore_model:
+if not restore_pretrained_model:
+    start_time_train = time.time()
+
     model.compile("adam", lr=0.001, loss_weights=loss_weights)
+    end_time_adam_compile = time.time()
     losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
+    end_time_adam_train = time.time()
 
     model.compile("L-BFGS-B", loss_weights=loss_weights)
-    losshistory, train_state = model.train(display_every=200)
+    end_time_LBFGS_compile = time.time()
+    losshistory, train_state = model.train(display_every=200, model_save_path=f"{model_path}/{simulation_case}")
+
+    end_time_train = time.time()
+    time_train = f"Total compilation and training time: {(end_time_train - start_time_train):.3f} seconds"
+    print(time_train)
+
+    # Retrieve the total number of iterations at the end of training
+    n_iterations = train_state.step
    
-    dde.saveplot(losshistory, train_state, issave=False, isplot=False)
+    dde.saveplot(
+        losshistory, train_state, issave=True, isplot=False, output_dir=model_path, 
+        loss_fname=f"{simulation_case}-{n_iterations}_loss.dat", 
+        train_fname=f"{simulation_case}-{n_iterations}_train.dat", 
+        test_fname=f"{simulation_case}-{n_iterations}_test.dat"
+    )
+
     def calculate_loss():
         losses = np.hstack(
                 (
@@ -176,8 +196,8 @@ if not restore_model:
         return steps, pde_loss, neumann_loss
 else:
     n_iterations = 17844
-    model_restore_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + ".ckpt"
-    model_loss_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + "_loss.dat"
+    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
+    model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path)
@@ -192,23 +212,23 @@ else:
 ## Visualize the loss
 steps, pde_loss, neumann_loss = calculate_loss()
 fig1, ax1 = plt.subplots(figsize=(10,8))
-ax1.plot(steps, pde_loss/5, color='b', lw=2, label="PDE")
-ax1.plot(steps, neumann_loss/4, color='r', lw=2,label="NBC")
-ax1.vlines(x=adam_iterations,ymin=0, ymax=1, linestyles='--', colors="k")
-ax1.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,0.5],   ha='center', va='top', size=15)
-ax1.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,0.5], ha='center', va='top', size=15)
+ax1.plot(steps, pde_loss/5, color="b", lw=2, label="PDE")
+ax1.plot(steps, neumann_loss/4, color="r", lw=2,label="NBC")
+ax1.vlines(x=adam_iterations,ymin=0, ymax=1, linestyles="--", colors="k")
+ax1.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,0.5],   ha="center", va="top", size=15)
+ax1.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,0.5], ha="center", va="top", size=15)
 ax1.set_xlabel("Iterations", size=17)
 ax1.set_ylabel("MSE", size=17)
-ax1.set_yscale('log')
+ax1.set_yscale("log")
 ax1.tick_params(axis="both", labelsize=15)
 ax1.legend(fontsize=17)
 ax1.grid()
 plt.tight_layout()
-fig1.savefig(simulation_case+"_loss_plot.png", dpi=300)
+fig1.savefig(f"{model_path}/{simulation_case}-{n_iterations}_loss_plot.png", dpi=300)
 
 ## Create a comparison with FEM results
 # Load the FEM results
-fem_path = str(Path(__file__).parent.parent)+"/fem_reference/Hertzian_fem_fine_mesh.csv"
+fem_path = f"{str(Path(__file__).parent.parent)}/fem_reference/Hertzian_fem_fine_mesh.csv"
 df = pd.read_csv(fem_path)
 fem_results = df[["Points_0","Points_1","displacement_0","displacement_1","nodal_cauchy_stresses_xyz_0","nodal_cauchy_stresses_xyz_1","nodal_cauchy_stresses_xyz_3"]]
 fem_results = fem_results.to_numpy()
@@ -223,11 +243,22 @@ z = np.zeros(y.shape)
 triangles = tri.Triangulation(x, y)
 
 # Predictions at FEM nodes
-start_time_calc = time.time()
+start_time_predict = time.time()
 output = model.predict(X)
-end_time_calc = time.time()
-final_time = f'Prediction time: {(end_time_calc - start_time_calc):.3f} seconds'
-print(final_time)
+end_time_predict = time.time()
+time_predict = f"Prediction time: {(end_time_predict - start_time_predict):.3f} seconds"
+print(time_predict)
+
+# Print times to output file
+if not restore_pretrained_model:
+    with open(f"{model_path}/{simulation_case}-{n_iterations}_times.txt", "w") as text_file:
+        print(f"Compilation and training times in [s]", file=text_file)
+        print(f"Adam compilation:    {(end_time_adam_compile - start_time_train):6.3f}", file=text_file)
+        print(f"Adam training:       {(end_time_adam_train - end_time_adam_compile):6.3f}", file=text_file)
+        print(f"L-BFGS compilation:  {(end_time_LBFGS_compile - end_time_adam_train):6.3f}", file=text_file)
+        print(f"L-BFGS training:     {(end_time_train - end_time_LBFGS_compile):6.3f}", file=text_file)
+        print(f"Total:               {(end_time_train - start_time_train):6.3f}", file=text_file)
+        print(f"Prediction:          {(end_time_predict - start_time_predict):6.3f}", file=text_file)
 
 u_pred, v_pred = output[:,0], output[:,1]
 sigma_xx_pred, sigma_yy_pred, sigma_xy_pred = output[:,2:3], output[:,3:4], output[:,4:5]
@@ -261,7 +292,7 @@ error_polar_stress_xy =  abs(np.array(sigma_rtheta_pred.flatten().tolist()) - si
 combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
 
 # Output results to VTK
-file_path = os.path.join(os.getcwd(), simulation_case+"_results")
+file_path = os.path.join(os.getcwd(), f"{model_path}/{simulation_case}-{n_iterations}_results")
 
 dol_triangles = triangles.triangles
 offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
@@ -285,11 +316,12 @@ s_combined_pred = np.asarray(combined_stress_pred).T
 u_combined_fem = np.asarray(combined_disp_fem).T
 s_combined_fem = np.asarray(combined_stress_fem).T
 
+# Output l2-error into console and file
 rel_err_l2_disp = np.linalg.norm(u_combined_pred - u_combined_fem) / np.linalg.norm(u_combined_fem)
 print("Relative L2 error for displacement: ", rel_err_l2_disp)
 rel_err_l2_stress = np.linalg.norm(s_combined_pred - s_combined_fem) / np.linalg.norm(s_combined_fem)
 print("Relative L2 error for stress:       ", rel_err_l2_stress)
-with open("L2_error_norm.txt", "w") as text_file:
+with open(f"{model_path}/{simulation_case}-{n_iterations}_L2_error_norm.txt", "w") as text_file:
     print(f"Relative L2 error for displacement: {rel_err_l2_disp:.8e}",   file=text_file)
     print(f"Relative L2 error for stress:       {rel_err_l2_stress:.8e}", file=text_file)
 
@@ -301,22 +333,23 @@ output = model.predict(X)
 sigma_xx_pred, sigma_yy_pred, sigma_xy_pred = output[:,2:3], output[:,3:4], output[:,4:5]
 sigma_rr_pred, sigma_theta_pred, sigma_rtheta_pred = polar_transformation_2d(sigma_xx_pred, sigma_yy_pred, sigma_xy_pred, X)
 
+x_lim = -0.25
 x_contact_lim = 2*np.sqrt(2*radius**2*abs(ext_traction)*(1-nu**2)/(e_modul*np.pi))
-x_contact_cond = np.logical_and(np.isclose(np.linalg.norm(X - center, axis=-1), radius), X[:,0]>-x_contact_lim)
-node_coords_x_contact = X[x_contact_cond][:,0]
-node_coords_x_contact = abs(node_coords_x_contact)
+x_contact_cond = np.logical_and(np.isclose(np.linalg.norm(X - center, axis=-1), radius), X[:,0]>x_lim)
+node_coords_x_contact = -X[x_contact_cond][:,0]
+idx = np.argsort(node_coords_x_contact)
 
-pc_analytical = 4*radius*abs(ext_traction)/(np.pi*x_contact_lim**2)*np.sqrt(x_contact_lim**2-node_coords_x_contact**2)
+pc_analytical = -np.nan_to_num(4*radius*ext_traction/(np.pi*x_contact_lim**2)*np.sqrt(x_contact_lim**2-node_coords_x_contact**2))
 pc_predicted = -sigma_rr_pred[x_contact_cond]
 
 fig2, ax2 = plt.subplots(figsize=(10,8))
-ax2.scatter(node_coords_x_contact,pc_analytical,label="Analytical solution")
-ax2.scatter(node_coords_x_contact,pc_predicted,label="Prediction")
-ax2.set_xlabel("|x|", fontsize=17)
-ax2.set_ylabel(r"$P_n$", fontsize=17)
-ax2.tick_params(axis='both', which='major', labelsize=15)
+ax2.plot(node_coords_x_contact[idx], pc_analytical[idx], label="Analytical", lw = 2)
+ax2.plot(node_coords_x_contact[idx], pc_predicted[idx], label="Prediction", lw = 2, color = "tab:orange", linestyle = '--')
+ax2.set_xlabel(r"|x|", fontsize=17)
+ax2.set_ylabel(r"$P_c$", fontsize=17)
+ax2.tick_params(axis="both", which="major", labelsize=15)
 ax2.legend(fontsize=17)
 ax2.grid()
 plt.tight_layout()
-fig2.savefig(simulation_case+"_pressure_distribution.png", dpi=300)
+fig2.savefig(f"{model_path}/{simulation_case}-{n_iterations}_pressure_distribution.png", dpi=300)
 plt.show()

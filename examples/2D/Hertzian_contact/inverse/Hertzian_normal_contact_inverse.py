@@ -3,7 +3,7 @@
 ### based on the work of tsahin
 # Import required libraries
 import deepxde as dde
-dde.config.set_default_float('float64') # use double precision (needed for L-BFGS)
+dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -22,6 +22,10 @@ from utils.geometry.geometry_utils import polar_transformation_2d
 from utils.elasticity import elasticity_utils
 import utils.contact_mech.contact_utils as contact_utils
 from utils.contact_mech.contact_utils import zero_complimentarity_function_based_fischer_burmeister, zero_tangential_traction
+
+## Set custom Flag to either restore the model from pretrained
+## or simulate yourself
+restore_pretrained_model = True
 
 ## Create geometry
 # Dimensions of disk
@@ -70,11 +74,11 @@ bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y_mixed_formulation, boun
 # Contact BC
 bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_complimentarity_function_based_fischer_burmeister, boundary_circle_contact)
 bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_circle_contact)
-bcs = [bc_zero_traction_x,bc_zero_traction_y,bc_zero_fischer_burmeister,bc_zero_tangential_traction]
+bcs = [bc_zero_traction_x, bc_zero_traction_y, bc_zero_fischer_burmeister, bc_zero_tangential_traction]
 
 ## Add external data for the prediction
 # Load external data
-fem_path = str(Path(__file__).parent.parent)+"/fem_reference/Hertzian_fem_fine_mesh.csv"
+fem_path = f"{str(Path(__file__).parent.parent)}/fem_reference/Hertzian_fem_fine_mesh.csv"
 df = pd.read_csv(fem_path)
 fem_results = df[["Points_0","Points_1","displacement_0","displacement_1","nodal_cauchy_stresses_xyz_0","nodal_cauchy_stresses_xyz_1","nodal_cauchy_stresses_xyz_3"]]
 fem_results = fem_results.to_numpy()
@@ -190,34 +194,47 @@ loss_weights = [w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5,
                 w_zero_tangential_traction,
                 w_ext_u, w_ext_v, w_ext_sigma_xx, w_ext_sigma_yy, w_ext_sigma_xy]
 
-
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
-restore_model = True
 model_path = str(Path(__file__).parent)
 simulation_case = f"inverse"
 adam_iterations = 2000
 external_var_list = [ext_traction_predicted]
 prediction_output_step_size = 1
 
-if not restore_model:
+if not restore_pretrained_model:
+    start_time_train = time.time()
 
-    parameter_file_name = model_path + "/" + "identified_pressure.dat"
+    parameter_file_name = f"{model_path}/identified_pressure.dat"
     variable = dde.callbacks.VariableValue(external_var_list, period=prediction_output_step_size, filename=parameter_file_name, precision=8)
     
     model.compile("adam", lr=0.001, loss_weights=loss_weights, external_trainable_variables=external_var_list)
+    end_time_adam_compile = time.time()
     losshistory, train_state = model.train(iterations=adam_iterations, callbacks=[variable], display_every=100)
+    end_time_adam_train = time.time()
 
     model.compile("L-BFGS-B", loss_weights=loss_weights, external_trainable_variables=external_var_list)
-    losshistory, train_state = model.train(callbacks=[variable], display_every=200)
+    end_time_LBFGS_compile = time.time()
+    losshistory, train_state = model.train(callbacks=[variable], display_every=200, model_save_path=f"{model_path}/{simulation_case}")
 
-    dde.saveplot(losshistory, train_state, issave=False, isplot=False)
+    end_time_train = time.time()
+    time_train = f"Total compilation and training time: {(end_time_train - start_time_train):.3f} seconds"
+    print(time_train)
 
+    # Retrieve the total number of iterations at the end of training
+    n_iterations = train_state.step
+
+    dde.saveplot(
+        losshistory, train_state, issave=True, isplot=False, output_dir=model_path, 
+        loss_fname=f"{simulation_case}-{n_iterations}_loss.dat", 
+        train_fname=f"{simulation_case}-{n_iterations}_train.dat", 
+        test_fname=f"{simulation_case}-{n_iterations}_test.dat"
+    )
 else:
     n_iterations = 18416
-    model_restore_path = model_path + "/" + simulation_case + "-" + str(n_iterations) + ".ckpt"
-    model_loss_path = model_path + "/" + simulation_case + "-" + str(n_iterations) + "_loss.dat"
-    parameter_file_name = model_path + "/" + simulation_case + "-" + str(n_iterations) + "_identified_pressure.dat"
+    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
+    model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
+    parameter_file_name = f"{model_path}/pretrained/{simulation_case}-{str(n_iterations)}_identified_pressure.dat"
     
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path)
@@ -231,16 +248,16 @@ with open(parameter_file_name) as f:
         steps.append(float(a))
         pressure_predicted.append(float(b.strip("[]")))
 fig1, ax1 = plt.subplots(figsize=(10,8))
-ax1.plot(steps, pressure_predicted, color='b', lw=2, label="Predicted pressure")
-ax1.vlines(x=adam_iterations,ymin=min(pressure_predicted), ymax=max(pressure_predicted), linestyles='--', colors="k")
-ax1.axhline(y=ext_traction_actual, color='r', lw=2,label="Actual pressure")
-ax1.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,max(pressure_predicted)],   ha='center', va='bottom', size=15)
-ax1.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,max(pressure_predicted)], ha='center', va='bottom', size=15)
+ax1.plot(steps, pressure_predicted, color="b", lw=2, label="Predicted")
+ax1.vlines(x=adam_iterations,ymin=min(pressure_predicted), ymax=max(pressure_predicted), linestyles="--", colors="k")
+ax1.axhline(y=ext_traction_actual, color="r", lw=2,label="Actual")
+ax1.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,max(pressure_predicted)],   ha="center", va="bottom", size=15)
+ax1.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,max(pressure_predicted)], ha="center", va="bottom", size=15)
 ax1.set_xlabel("Iterations", size=17)
 ax1.set_ylabel("Pressure", size=17)
 ax1.tick_params(axis="both", labelsize=15)
 ax1.legend(fontsize=17)
 ax1.grid()
 plt.tight_layout()
-fig1.savefig(simulation_case+"_pressure_prediction_plot.png", dpi=300)
+fig1.savefig(f"{model_path}/{simulation_case}-{n_iterations}_pressure_prediction_plot.png", dpi=300)
 plt.show()
