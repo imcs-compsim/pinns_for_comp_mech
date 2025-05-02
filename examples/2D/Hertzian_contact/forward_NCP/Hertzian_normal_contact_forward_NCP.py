@@ -142,12 +142,12 @@ loss_weights = [w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5,
 
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
-restore_model = False
+restore_pretrained_model = False
 model_path = str(Path(__file__).parent)
 simulation_case = f"forward_NCP"
 adam_iterations = 2000
 
-if not restore_model:
+if not restore_pretrained_model:
     model.compile("adam", lr=0.001, loss_weights=loss_weights)
     losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
 
@@ -158,9 +158,10 @@ if not restore_model:
     n_iterations = train_state.step
    
     dde.saveplot(
-        losshistory, train_state, issave=True, isplot=False, 
-        output_dir=model_path, loss_fname=f"{simulation_case}_loss.dat", 
-        train_fname=f"{simulation_case}_train.dat", test_fname=f"{simulation_case}_test.dat"
+        losshistory, train_state, issave=True, isplot=False, output_dir=model_path, 
+        loss_fname=f"{simulation_case}-{n_iterations}_loss.dat", 
+        train_fname=f"{simulation_case}-{n_iterations}_train.dat", 
+        test_fname=f"{simulation_case}-{n_iterations}_test.dat"
     )
 
     def calculate_loss():
@@ -177,8 +178,8 @@ if not restore_model:
         return steps, pde_loss, neumann_loss
 else:
     n_iterations = 17770
-    model_restore_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + ".ckpt"
-    model_loss_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + "_loss.dat"
+    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
+    model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path)
@@ -290,7 +291,7 @@ rel_err_l2_disp = np.linalg.norm(u_combined_pred - u_combined_fem) / np.linalg.n
 print("Relative L2 error for displacement: ", rel_err_l2_disp)
 rel_err_l2_stress = np.linalg.norm(s_combined_pred - s_combined_fem) / np.linalg.norm(s_combined_fem)
 print("Relative L2 error for stress:       ", rel_err_l2_stress)
-with open("L2_error_norm.txt", "w") as text_file:
+with open(f"{model_path}/{simulation_case}-{n_iterations}_L2_error_norm.txt", "w") as text_file:
     print(f"Relative L2 error for displacement: {rel_err_l2_disp:.8e}",   file=text_file)
     print(f"Relative L2 error for stress:       {rel_err_l2_stress:.8e}", file=text_file)
 
