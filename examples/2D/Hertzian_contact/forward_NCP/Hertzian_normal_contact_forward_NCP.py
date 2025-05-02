@@ -20,6 +20,8 @@ from utils.geometry.gmsh_models import QuarterDisc
 from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, calculate_traction_mixed_formulation, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
 from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from utils.elasticity import elasticity_utils
+import utils.contact_mech.contact_utils as contact_utils
+from utils.contact_mech.contact_utils import calculate_gap_in_normal_direction
 
 ## Create geometry
 # Dimensions of disk
@@ -44,23 +46,23 @@ nu,lame,shear,e_modul = problem_parameters()
 
 ## Preliminary calculations for contact conditions
 elasticity_utils.geom = geom
-distance = 0
+contact_utils.distance = radius
 
-def calculate_gap_in_normal_direction(x,y,X):
-    '''
-    Calculates the gap in normal direction
-    '''
-    # Calculate the gap in y direction    
-    gap_y = x[:,1:2] + y[:,1:2] + radius + distance
+# def calculate_gap_in_normal_direction(x,y,X):
+#     '''
+#     Calculates the gap in normal direction
+#     '''
+#     # Calculate the gap in y direction    
+#     gap_y = x[:,1:2] + y[:,1:2] + radius + distance
 
-    # calculate the boundary normals
-    normals, cond = calculate_boundary_normals(X,geom)
+#     # calculate the boundary normals
+#     normals, cond = calculate_boundary_normals(X,geom)
 
-    # Here is the idea to calculate gap_n:
-    # gap_n/|n| = gap_y/|ny| --> since n is unit vector |n|=1
-    gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
+#     # Here is the idea to calculate gap_n:
+#     # gap_n/|n| = gap_y/|ny| --> since n is unit vector |n|=1
+#     gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
     
-    return gap_n
+#     return gap_n
 
 ## Enforce Karush-Kuhn-Tucker conditions for frictionless contact
 #      gn >= 0
