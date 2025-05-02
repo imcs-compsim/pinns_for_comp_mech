@@ -1,4 +1,4 @@
-### Quarter disc hertzian contact problem finding external pressure with external data
+### Quarter disc hertzian contact problem predicting external pressure with external data
 ### @author: svoelkl, dwolff, apopp
 ### based on the work of tsahin
 # Import required libraries
@@ -17,7 +17,7 @@ import time
 # Import custom modules
 from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import QuarterDisc
-from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, stress_to_traction_2d
+from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, calculate_traction_mixed_formulation, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
 from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from utils.elasticity import elasticity_utils
 
@@ -66,19 +66,6 @@ def calculate_gap_in_normal_direction(x,y,X):
     
     return gap_n
 
-def calculate_traction(x, y, X):
-    '''
-    Calculates x component of any traction vector using by Cauchy stress tensor
-    '''
-
-    sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
-    
-    normals, cond = calculate_boundary_normals(X,geom)
-
-    Tx, Ty, Tn, Tt = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
-
-    return Tx, Ty, Tn, Tt
-
 ## Enforce Karush-Kuhn-Tucker conditions for frictionless contact
 #      gn >= 0
 #      Pn <= 0
@@ -87,12 +74,13 @@ def calculate_traction(x, y, X):
 # f(a,b) = a + b - sqrt(a^2 + b^2) (zero_fischer_burmeister)
 # where a = gn, b = -Pn
 #       Tt = 0 (zero_tangential_traction)
+
 def zero_fischer_burmeister(x,y,X):
     '''
     Enforces KKT conditions using Fischer-Burmeister equation
     '''
     # ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
+    Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
     gn = calculate_gap_in_normal_direction(x, y, X)
     
     a = gn
@@ -105,30 +93,13 @@ def zero_tangential_traction(x,y,X):
     Enforces tangential part of contact traction (Tt) to be zero.
     Tt = 0, Frictionless contact.
     '''
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
+    Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
 
     return Tt
 
 ## Define BCs
 # Applied pressure 
 ext_traction = -0.5
-
-### maybe replace with zero_neumann_*_mixed_formulation ###remove
-def zero_neumann_x(x,y,X):
-    '''
-    Enforces x component of zero Neumann BC to be zero.
-    '''
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
-
-    return Tx
-
-def zero_neumann_y(x,y,X):
-    '''
-    Enforces y component of zero Neumann BC to be zero.
-    '''
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
-
-    return Ty
 
 def boundary_circle_not_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (x[0]<x_loc_partition)
@@ -137,8 +108,8 @@ def boundary_circle_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (x[0]>=x_loc_partition)
 
 # Neumann BC
-bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x, boundary_circle_not_contact)
-bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y, boundary_circle_not_contact)
+bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x_mixed_formulation, boundary_circle_not_contact)
+bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y_mixed_formulation, boundary_circle_not_contact)
 
 # Contact BC
 bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_fischer_burmeister, boundary_circle_contact)
@@ -270,23 +241,27 @@ restore_model = True
 model_path = str(Path(__file__).parent)
 simulation_case = f"inverse"
 adam_iterations = 2000
-parameter_file_name = model_path + "/" + "identified_pressure.dat"
 external_var_list = [ext_traction_predicted]
 prediction_output_step_size = 1
-variable = dde.callbacks.VariableValue(external_var_list, period=prediction_output_step_size, filename=parameter_file_name, precision=8)
 
 if not restore_model:
+
+    parameter_file_name = model_path + "/" + "identified_pressure.dat"
+    variable = dde.callbacks.VariableValue(external_var_list, period=prediction_output_step_size, filename=parameter_file_name, precision=8)
     
     model.compile("adam", lr=0.001, loss_weights=loss_weights, external_trainable_variables=external_var_list)
     losshistory, train_state = model.train(iterations=adam_iterations, callbacks=[variable], display_every=100)
 
     model.compile("L-BFGS-B", loss_weights=loss_weights, external_trainable_variables=external_var_list)
     losshistory, train_state = model.train(callbacks=[variable], display_every=200)
-   
+
+    dde.saveplot(losshistory, train_state, issave=False, isplot=False)
+
 else:
-    n_iterations = 10827 ## update
-    model_restore_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + ".ckpt"
-    model_loss_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + "_loss.dat"
+    n_iterations = 18416
+    model_restore_path = model_path + "/" + simulation_case + "-" + str(n_iterations) + ".ckpt"
+    model_loss_path = model_path + "/" + simulation_case + "-" + str(n_iterations) + "_loss.dat"
+    parameter_file_name = model_path + "/" + simulation_case + "-" + str(n_iterations) + "_identified_pressure.dat"
     
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path)
@@ -301,6 +276,7 @@ with open(parameter_file_name) as f:
         pressure_predicted.append(float(b.strip("[]")))
 fig1, ax1 = plt.subplots(figsize=(10,8))
 ax1.plot(steps, pressure_predicted, color='b', lw=2, label="Predicted pressure")
+ax1.vlines(x=adam_iterations,ymin=min(pressure_predicted), ymax=max(pressure_predicted), linestyles='--', colors="k")
 ax1.axhline(y=ext_traction_actual, color='r', lw=2,label="Actual pressure")
 ax1.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,max(pressure_predicted)],   ha='center', va='bottom', size=15)
 ax1.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,max(pressure_predicted)], ha='center', va='bottom', size=15)

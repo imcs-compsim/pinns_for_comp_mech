@@ -17,7 +17,7 @@ import time
 # Import custom modules
 from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import QuarterDisc
-from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, stress_to_traction_2d
+from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, calculate_traction_mixed_formulation, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
 from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from utils.elasticity import elasticity_utils
 
@@ -42,12 +42,10 @@ elasticity_utils.lame = lame
 elasticity_utils.shear = shear
 nu,lame,shear,e_modul = problem_parameters()
 
-
 ## Preliminary calculations for contact conditions
 elasticity_utils.geom = geom
 distance = 0
 
-### maybe replace with calculate_gap_in_normal_direction ###remove
 def calculate_gap_in_normal_direction(x,y,X):
     '''
     Calculates the gap in normal direction
@@ -63,20 +61,6 @@ def calculate_gap_in_normal_direction(x,y,X):
     gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
     
     return gap_n
-
-### maybe replace with calculate_traction_mixed_formulation ###remove
-def calculate_traction(x, y, X):
-    '''
-    Calculates x component of any traction vector using by Cauchy stress tensor
-    '''
-
-    sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
-    
-    normals, cond = calculate_boundary_normals(X,geom)
-
-    Tx, Ty, Tn, Tt = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
-
-    return Tx, Ty, Tn, Tt
 
 ## Enforce Karush-Kuhn-Tucker conditions for frictionless contact
 #      gn >= 0 (positive_normal_gap)
@@ -99,7 +83,7 @@ def negative_normal_traction(x,y,X):
     Enforces normal part of contact traction (Pn) to be negative.
     Pn <= 0, second condition of KarushKuhnTucker-KKT.
     '''
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
+    Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
 
     # If Pn is positive, it will create contributions to overall loss. Aims is to get negative normal traction
     return (1.0+tf.math.sign(Pn))*Pn
@@ -109,7 +93,7 @@ def zero_complimentary(x,y,X):
     Enforces complimentary term to be zero.
     gn * Pn = 0, third condition of KarushKuhnTucker-KKT.
     '''
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
+    Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
     gn = calculate_gap_in_normal_direction(x, y, X)
 
     return gn*Pn
@@ -119,30 +103,13 @@ def zero_tangential_traction(x,y,X):
     Enforces tangential part of contact traction (Tt) to be zero.
     Tt = 0, Frictionless contact.
     '''
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
+    Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
 
     return Tt
 
 ## Define BCs
 # Applied pressure 
 ext_traction = -0.5
-
-### maybe replace with zero_neumann_*_mixed_formulation ###remove
-def zero_neumann_x(x,y,X):
-    '''
-    Enforces x component of zero Neumann BC to be zero.
-    '''
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
-
-    return Tx
-
-def zero_neumann_y(x,y,X):
-    '''
-    Enforces y component of zero Neumann BC to be zero.
-    '''
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
-
-    return Ty
 
 def boundary_circle_not_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (x[0]<x_loc_partition)
@@ -151,8 +118,8 @@ def boundary_circle_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (x[0]>=x_loc_partition)
 
 # Neumann BC
-bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x, boundary_circle_not_contact)
-bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y, boundary_circle_not_contact)
+bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x_mixed_formulation, boundary_circle_not_contact)
+bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y_mixed_formulation, boundary_circle_not_contact)
 
 # Contact BC
 bc_positive_normal_gap = dde.OperatorBC(geom, positive_normal_gap, boundary_circle_contact)
@@ -280,7 +247,6 @@ else:
         
         return steps, pde_loss, neumann_loss
 
-
 ## Visualize the loss
 steps, pde_loss, neumann_loss = calculate_loss()
 fig1, ax1 = plt.subplots(figsize=(10,8))
@@ -371,7 +337,6 @@ unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset,
                                                "error_polar_stress" : combined_error_polar_stress
                                             })
 
-
 ## Calculate the l2-error between FEM and PINN results
 u_combined_pred = np.asarray(combined_disp_pred).T
 s_combined_pred = np.asarray(combined_stress_pred).T
@@ -403,10 +368,8 @@ pc_analytical = 4*radius*abs(ext_traction)/(np.pi*x_contact_lim**2)*np.sqrt(x_co
 pc_predicted = -sigma_rr_pred[x_contact_cond]
 
 fig2, ax2 = plt.subplots(figsize=(10,8))
-
 ax2.scatter(node_coords_x_contact,pc_analytical,label="Analytical solution")
 ax2.scatter(node_coords_x_contact,pc_predicted,label="Prediction")
-
 ax2.set_xlabel("|x|", fontsize=17)
 ax2.set_ylabel(r"$P_n$", fontsize=17)
 ax2.tick_params(axis='both', which='major', labelsize=15)

@@ -1,4 +1,4 @@
-### Quarter disc hertzian contact problem
+### Quarter disc hertzian contact problem as a surrogate model
 ### @author: svoelkl, dwolff, apopp
 ### based on the work of tsahin
 # Import required libraries
@@ -21,7 +21,7 @@ import time
 # Import custom modules
 from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import QuarterDisc
-from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, stress_to_traction_2d
+from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, calculate_traction_mixed_formulation, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
 from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from utils.elasticity import elasticity_utils
 
@@ -50,7 +50,6 @@ elasticity_utils.lame = lame
 elasticity_utils.shear = shear
 nu,lame,shear,e_modul = problem_parameters()
 
-
 ## Preliminary calculations for contact conditions
 elasticity_utils.geom = geom
 distance = 0
@@ -71,19 +70,6 @@ def calculate_gap_in_normal_direction(x,y,X):
     
     return gap_n
 
-def calculate_traction(x, y, X):
-    '''
-    Calculates x component of any traction vector using by Cauchy stress tensor
-    '''
-
-    sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
-    
-    normals, cond = calculate_boundary_normals(X,geom)
-
-    Tx, Ty, Tn, Tt = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
-
-    return Tx, Ty, Tn, Tt
-
 ## Enforce Karush-Kuhn-Tucker conditions for frictionless contact
 #      gn >= 0
 #      Pn <= 0
@@ -92,12 +78,13 @@ def calculate_traction(x, y, X):
 # f(a,b) = a + b - sqrt(a^2 + b^2) (zero_fischer_burmeister)
 # where a = gn, b = -Pn
 #       Tt = 0 (zero_tangential_traction)
+
 def zero_fischer_burmeister(x,y,X):
     '''
     Enforces KKT conditions using Fischer-Burmeister equation
     '''
     # ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
+    Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
     gn = calculate_gap_in_normal_direction(x, y, X)
     
     a = gn
@@ -110,30 +97,13 @@ def zero_tangential_traction(x,y,X):
     Enforces tangential part of contact traction (Tt) to be zero.
     Tt = 0, Frictionless contact.
     '''
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
+    Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
 
     return Tt
 
 ## Define BCs
 # Applied pressure 
 ext_traction = -0.5
-
-### maybe replace with zero_neumann_*_mixed_formulation ###remove
-def zero_neumann_x(x,y,X):
-    '''
-    Enforces x component of zero Neumann BC to be zero.
-    '''
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
-
-    return Tx
-
-def zero_neumann_y(x,y,X):
-    '''
-    Enforces y component of zero Neumann BC to be zero.
-    '''
-    Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
-
-    return Ty
 
 def boundary_circle_not_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x[:2] - center, axis=-1), radius) and (x[0]<x_loc_partition)
@@ -142,8 +112,8 @@ def boundary_circle_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x[:2] - center, axis=-1), radius) and (x[0]>=x_loc_partition)
 
 # Neumann BC
-bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x, boundary_circle_not_contact)
-bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y, boundary_circle_not_contact)
+bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x_mixed_formulation, boundary_circle_not_contact)
+bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y_mixed_formulation, boundary_circle_not_contact)
 
 # Contact BC
 bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_fischer_burmeister, boundary_circle_contact)
@@ -224,7 +194,6 @@ loss_weights = [w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5,
                 w_zero_fischer_burmeister,
                 w_zero_tangential_traction]
 
-
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
 restore_model = True
@@ -253,7 +222,7 @@ if not restore_model:
         
         return steps, pde_loss, neumann_loss
 else:
-    n_iterations = 11581 ## update
+    n_iterations = 18702
     model_restore_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + ".ckpt"
     model_loss_path = model_path + "/" + simulation_case + "-"+ str(n_iterations) + "_loss.dat"
     
@@ -267,12 +236,31 @@ else:
         
         return steps, pde_loss, neumann_loss
 
+## Visualize the loss
+steps, pde_loss, neumann_loss = calculate_loss()
+fig1, ax1 = plt.subplots(figsize=(10,8))
+ax1.plot(steps, pde_loss/5, color='b', lw=2, label="PDE")
+ax1.plot(steps, neumann_loss/4, color='r', lw=2,label="NBC")
+ax1.vlines(x=adam_iterations,ymin=0, ymax=1, linestyles='--', colors="k")
+ax1.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,0.5],   ha='center', va='top', size=15)
+ax1.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,0.5], ha='center', va='top', size=15)
+ax1.set_xlabel("Iterations", size=17)
+ax1.set_ylabel("MSE", size=17)
+ax1.set_yscale('log')
+ax1.tick_params(axis="both", labelsize=15)
+ax1.legend(fontsize=17)
+ax1.grid()
+plt.tight_layout()
+fig1.savefig(simulation_case+"_loss_plot.png", dpi=300)
+
 ## Visualize the pressure for different values
 # Define variable space
 theta = np.linspace(0, 2 * np.pi, num=15000, endpoint=False)
 X = np.vstack((np.cos(theta), np.sin(theta))).T
 node_coords_xy = radius*X + center
 
+borders=[-0.45,-1.5]
+external_dim_size = 3
 p_applied = np.linspace(borders[0],borders[1],external_dim_size).reshape(-1,1).astype(np.dtype('f8'))
 R = radius
 p = abs(p_applied)
@@ -334,7 +322,6 @@ ax[0].set_ylabel(r"$p_c$", fontsize=22)
 fig.subplots_adjust(bottom=0.3, wspace=0.175)
 plt.tight_layout()
 fig.savefig(simulation_case+"_pressure_distribution.png", dpi=300)
-plt.show()
 
 ## Compute the error of the solutions
 def abs_error(actual, pred):
@@ -348,12 +335,18 @@ def l2_norm(actual, pred):
     l2_error_stress = np.linalg.norm(actual - pred) / np.linalg.norm(actual)
     return l2_error_stress
 
+## Print and save the error
+l2_error = []
 for i in range(external_dim_size):
-    
     x_e2 = -x_loc[i]
     pc_pred = pc_pred_list[i]
     pc_actual = 4*R*p[i]/(np.pi*b[i]**2)*np.sqrt(b[i]**2-x_e2**2)
     pc_actual[np.isnan(pc_actual)]=0
     
-    l2_error = l2_norm(pc_actual.flatten(), pc_pred.flatten())
-    print(f"Error for e2: {float(l2_error):.2%}")
+    l2_error.append(l2_norm(pc_actual.flatten(), pc_pred.flatten()))
+    print(f"Relative L2 error for pressure: {float(l2_error[i]):.2%}")
+
+with open("L2_error_norm.txt", "w") as text_file:
+    for i in range(external_dim_size):
+        print(f"At an external pressure of {titles[i][1:-1]} the relative L2 error for contact pressure is {float(l2_error[i]):.8e}",   file=text_file)
+plt.show()
