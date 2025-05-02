@@ -142,7 +142,7 @@ loss_weights = [w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5,
 
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
-restore_model = True
+restore_model = False
 model_path = str(Path(__file__).parent)
 simulation_case = f"forward_NCP"
 adam_iterations = 2000
@@ -152,9 +152,17 @@ if not restore_model:
     losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
 
     model.compile("L-BFGS-B", loss_weights=loss_weights)
-    losshistory, train_state = model.train(display_every=200)
+    losshistory, train_state = model.train(display_every=200, model_save_path=f"{model_path}/{simulation_case}")
+
+    # Retrieve the total number of iterations at the end of training
+    n_iterations = train_state.step
    
-    dde.saveplot(losshistory, train_state, issave=False, isplot=False)
+    dde.saveplot(
+        losshistory, train_state, issave=True, isplot=False, 
+        output_dir=model_path, loss_fname=f"{simulation_case}_loss.dat", 
+        train_fname=f"{simulation_case}_train.dat", test_fname=f"{simulation_case}_test.dat"
+    )
+
     def calculate_loss():
         losses = np.hstack(
                 (
@@ -197,7 +205,7 @@ ax1.tick_params(axis="both", labelsize=15)
 ax1.legend(fontsize=17)
 ax1.grid()
 plt.tight_layout()
-fig1.savefig(simulation_case+"_loss_plot.png", dpi=300)
+fig1.savefig(f"{model_path}/{simulation_case}-{n_iterations}_loss_plot.png", dpi=300)
 
 ## Create a comparison with FEM results
 # Load the FEM results
@@ -254,7 +262,7 @@ error_polar_stress_xy =  abs(np.array(sigma_rtheta_pred.flatten().tolist()) - si
 combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
 
 # Output results to VTK
-file_path = os.path.join(os.getcwd(), simulation_case+"_results")
+file_path = os.path.join(os.getcwd(), f"{model_path}/{simulation_case}-{n_iterations}_results")
 
 dol_triangles = triangles.triangles
 offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
@@ -311,5 +319,5 @@ ax2.tick_params(axis='both', which='major', labelsize=15)
 ax2.legend(fontsize=17)
 ax2.grid()
 plt.tight_layout()
-fig2.savefig(simulation_case+"_pressure_distribution.png", dpi=300)
+fig2.savefig(f"{model_path}/{simulation_case}-{n_iterations}_pressure_distribution.png", dpi=300)
 plt.show()
