@@ -24,6 +24,9 @@ jobs:
         run: |
           rsync -av --delete examples/ ../collab-repo/examples/
           rsync -av --delete utils/ ../collab-repo/utils/
+          rsync -av --delete pyproject.toml ../collab-repo/
+          rsync -av --delete __version__.py ../collab-repo/
+          rsync -av --delete env.yaml ../collab-repo/
         # `--delete` ensures removed files are also deleted in the target
 
       - name: Commit and push changes to collab repo
