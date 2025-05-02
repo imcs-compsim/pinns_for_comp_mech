@@ -17,9 +17,11 @@ import time
 # Import custom modules
 from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import QuarterDisc
-from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, calculate_traction_mixed_formulation, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
-from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
+from utils.geometry.geometry_utils import polar_transformation_2d
 from utils.elasticity import elasticity_utils
+import utils.contact_mech.contact_utils as contact_utils
+from utils.contact_mech.contact_utils import positive_normal_gap_sign, negative_normal_traction_sign, zero_complimentary, zero_tangential_traction
 
 ## Create geometry
 # Dimensions of disk
@@ -34,78 +36,18 @@ revert_curve_list = []
 revert_normal_dir_list = [1,2,2,1]
 geom = GmshGeometry2D(gmsh_model, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
 
-## Adjust material parameters
+## Adjust global definitions
+# Material parameters
 # We want to have e_modul=200 and nu=0.3
 lame = 115.38461538461539
 shear = 76.92307692307692
 elasticity_utils.lame = lame
 elasticity_utils.shear = shear
 nu,lame,shear,e_modul = problem_parameters()
-
-## Preliminary calculations for contact conditions
+# Communicate parameters to dependencies
 elasticity_utils.geom = geom
-distance = 0
-
-def calculate_gap_in_normal_direction(x,y,X):
-    '''
-    Calculates the gap in normal direction
-    '''
-    # Calculate the gap in y direction    
-    gap_y = x[:,1:2] + y[:,1:2] + radius + distance
-
-    # calculate the boundary normals
-    normals, cond = calculate_boundary_normals(X,geom)
-
-    # Here is the idea to calculate gap_n:
-    # gap_n/|n| = gap_y/|ny| --> since n is unit vector |n|=1
-    gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
-    
-    return gap_n
-
-## Enforce Karush-Kuhn-Tucker conditions for frictionless contact
-#      gn >= 0 (positive_normal_gap)
-#      Pn <= 0 (negative_normal_traction)
-# gn * Pn  = 0 (zero_complimentary)
-#       Tt = 0 (zero_tangential_traction)
-
-def positive_normal_gap(x, y, X):
-    '''
-    Enforces normal gap (gn) to be positive.
-    gn >= 0, first condition of KarushKuhnTucker-KKT.
-    '''
-    gn = calculate_gap_in_normal_direction(x, y, X)
-
-    # If gn is negative, it will create contributions to overall loss. Aims is to get positive gap
-    return (1.0-tf.math.sign(gn))*gn
-
-def negative_normal_traction(x,y,X):
-    '''
-    Enforces normal part of contact traction (Pn) to be negative.
-    Pn <= 0, second condition of KarushKuhnTucker-KKT.
-    '''
-    Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
-
-    # If Pn is positive, it will create contributions to overall loss. Aims is to get negative normal traction
-    return (1.0+tf.math.sign(Pn))*Pn
-
-def zero_complimentary(x,y,X):
-    '''
-    Enforces complimentary term to be zero.
-    gn * Pn = 0, third condition of KarushKuhnTucker-KKT.
-    '''
-    Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
-    gn = calculate_gap_in_normal_direction(x, y, X)
-
-    return gn*Pn
-
-def zero_tangential_traction(x,y,X):
-    '''
-    Enforces tangential part of contact traction (Tt) to be zero.
-    Tt = 0, Frictionless contact.
-    '''
-    Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
-
-    return Tt
+contact_utils.geom = geom
+contact_utils.distance = radius
 
 ## Define BCs
 # Applied pressure 
@@ -122,11 +64,11 @@ bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x_mixed_formulation, boun
 bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y_mixed_formulation, boundary_circle_not_contact)
 
 # Contact BC
-bc_positive_normal_gap = dde.OperatorBC(geom, positive_normal_gap, boundary_circle_contact)
-bc_negative_normal_traction = dde.OperatorBC(geom, negative_normal_traction, boundary_circle_contact)
-bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_circle_contact)
+bc_positive_normal_gap = dde.OperatorBC(geom, positive_normal_gap_sign, boundary_circle_contact)
+bc_negative_normal_traction = dde.OperatorBC(geom, negative_normal_traction_sign, boundary_circle_contact)
 bc_zero_complimentary = dde.OperatorBC(geom, zero_complimentary, boundary_circle_contact)
-bcs = [bc_zero_traction_x,bc_zero_traction_y,bc_positive_normal_gap,bc_negative_normal_traction,bc_zero_tangential_traction,bc_zero_complimentary]
+bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_circle_contact)
+bcs = [bc_zero_traction_x,bc_zero_traction_y,bc_positive_normal_gap,bc_negative_normal_traction,bc_zero_complimentary,bc_zero_tangential_traction]
 
 # Setup the data object
 n_dummy = 1
@@ -194,15 +136,15 @@ w_zero_traction_x, w_zero_traction_y = 1e0, 1e0
 # Weights due to Contact BC
 w_positive_normal_gap = 1e4
 w_negative_normal_traction = 1e0
-w_zero_tangential_traction = 1e0
 w_zero_complimentary = 1e2
+w_zero_tangential_traction = 1e0
 
 loss_weights = [w_pde_1, w_pde_2, w_pde_3, w_pde_4, w_pde_5,
                 w_zero_traction_x, w_zero_traction_y,
                 w_positive_normal_gap,
                 w_negative_normal_traction,
-                w_zero_tangential_traction,
-                w_zero_complimentary]
+                w_zero_complimentary,
+                w_zero_tangential_traction]
 
 
 ## Train the model or use a pre-trained model

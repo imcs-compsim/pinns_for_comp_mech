@@ -21,9 +21,11 @@ import time
 # Import custom modules
 from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import QuarterDisc
-from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, calculate_traction_mixed_formulation, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
-from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
+from utils.geometry.geometry_utils import polar_transformation_2d
 from utils.elasticity import elasticity_utils
+import utils.contact_mech.contact_utils as contact_utils
+from utils.contact_mech.contact_utils import zero_complimentarity_function_based_fischer_burmeister, zero_tangential_traction
 
 ## Create geometry
 # Dimensions of disk
@@ -42,64 +44,18 @@ borders = [-0.2,-1.0]
 geom = GmshGeometry2D(gmsh_model,external_dim_size=external_dim_size, borders=borders, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
 # extenal_dim_size defines a "third" dimension which is applied layerwise between borders in extenal_dim_size steps
 
-## Adjust material parameters
+## Adjust global definitions
+# Material parameters
 # We want to have e_modul=200 and nu=0.3
 lame = 115.38461538461539
 shear = 76.92307692307692
 elasticity_utils.lame = lame
 elasticity_utils.shear = shear
 nu,lame,shear,e_modul = problem_parameters()
-
-## Preliminary calculations for contact conditions
+# Communicate parameters to dependencies
 elasticity_utils.geom = geom
-distance = 0
-
-def calculate_gap_in_normal_direction(x,y,X):
-    '''
-    Calculates the gap in normal direction
-    '''
-    # Calculate the gap in y direction    
-    gap_y = x[:,1:2] + y[:,1:2] + radius + distance
-
-    # calculate the boundary normals
-    normals, cond = calculate_boundary_normals(X,geom)
-
-    # Here is the idea to calculate gap_n:
-    # gap_n/|n| = gap_y/|ny| --> since n is unit vector |n|=1
-    gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
-    
-    return gap_n
-
-## Enforce Karush-Kuhn-Tucker conditions for frictionless contact
-#      gn >= 0
-#      Pn <= 0
-# gn * Pn  = 0
-# using nonlinear complimentarity problem function Fischer-Burmeister
-# f(a,b) = a + b - sqrt(a^2 + b^2) (zero_fischer_burmeister)
-# where a = gn, b = -Pn
-#       Tt = 0 (zero_tangential_traction)
-
-def zero_fischer_burmeister(x,y,X):
-    '''
-    Enforces KKT conditions using Fischer-Burmeister equation
-    '''
-    # ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf
-    Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
-    gn = calculate_gap_in_normal_direction(x, y, X)
-    
-    a = gn
-    b = -Pn
-    
-    return a + b - tf.sqrt(tf.maximum(a**2+b**2, 1e-9))
-
-def zero_tangential_traction(x,y,X):
-    '''
-    Enforces tangential part of contact traction (Tt) to be zero.
-    Tt = 0, Frictionless contact.
-    '''
-    Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
-
-    return Tt
+contact_utils.geom = geom
+contact_utils.distance = radius
 
 ## Define BCs
 # Applied pressure 
@@ -116,7 +72,7 @@ bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x_mixed_formulation, boun
 bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y_mixed_formulation, boundary_circle_not_contact)
 
 # Contact BC
-bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_fischer_burmeister, boundary_circle_contact)
+bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_complimentarity_function_based_fischer_burmeister, boundary_circle_contact)
 bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_circle_contact)
 bcs = [bc_zero_traction_x,bc_zero_traction_y,bc_zero_fischer_burmeister,bc_zero_tangential_traction]
 
