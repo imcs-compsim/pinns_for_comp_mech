@@ -12,6 +12,8 @@ from pathlib import Path
 from deepxde.backend import tf
 import matplotlib.tri as tri
 from pyevtk.hl import unstructuredGridToVTK
+import matplotlib as mpl
+mpl.rcParams["mathtext.fontset"] = "stix"
 import time
 
 # Import custom modules
@@ -378,13 +380,13 @@ idx = np.argsort(node_coords_x_contact)
 pc_analytical = -np.nan_to_num(4*radius*ext_traction/(np.pi*x_contact_lim**2)*np.sqrt(x_contact_lim**2-node_coords_x_contact**2))
 pc_predicted = -sigma_rr_pred[x_contact_cond]
 
-fig2, ax2 = plt.subplots(figsize=(10,8))
-ax2.plot(node_coords_x_contact[idx], pc_analytical[idx], label="Analytical", lw = 2)
-ax2.plot(node_coords_x_contact[idx], pc_predicted[idx], label="Prediction", lw = 2, color = "tab:orange", linestyle = '--')
-ax2.set_xlabel(r"|x|", fontsize=17)
-ax2.set_ylabel(r"$P_c$", fontsize=17)
-ax2.tick_params(axis="both", which="major", labelsize=15)
-ax2.legend(fontsize=17)
+fig2, ax2 = plt.subplots(figsize=(5,4))
+ax2.plot(node_coords_x_contact[idx], pc_analytical[idx], label="Analytical", lw = 3)
+ax2.plot(node_coords_x_contact[idx], pc_predicted[idx], label="Prediction", lw = 3, color = "tab:orange", linestyle = '--')
+ax2.set_xlabel(r"$-x$", fontsize=16)
+ax2.set_ylabel(r"$p_\mathrm{C}$", fontsize=16)
+ax2.tick_params(axis="both", which="major", labelsize=12)
+ax2.legend(fontsize=14)
 ax2.grid()
 plt.tight_layout()
 fig2.savefig(f"{model_path}/{simulation_case}-{n_iterations}_pressure_distribution.png", dpi=300)

@@ -12,6 +12,8 @@ from pathlib import Path
 from deepxde.backend import tf
 import matplotlib.tri as tri
 from pyevtk.hl import unstructuredGridToVTK
+import matplotlib as mpl
+mpl.rcParams["mathtext.fontset"] = "stix"
 import time
 
 # Import custom modules
@@ -247,16 +249,15 @@ with open(parameter_file_name) as f:
         a, b = line.split()
         steps.append(float(a))
         pressure_predicted.append(float(b.strip("[]")))
-fig1, ax1 = plt.subplots(figsize=(10,8))
-ax1.plot(steps, pressure_predicted, color="b", lw=2, label="Predicted")
+fig1, ax1 = plt.subplots(figsize=(7,4))
+ax1.plot(steps, pressure_predicted, color="b", lw=2, label=r"Predicted $\tilde{p}$")
 ax1.vlines(x=adam_iterations,ymin=min(pressure_predicted), ymax=max(pressure_predicted), linestyles="--", colors="k")
-ax1.axhline(y=ext_traction_actual, color="r", lw=2,label="Actual")
-ax1.annotate(r"ADAM $\ \Leftarrow$ ",    xy=[adam_iterations/2,max(pressure_predicted)],   ha="center", va="bottom", size=15)
-ax1.annotate(r"$\Rightarrow \ $ L-BGFS", xy=[adam_iterations*3/2,max(pressure_predicted)], ha="center", va="bottom", size=15)
-ax1.set_xlabel("Iterations", size=17)
-ax1.set_ylabel("Pressure", size=17)
-ax1.tick_params(axis="both", labelsize=15)
-ax1.legend(fontsize=17)
+ax1.axhline(y=ext_traction_actual, color="r", lw=2,label=r"Actual $p$")
+ax1.annotate(r"ADAM $\Leftarrow\,\Rightarrow$ L-BGFS",    xy=[adam_iterations*1.075,max(pressure_predicted)*0.8],   ha="center", va="bottom", size=12)
+ax1.set_xlabel("Iterations", size=14)
+ax1.set_ylabel("Pressure", size=14)
+ax1.tick_params(axis="both", labelsize=10)
+ax1.legend(fontsize=14)
 ax1.grid()
 plt.tight_layout()
 fig1.savefig(f"{model_path}/{simulation_case}-{n_iterations}_pressure_prediction_plot.png", dpi=300)
