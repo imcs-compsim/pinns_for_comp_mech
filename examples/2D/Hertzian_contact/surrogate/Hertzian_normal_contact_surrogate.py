@@ -278,7 +278,7 @@ for i in range(external_dim_size):
 
 ## Visualize the predicted pressure
 fig, ax = plt.subplots(1,external_dim_size,figsize=(external_dim_size*4,4))
-lw = 2
+lw = 3
 s = 20
 lines =[]
 titles=[fr"$p={p_i[0]:1.2}$" for p_i in p]
@@ -288,16 +288,16 @@ for i in range(external_dim_size):
     l1, = ax[i].plot(x[i], pc[i], label="Analytical", lw=lw, zorder=2)
     ax[i].hlines(y=0, xmin=b[i], xmax=abs(x_lim), lw=lw, zorder=3)
     l3 = ax[i].plot(-x_loc[i], pc_pred_list[i], '--', label="Prediction", color = "tab:orange", lw=lw, zorder=4)
-    ax[i].set_xlabel(r"$|x|$", fontsize=22)
+    ax[i].set_xlabel(r"$-x$", fontsize=22)
     ax[i].xaxis.set_major_formatter(FormatStrFormatter("%.2f"))
-    ax[i].tick_params(axis="both", which="major", labelsize=13)
+    ax[i].tick_params(axis="both", which="major", labelsize=14)
     ax[i].yaxis.set_major_locator(MaxNLocator(integer=True))
     ax[i].yaxis.set_major_locator(plt.MaxNLocator(4))
     ax[i].set_title(titles[i], size=22)
 
-ax[0].set_ylabel(r"$p_c$", fontsize=22)
+ax[0].set_ylabel(r"$p_\mathrm{C}$", fontsize=22)
 fig.subplots_adjust(bottom=0.3, wspace=0.175)
-plt.legend()
+plt.legend(fontsize=16)
 plt.tight_layout()
 fig.savefig(f"{model_path}/{simulation_case}-{n_iterations}_pressure_distribution.png", dpi=300)
 
