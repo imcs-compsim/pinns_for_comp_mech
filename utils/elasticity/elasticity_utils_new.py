@@ -249,10 +249,28 @@ class StressLawInterface(ABC):
 
 class StVenantKirchhoff(StressLawInterface):
 
-    def __init__(self, lamb, mu):
+    def __init__(self, lame, shear, twoD=False, approx=None):
         """Initialize the class."""
-        self._lamb = lamb
-        self._mu = mu
+        self._lame = lame    # lame parameter
+        self._shear = shear  # shear modulus
+        # Compute the more tangible engineering material parameters 
+        self._lame_shear_to_young_poisson()
+        # if we are in 2D, we need to choose either a plane strain or a plane 
+        # stress assumption
+        if twoD:
+            if approx is not None:
+                if approx == "plane strain":
+                    self._2pk = self._plane_strain
+                elif approx == "plane stress":
+                    self._2pk = self._plane_stress
+                else:
+                    raise ValueError(
+                        "Please choose either 'plane strain' or 'plane stress' as appproximation."
+                    )
+            else:
+                raise ValueError(
+                        "In 2D, an approximation has to be chosen (either 'plane strain' or 'plane stress')."
+                    )
 
     def _2pk(self, def_grad, **kwds):
         """Compute the 2nd Piola Kirchhoff stress tensor for a St. Venant Kirchhoff 
@@ -265,7 +283,36 @@ class StVenantKirchhoff(StressLawInterface):
         # is NOT batched for efficiency reasons, we have to perform an outer 
         # vector-matrix product here to broadcast the result of the 
         # multiplication to the correct dimensions
-        _stress = self._lamb * _outer_vec_mat_prod(_trace(_strain), _identity_like(_strain)) 
-        _stress += 2.0 * self._mu * _strain
+        _stress = self._lame * _outer_vec_mat_prod(_trace(_strain), _identity_like(_strain)) 
+        _stress += 2.0 * self._shear * _strain
         return _stress
     
+    def _plane_strain(self, def_grad, **kwds):
+        """TODO"""
+        # compute the strain from the deformation gradient
+        _strain = strain(def_grad, **kwds)
+        # compute the simplified stress terms components
+        _stress = bkd.zeros_like(def_grad)
+        # calculate stress terms (constitutive law - plane strain)
+        _stress[:, 0, 0] = self.young/((1.0+self._poisson)*(1.0-2.0*self._poisson))*((1.0-self._poisson)*_strain[:, 0, 0]+self._poisson*_strain[:, 1, 1])
+        _stress[:, 0, 1] = self.young/((1.0+self._poisson)*(1.0-2.0*self._poisson))*(self._poisson*_strain[:, 0, 0]+(1.0-self._poisson)*_strain[:, 1, 1])
+        _stress[:, 1, 0] = _stress[:, 0, 1]
+        _stress[:, 1, 1] = self.young/((1.0+self._poisson)*(1.0-2.0*self._poisson))*((1.0-2.0*self._poisson)*_strain[:, 0, 1])
+        return _stress
+    
+    def _plane_stress(self, def_grad, **kwds):
+        """TODO"""
+        # compute the strain from the deformation gradient
+        _strain = strain(def_grad, **kwds)
+        # compute the simplified stress terms components
+        _stress = bkd.zeros_like(def_grad)
+        _stress[:, 0, 0] = self.young/(1.0-self._poisson**2)*(_strain[:, 0, 0]+self._poisson*_strain[:, 1, 1])
+        _stress[:, 0, 1] = self.young/(1.0-self._poisson**2)*((1.0-self._poisson)*_strain[:, 0, 1])
+        _stress[:, 1, 0] = _stress[:, 0, 1]
+        _stress[:, 1, 1] = self.young/(1.0-self._poisson**2)*(self._poisson*_strain[:, 0, 0]+_strain[:, 1, 1])
+        return _stress
+    
+    def _lame_shear_to_young_poisson(self):
+        """TODO"""
+        self._poisson = self._lame/(2*(self._lame+self._shear))
+        self._young = self._shear*(3*self._lame+2*self._shear)/(self._lame+self._shear) 
