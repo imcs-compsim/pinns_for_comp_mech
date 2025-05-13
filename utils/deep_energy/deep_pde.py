@@ -4,7 +4,7 @@ from deepxde.data import Data
 from deepxde import backend as bkd
 from deepxde import config
 from deepxde.backend import backend_name
-from deepxde.utils import get_num_args, run_if_all_none
+from deepxde.utils import get_num_args, run_if_all_none, to_numpy
 
 class DeepEnergyPDE(Data):
     """Variational PDE solver based on weak formulation.
@@ -112,6 +112,8 @@ class DeepEnergyPDE(Data):
         self.train_x, self.train_y = None, None
         self.test_x, self.test_y = None, None
         self.train_aux_vars, self.test_aux_vars = None, None
+        
+        self.current_epoch = None
 
         self.train_next_batch()
         self.test()
@@ -123,36 +125,82 @@ class DeepEnergyPDE(Data):
             # JAX requires pure functions
             outputs_pde = (outputs, aux[0])
         
+        if model.callbacks is not None:
+            model.callbacks.on_epoch_begin()
+        
         bcs_start = np.cumsum([0] + self.num_bcs)
         bcs_start = list(map(int, bcs_start))
         
         losses=[]
         
         if self.energy_form is not None:
-            if not isinstance(self.energy_form, (list, tuple)):
-                self.energy_form = [self.energy_form]
-            for energy_form in self.energy_form:
-                # if get_num_args(energy_form) == 9:
-                n_gp = self.geom.n_gp
-                n_e = self.geom.n_elements
-                pde_start = bcs_start[-1]
+            # if get_num_args(energy_form) == 9:
+            n_gp = self.geom.n_gp
+            n_e = self.geom.n_elements
+            n_gp_boundary = self.geom.n_gp_boundary
+            n_e_boundary = self.geom.boundary_elements
+            pde_start = bcs_start[-1]
+            pde_boundary_start = None
+            boundary_selection_tag = self.geom.boundary_selection_tag
+            
+            # convert to tensors or define them
+            jacobian_t = bkd.as_tensor(self.geom.jacobian)
+            global_element_weights_t = bkd.as_tensor(self.geom.global_element_weights)
+            mapped_normal_boundary_t = self.geom.mapped_normal_boundary
+            jacobian_boundary_t = self.geom.jacobian_boundary
+            global_weights_boundary_t = self.geom.global_weights_boundary
+            # lagrange_parameter_boundary = self.geom.lagrange_parameter
 
-                element_integral = bkd.sum(
-                                        energy_form(inputs, 
-                                                    outputs_pde, 
-                                                    pde_start,
-                                                    n_e,
-                                                    n_gp, 
-                                                    bkd.as_tensor(self.geom.jacobian),
-                                                    bkd.as_tensor(self.geom.global_element_weights)
-                                                    ),
-                                        dim=1)
-                    
-                f = bkd.reduce_sum(element_integral)
+            
+            if self.geom.mapped_coordinates_boundary is not None:
+                pde_boundary_start = pde_start + self.geom.mapped_coordinates.shape[0]
+                mapped_normal_boundary_t = bkd.as_tensor(self.geom.mapped_normal_boundary)
+                jacobian_boundary_t = bkd.as_tensor(self.geom.jacobian_boundary)
+                global_weights_boundary_t = bkd.as_tensor(self.geom.global_weights_boundary)
+            
+            if self.geom.lagrange_method:
+                lagrange_parameter_boundary_t = bkd.as_tensor(self.geom.lagrange_parameter)
                 
-                #f = bkd.reduce_sum(loss_element)
-                
-                losses.append(f)
+                f_component, lagrange_parameter_boundary_t = self.energy_form(
+                                self.train_x,
+                                inputs, 
+                                outputs_pde, 
+                                pde_start,
+                                pde_boundary_start,
+                                n_e,
+                                n_gp,
+                                n_e_boundary,
+                                n_gp_boundary,
+                                jacobian_t,
+                                global_element_weights_t,
+                                mapped_normal_boundary_t,
+                                jacobian_boundary_t,
+                                global_weights_boundary_t,
+                                boundary_selection_tag,
+                                lagrange_parameter_boundary_t                            
+                                )
+                self.geom.lagrange_parameter = to_numpy(lagrange_parameter_boundary_t)
+            else:
+                f_component = self.energy_form(
+                            self.train_x,
+                            inputs, 
+                            outputs_pde, 
+                            pde_start,
+                            pde_boundary_start,
+                            n_e,
+                            n_gp,
+                            n_e_boundary,
+                            n_gp_boundary,
+                            jacobian_t,
+                            global_element_weights_t,
+                            mapped_normal_boundary_t,
+                            jacobian_boundary_t,
+                            global_weights_boundary_t,
+                            boundary_selection_tag                            
+                            )
+            for f in f_component:
+                losses.append(bkd.reduce_sum(f))
+            #losses.append(sum([bkd.reduce_sum(f) for f in f_component]))
               
         if self.additional_domain_eq is not None:
             f = self.additional_domain_eq(inputs, outputs_pde)
@@ -177,12 +225,10 @@ class DeepEnergyPDE(Data):
     def train_next_batch(self, batch_size=None):
         self.train_x_pde = self.geom.mapped_coordinates
         self.train_x_bc = self.bc_points()
-        #self.geom.mapped_coordinates
-        if self.energy_form is not None:
-            self.train_x = np.vstack((self.train_x_bc, self.train_x_pde))
         
-        # if self.energy_form is not None:
-        #     self.train_x = np.vstack((self.train_x, self.geom.mapped_coordinates))
+        self.train_x = np.vstack((self.train_x_bc, self.train_x_pde))
+        if self.geom.mapped_coordinates_boundary is not None:
+            self.train_x = np.vstack((self.train_x, self.geom.mapped_coordinates_boundary))
         
         self.train_y = self.soln(self.train_x) if self.soln else None
         if self.auxiliary_var_fn is not None:
