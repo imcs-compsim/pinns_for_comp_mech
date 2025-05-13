@@ -59,8 +59,10 @@ Issues = "https://github.com/imcs-compsim/pinns_for_comp_mech/issues"
 packages = [
   "utils",
   "utils.contact_mech",
+  "utils.deep_energy",
   "utils.elasticity",
   "utils.geometry",
+  "utils.hyper_elasticity",
   "utils.postprocess",
   "utils.vpinns",
 ]
