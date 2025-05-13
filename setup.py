@@ -21,7 +21,7 @@ setup(
         'utils.deep_energy',
         'utils.elasticity',
         'utils.geometry',
-        'utils.hyper_elasticity',
+        'utils.hyperelasticity',
         'utils.postprocess'
     ],
 
