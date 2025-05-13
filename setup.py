@@ -18,8 +18,10 @@ setup(
     packages=[
         'utils',
         'utils.contact_mech',
+        'utils.deep_energy',
         'utils.elasticity',
         'utils.geometry',
+        'utils.hyper_elasticity',
         'utils.postprocess'
     ],
 
