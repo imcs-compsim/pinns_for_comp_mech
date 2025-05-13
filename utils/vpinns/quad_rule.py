@@ -9,7 +9,7 @@ from numpy.polynomial.legendre import leggauss
 from numpy import inf
 
 class GaussQuadratureRule:
-    def __init__(self, rule_name, dimension, ngp, **additional_params):
+    def __init__(self, rule_name, dimension, ngp, element_type="tensor", **additional_params):
         '''
         Constructs the gauss quad rule based on dimension and number of gauss points. 
         Available rules:
@@ -22,9 +22,18 @@ class GaussQuadratureRule:
         self.rule_name = rule_name
         self.dimension = dimension 
         self.ngp = ngp
+        self.element_type = element_type # "tensor" or "simplex"
         self.additional_params = additional_params
         
     def generate(self):
+        if self.element_type == "tensor":
+            return self.generate_tensor()
+        elif self.element_type == "simplex":
+            return self.generate_simplex()
+        else:
+            raise ValueError(f"Unknown element_type: {self.element_type}")
+        
+    def generate_tensor(self):
         
         rule_dic = {
             "gauss_labotto" : self.gauss_labotto,
@@ -35,14 +44,112 @@ class GaussQuadratureRule:
 
         return coord_quadrature.reshape(-1,self.dimension), weight_quadrature.reshape(-1,self.dimension)
     
+    def generate_simplex(self):
+        if self.dimension == 2:
+            return self.triangle_rule()
+        elif self.dimension == 3:
+            return self.tetrahedron_rule()
+        else:
+            raise NotImplementedError("Only 2D triangle and 3D tetrahedron supported in simplex mode")
+    
+    def triangle_rule(self):
+        if self.ngp == 1:
+            # 1-point centroid rule
+            coords = np.array([[1/3, 1/3]])
+            weights = np.array([[0.5]])
+
+        elif self.ngp == 3:
+            # 3-point rule (exact for degree 2)
+            coords = np.array([
+                [1/6, 1/6],
+                [2/3, 1/6],
+                [1/6, 2/3]
+            ])
+            weights = np.array([[1/6], [1/6], [1/6]])
+
+        elif self.ngp == 4:
+            # 4-point rule (degree 3, symmetric)
+            coords = np.array([
+                [1/3, 1/3],     # centroid
+                [3/5, 1/5],
+                [1/5, 3/5],
+                [1/5, 1/5]
+            ])
+            weights = np.array([
+                [-27/96],       # -27/48 × 0.5
+                [25/96],        # 25/48 × 0.5
+                [25/96],
+                [25/96]
+            ])
+
+        elif self.ngp == 7:
+            # 7-point rule (degree 5)
+            coords = np.array([
+                [0.33333, 0.33333],
+                [0.10128, 0.10128],
+                [0.79742, 0.10128],
+                [0.10128, 0.79742],
+                [0.47014, 0.05971],
+                [0.47014, 0.47014],
+                [0.05971, 0.47014]
+            ])
+            weights = np.array([
+                [0.22500 * 0.5],
+                [0.12593 * 0.5],
+                [0.12593 * 0.5],
+                [0.12593 * 0.5],
+                [0.13239 * 0.5],
+                [0.13239 * 0.5],
+                [0.13239 * 0.5],
+            ])
+
+        else:
+            raise NotImplementedError("Triangle quadrature rule not implemented for ngp = {}".format(self.ngp))
+
+        return coords, weights
+
+    
+    def tetrahedron_rule(self):
+        if self.ngp == 1:
+            # 1-point quadrature: centroid
+            coords = np.array([[0.25, 0.25, 0.25]])
+            weights = np.array([[1/6]])
+
+        elif self.ngp == 4:
+            # 4-point quadrature (degree 2): symmetric formula
+            a = 0.58541020
+            b = 0.13819660
+            coords = np.array([
+                [b, b, b],
+                [a, b, b],
+                [b, a, b],
+                [b, b, a]
+            ])
+            weights  = np.array([[1/24], [1/24], [1/24], [1/24]]) # All weights equal, total volume = 1/6
+
+        elif self.ngp == 5:
+            # 5-point quadrature (degree 3): centroid + 4 off-center points
+            coords = np.array([
+                [0.25, 0.25, 0.25],  # centroid
+                [0.5,  1/6, 1/6],
+                [1/6, 0.5,  1/6],
+                [1/6, 1/6, 0.5],
+                [1/6, 1/6, 1/6]
+            ])
+            weights = np.array([[-4/30], [9/120], [9/120], [9/120], [9/120]])
+
+        else:
+            raise NotImplementedError(f"{self.ngp}-point tetrahedron quadrature not implemented")
+
+        return coords, weights
+    
     def gauss_legendre(self):
         
         if self.dimension == 1:
-            try:
-                self.ngp >= 1
-                return leggauss(self.ngp)
-            except:
-                raise ValueError("Number of gauss points must be >=1, chosen is {self.ngp}<1")
+            if self.ngp < 1:
+                raise ValueError(f"Number of Gauss points must be >= 1, got {self.ngp}")
+            return leggauss(self.ngp)
+        
         elif self.dimension == 2:
             coord_quadrature_1d, weight_quadrature_1d = leggauss(self.ngp)
             
@@ -53,8 +160,19 @@ class GaussQuadratureRule:
             weight_quadrature_2d=np.array((weight_quadrature_x.ravel(), weight_quadrature_y.ravel())).T
             
             #common_weight = weights[:,0]*weights[:,1]
+        
+            return coord_quadrature_2d, weight_quadrature_2d #common_weight
+        
+        elif self.dimension == 3:
+            coord_quadrature_1d, weight_quadrature_1d = leggauss(self.ngp)
             
-            return coord_quadrature_2d, weight_quadrature_2d #common_weight      
+            coord_quadrature_x, coord_quadrature_y, coord_quadrature_z = np.meshgrid(coord_quadrature_1d,coord_quadrature_1d,coord_quadrature_1d)
+            coord_quadrature_3d = np.array((coord_quadrature_x.ravel(), coord_quadrature_y.ravel(), coord_quadrature_z.ravel())).T
+            
+            weight_quadrature_x, weight_quadrature_y, weight_quadrature_z = np.meshgrid(weight_quadrature_1d, weight_quadrature_1d, weight_quadrature_1d)
+            weight_quadrature_3d = np.array((weight_quadrature_x.ravel(), weight_quadrature_y.ravel(), weight_quadrature_z.ravel())).T
+            
+            return coord_quadrature_3d, weight_quadrature_3d
     
     def gauss_labotto(self):
         
@@ -120,6 +238,15 @@ class GaussQuadratureRule:
             weight_quadrature_2d=np.array((weight_quadrature_x.ravel(), weight_quadrature_y.ravel())).T
             
             return coord_quadrature_2d, weight_quadrature_2d
+        
+        elif self.dimension == 3:            
+            coord_quadrature_x, coord_quadrature_y, coord_quadrature_z = np.meshgrid(coord_quadrature,coord_quadrature,coord_quadrature)
+            coord_quadrature_3d = np.array((coord_quadrature_x.ravel(), coord_quadrature_y.ravel(), coord_quadrature_z.ravel())).T
+            
+            weight_quadrature_x, weight_quadrature_y, weight_quadrature_z = np.meshgrid(weight_quadrature, weight_quadrature, weight_quadrature)
+            weight_quadrature_3d = np.array((weight_quadrature_x.ravel(), weight_quadrature_y.ravel(), weight_quadrature_z.ravel())).T
+            
+            return coord_quadrature_3d, weight_quadrature_3d
             
     
     @staticmethod
