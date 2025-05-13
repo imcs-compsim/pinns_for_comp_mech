@@ -65,18 +65,38 @@ pressure = 0.1
 nu,lame,shear,e_modul = problem_parameters()
 applied_disp_y = -pressure/e_modul*(1-nu**2)*1
 
-residual_form = "1"
-
-def potential_energy(inputs, outputs, beg, n_e, n_gp, g_jacobian, g_weights):
+def potential_energy(X, 
+                     inputs, 
+                     outputs, 
+                     beg_pde, 
+                     beg_boundary, 
+                     n_e, 
+                     n_gp, 
+                     n_e_boundary, 
+                     n_gp_boundary, 
+                     jacobian_t, 
+                     global_element_weights_t, 
+                     mapped_normal_boundary_t, 
+                     jacobian_boundary_t, 
+                     global_weights_boundary_t,
+                     boundary_selection_tag):
     
     eps_xx, eps_yy, eps_xy = elastic_strain_2d(inputs,outputs)
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(inputs,outputs)
     
-    potential_energy = 1/2*(sigma_xx[beg:]*eps_xx[beg:] + sigma_yy[beg:]*eps_yy[beg:] + 2*sigma_xy[beg:]*eps_xy[beg:])
+    # get the internal energy
+    internal_energy_density = 1/2*(sigma_xx[beg_pde:beg_boundary]*eps_xx[beg_pde:beg_boundary] + 
+                            sigma_yy[beg_pde:beg_boundary]*eps_yy[beg_pde:beg_boundary] + 
+                            2*sigma_xy[beg_pde:beg_boundary]*eps_xy[beg_pde:beg_boundary])
     
-    total_potential_energy = g_weights[:,0:1]*g_weights[:,1:2]*(potential_energy)*g_jacobian
+    internal_energy = global_element_weights_t[:,0:1]*global_element_weights_t[:,1:2]*(internal_energy_density)*jacobian_t
     
-    return bkd.reshape(total_potential_energy, (n_e, n_gp))
+    # internal_energy_reshaped = bkd.reshape(internal_energy, (n_e, n_gp))
+    
+    # total_energy = bkd.reduce_sum(bkd.sum(internal_energy_reshaped, dim=1)) 
+    
+    return [internal_energy]
+
 
 def points_at_top(x, on_boundary):
     points_top = np.isclose(x[1],h_beam)
@@ -94,7 +114,7 @@ bc_u_y = dde.DirichletBC(geom, lambda _: applied_disp_y, points_at_top, componen
 n_dummy = 1
 data = DeepEnergyPDE(
     geom,
-    [potential_energy],
+    potential_energy,
     [bc_u_y],
     num_domain=n_dummy,
     num_boundary=n_dummy,
@@ -123,7 +143,7 @@ model = dde.Model(data, net)
 loss_weights=[1,1e3]
 
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
-losshistory, train_state = model.train(epochs=1000, display_every=100)
+losshistory, train_state = model.train(epochs=2000, display_every=100)
 
 model.compile("L-BFGS", loss_weights=loss_weights)
 losshistory, train_state = model.train(display_every=200)
@@ -162,7 +182,7 @@ combined_disp_analytical = tuple(np.vstack((u_x_analytical, u_y_analytical, np.z
 combined_stress_analytical = tuple(np.vstack((s_xx_analytical, s_yy_analytical, s_xy_analytical)))
 
 
-file_path = os.path.join(os.getcwd(), "deep_energy_patch")
+file_path = os.path.join(os.getcwd(), "deep_energy_single_block_compression")
 
 x = X[:,0].flatten()
 y = X[:,1].flatten()
