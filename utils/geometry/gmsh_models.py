@@ -863,6 +863,82 @@ class Cylinder_hertzian(object):
             gmsh.fltk.run()
 
         return gmsh_model
+    
+class Eighth_sphere_hertzian(object):
+    def __init__(self, radius, center, angle=None, refine_times=None, mesh_size=0.15, gmsh_options=None):
+        self.radius = radius
+        self.center = center
+        if angle:
+            self.angle_rad = np.pi*angle/180
+        else:
+            self.angle_rad = angle
+        self.refine_times = refine_times 
+        self.mesh_size = mesh_size
+        self.gmsh_options = gmsh_options
+
+    def computeblimit(self):
+        arc_length = self.radius * np.sin(self.angle_rad)
+        return arc_length
+    
+    def generateGmshModel(self, visualize_mesh=False):
+        '''
+        Generates an eighth sphere with mesh refinements on the bottom if desired.
+
+        Parameters
+        ----------
+        visualize_mesh : boolean
+            a booelan value to show the mesh using Gmsh or not
+        Returns 
+        -------
+        gmsh_model: Object
+            gmsh model 
+        '''
+
+        # create gmsh model instance
+        gmsh_model = gmsh.model
+
+        # initialize gmsh
+        gmsh.initialize(sys.argv)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if type(value).__name__ == 'str':
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+        
+        arc_length = self.computeblimit()
+        gmsh.initialize()
+        gmsh_sphere = gmsh.model.occ.addSphere(xc=self.center[0], yc=self.center[1], zc=self.center[2], radius=self.radius, angle1=0, angle2=np.pi/2, angle3=np.pi/2)
+        gmsh.model.occ.rotate(dimTags=[(3, gmsh_sphere)], x=self.center[0], y=self.center[1], z=self.center[2], ax=0, ay=0, az=1, angle=np.pi)
+        gmsh.model.occ.synchronize()
+        eps=1E-6
+        p_contact_anticipated = [self.center[0],self.center[1]-self.radius,self.center[2]]
+        p_contact = gmsh.model.occ.get_entities_in_bounding_box(xmin=p_contact_anticipated[0]-eps,
+                                                                ymin=p_contact_anticipated[1]-eps,
+                                                                zmin=p_contact_anticipated[2]-eps,
+                                                                xmax=p_contact_anticipated[0]+eps,
+                                                                ymax=p_contact_anticipated[1]+eps,
+                                                                zmax=p_contact_anticipated[2]+eps,
+                                                                dim=0)
+        field_distance = gmsh.model.mesh.field.add("Distance")
+        gmsh.model.mesh.field.setNumbers(field_distance, "PointsList", [p_contact[0][1]])
+        field_threshold = gmsh.model.mesh.field.add("Threshold")
+        gmsh.model.mesh.field.setNumber(field_threshold, "InField", field_distance)
+        gmsh.model.mesh.field.setNumber(field_threshold, "SizeMin", self.mesh_size/self.refine_times)
+        gmsh.model.mesh.field.setNumber(field_threshold, "SizeMax", self.mesh_size)
+        gmsh.model.mesh.field.setNumber(field_threshold, "DistMin", arc_length)
+        gmsh.model.mesh.field.setNumber(field_threshold, "DistMax", 1.25*arc_length)
+        field_min = gmsh.model.mesh.field.add("Min")
+        gmsh.model.mesh.field.setNumbers(field_min, "FieldsList", [field_threshold])
+        gmsh.model.mesh.field.setAsBackgroundMesh(field_min)
+        gmsh.model.mesh.generate(3)
+
+        if visualize_mesh:
+            if '-nopopup' not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model
 
 class Block_3D_hex(object):
     def __init__(self, origin, length, height, width, divisions, gmsh_options=None):
