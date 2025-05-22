@@ -29,7 +29,7 @@ angle_deg = 15
 refine_times = 5
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 
-Eighth_sphere_hertzian = Eighth_sphere_hertzian(radius=radius, center=center, mesh_size=0.15, angle=angle_deg, refine_times=refine_times, gmsh_options=gmsh_options)
+Eighth_sphere_hertzian = Eighth_sphere_hertzian(radius=radius, center=center, mesh_size=0.05, angle=angle_deg, refine_times=refine_times, gmsh_options=gmsh_options)
 
 gmsh_model = Eighth_sphere_hertzian.generateGmshModel(visualize_mesh=True)
 
