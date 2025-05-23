@@ -31,7 +31,7 @@ gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 
 Eighth_sphere_hertzian = Eighth_sphere_hertzian(radius=radius, center=center, mesh_size=0.05, angle=angle_deg, refine_times=refine_times, gmsh_options=gmsh_options)
 
-gmsh_model = Eighth_sphere_hertzian.generateGmshModel(visualize_mesh=True)
+gmsh_model = Eighth_sphere_hertzian.generateGmshModel(visualize_mesh=False)
 
 geom = GmshGeometry3D(gmsh_model)
 
@@ -55,23 +55,31 @@ def boundary_not_contact(x, on_boundary):
 def boundary_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (np.linalg.norm(x[0:3:2]-[center[0],center[2]], axis=-1)<=b_limit)
 
+def boundary_sliding_x(x, on_boundary):
+    return on_boundary and np.isclose(x[0],center[0])
+
+def boundary_sliding_z(x, on_boundary):
+    return on_boundary and np.isclose(x[2],center[2])
+
 # def bottom_point(x, on_boundary):
 #     points_at_x_0 = np.isclose(x[0],0)
 #     points_on_the_radius = np.isclose(np.linalg.norm(x[:2] - center[:2], axis=-1), radius)
 
 #     return on_boundary and points_on_the_radius and points_at_x_0
 
-# # Neumann BCs on non-contact zones of sphere
+# # Neumann BCs on non-contact zones of the radial surface of the sphere
 bc1 = dde.OperatorBC(geom, apply_zero_neumann_x_mixed_formulation, boundary_not_contact)
 bc2 = dde.OperatorBC(geom, apply_zero_neumann_y_mixed_formulation, boundary_not_contact)
 bc3 = dde.OperatorBC(geom, apply_zero_neumann_z_mixed_formulation, boundary_not_contact)
-
+# # Neumann BCs (sliding) on cut sections of the sphere
+bc4 = dde.OperatorBC(geom, apply_zero_neumann_x_mixed_formulation, boundary_sliding_x)
+bc5 = dde.OperatorBC(geom, apply_zero_neumann_z_mixed_formulation, boundary_sliding_z)
 # # Contact BCs
-# enforce tangential tractions to be zero
-bc4 = dde.OperatorBC(geom, zero_tangential_traction_component1_3d, boundary_contact)
-bc5 = dde.OperatorBC(geom, zero_tangential_traction_component2_3d, boundary_contact)
+# enforce tangential tractions to be zero in contact area
+bc6 = dde.OperatorBC(geom, zero_tangential_traction_component1_3d, boundary_contact)
+bc7 = dde.OperatorBC(geom, zero_tangential_traction_component2_3d, boundary_contact)
 # KKT using fisher_burmeister
-bc6 = dde.OperatorBC(geom, zero_complementarity_function_based_fisher_burmeister_3d, boundary_contact)
+bc8 = dde.OperatorBC(geom, zero_complementarity_function_based_fisher_burmeister_3d, boundary_contact)
 
 # bc7 = dde.DirichletBC(geom, lambda _: 0, bottom_point, component=1)
 
@@ -79,7 +87,7 @@ n_dummy = 1
 data = dde.data.PDE(
     geom,
     pde_mixed_3d,
-    [bc1, bc2, bc3, bc4, bc5, bc6],
+    [bc1, bc2, bc3, bc4, bc5, bc6, bc7, bc8],
     num_domain=n_dummy,
     num_boundary=n_dummy,
     num_test=n_dummy,
@@ -138,6 +146,7 @@ w_momentum_xx, w_momentum_yy, w_momentum_zz = 1e0, 1e0, 1e0
 w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz = 1e0, 1e0, 1e0, 1e0, 1e0, 1e0
 # weights due to Neumann BCs
 w_zero_traction_x, w_zero_traction_y, w_zero_traction_z = 1e0, 1e0, 1e0
+w_sliding_x, w_sliding_z = 1e0, 1e0
 # weights due to Contact BCs
 w_zero_tangential_traction_component1 = 1e0
 w_zero_tangential_traction_component2 = 1e0
@@ -146,7 +155,7 @@ w_zero_fisher_burmeister = 5e2
 # w_dirichlet = 1e0
 
 loss_weights = [w_momentum_xx, w_momentum_yy, w_momentum_zz, 
-                w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz,  
+                w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz, w_sliding_x, w_sliding_z, 
                 w_zero_traction_x, w_zero_traction_y, w_zero_traction_z,
                 w_zero_tangential_traction_component1, w_zero_tangential_traction_component2, w_zero_fisher_burmeister]
 
@@ -155,10 +164,10 @@ restore_model = False
 
 if not restore_model:
     model.compile("adam", lr=0.001, loss_weights=loss_weights)
-    losshistory, train_state = model.train(epochs=1000, display_every=100) 
+    losshistory, train_state = model.train(iterations=2000, display_every=100)
     # losshistory, train_state = model.train(epochs=2000, display_every=200, model_save_path=model_path) # use if you want to save the model
 
-    dde.optimizers.config.set_LBFGS_options(maxiter=1000)
+    # dde.optimizers.config.set_LBFGS_options(maxiter=1000)
     model.compile("L-BFGS", loss_weights=loss_weights)
     losshistory, train_state = model.train(display_every=200)
     # losshistory, train_state = model.train(display_every=200, model_save_path=model_path) # same as above
