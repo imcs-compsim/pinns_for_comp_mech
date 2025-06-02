@@ -30,8 +30,10 @@ radius = 1
 angle_deg = 15 # Angle of refinement area
 refine_times = 5 # Refinement multiplicator in refinement area
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
+start_time_meshing = time.time()
 Eighth_sphere = Eighth_sphere_hertzian(radius=radius, center=center, mesh_size=0.05, angle=angle_deg, refine_times=refine_times, gmsh_options=gmsh_options)
 gmsh_model = Eighth_sphere.generateGmshModel(visualize_mesh=False)
+end_time_meshing = time.time()
 geom = GmshGeometry3D(gmsh_model)
 
 ## Adjust global definitions
@@ -216,6 +218,7 @@ solutionFieldOnMeshToVtk3D(geom,
 if not restore_pretrained_model:
     with open(f"{model_path}/{simulation_case}-{n_iterations}_times.txt", "w") as text_file:
         print(f"Compilation and training times in [s]", file=text_file)
+        print(f"Meshing took:        {(end_time_meshing - start_time_meshing):6.3f}", file=text_file)
         print(f"Adam compilation:    {(end_time_adam_compile - start_time_train):6.3f}", file=text_file)
         print(f"Adam training:       {(end_time_adam_train - end_time_adam_compile):6.3f}", file=text_file)
         print(f"L-BFGS compilation:  {(end_time_LBFGS_compile - end_time_adam_train):6.3f}", file=text_file)
