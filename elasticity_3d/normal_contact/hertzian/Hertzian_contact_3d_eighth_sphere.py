@@ -20,7 +20,7 @@ from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = False
+restore_pretrained_model = True
 
 ## Create geometry
 # Dimensions of sphere
@@ -166,7 +166,7 @@ loss_weights = [w_momentum_xx, w_momentum_yy, w_momentum_zz,
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
 model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian/hertzian_sphere_3d"
-simulation_case = f"eigth_sphere_linear"
+simulation_case = f"eighth_sphere_linear"
 adam_iterations = 2000
 
 if not restore_pretrained_model:
@@ -197,9 +197,9 @@ if not restore_pretrained_model:
     )
 
 else:
-    n_iterations = 15302
-    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
-    model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
+    n_iterations = 9249
+    model_restore_path = f"{model_path}/{simulation_case}-{n_iterations}.ckpt"
+    model_loss_path = f"{model_path}/{simulation_case}-{n_iterations}_loss.dat"
     
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path)
