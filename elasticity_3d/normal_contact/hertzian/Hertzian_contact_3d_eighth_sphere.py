@@ -1,93 +1,97 @@
+### Eighth sphere hertzian contact problem using a nonlinear complimentary problem (NCP) function
+### @author: svoelkl, dwolff, apopp
+### based on the work of tsahin
+# Import required libraries
 import deepxde as dde
 import numpy as np
 from deepxde import backend as bkd
 from pathlib import Path
-import gmsh
-'''
-@author: tsahin
+import time
 
-Simple compression test for a 3D block, results seem identical to 2D.
-'''
-
+# Import custom modules
 from utils.geometry.custom_geometry import GmshGeometry3D
 from utils.geometry.gmsh_models import Eighth_sphere_hertzian
-
 from utils.elasticity import elasticity_utils
 from utils.elasticity.elasticity_utils import pde_mixed_3d, problem_parameters
 from utils.elasticity.elasticity_utils import apply_zero_neumann_x_mixed_formulation, apply_zero_neumann_y_mixed_formulation, apply_zero_neumann_z_mixed_formulation
-from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
-from utils.geometry.geometry_utils import calculate_boundary_normals_3D
-
 from utils.contact_mech import contact_utils
 from utils.contact_mech.contact_utils import zero_tangential_traction_component1_3d, zero_tangential_traction_component2_3d, zero_complementarity_function_based_fisher_burmeister_3d
+from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
 
-projection_plane = {"y" : -1} # projection plane formula
-pressure = -0.5
+## Set custom Flag to either restore the model from pretrained
+## or simulate yourself
+restore_pretrained_model = False
+
+## Create geometry
+# Dimensions of sphere
 center = [0, 0, 0]
 radius = 1
-angle_deg = 15
-refine_times = 5
+# Create the eighth spere using gmsh
+angle_deg = 15 # Angle of refinement area
+refine_times = 5 # Refinement multiplicator in refinement area
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
-
-Eighth_sphere_hertzian = Eighth_sphere_hertzian(radius=radius, center=center, mesh_size=0.05, angle=angle_deg, refine_times=refine_times, gmsh_options=gmsh_options)
-
-gmsh_model = Eighth_sphere_hertzian.generateGmshModel(visualize_mesh=False)
-
+Eighth_sphere = Eighth_sphere_hertzian(radius=radius, center=center, mesh_size=0.05, angle=angle_deg, refine_times=refine_times, gmsh_options=gmsh_options)
+gmsh_model = Eighth_sphere.generateGmshModel(visualize_mesh=False)
 geom = GmshGeometry3D(gmsh_model)
 
-# # change global variables in elasticity_utils, they are used for getting the material properties for analytical model
+## Adjust global definitions
+# Material parameters
+# We want to have e_modul=200 and nu=0.3
 lame = 115.38461538461539
 shear = 76.92307692307692
 elasticity_utils.lame = lame
 elasticity_utils.shear = shear
-nu,lame,shear,e_modul = problem_parameters() # with dimensions, will be used for analytical solution
-# This will lead to e_modul=200 and nu=0.3
-
-# assign local parameters from the current file in contact_utils and elasticity_utils
+nu,lame,shear,e_modul = problem_parameters()
+# Projection plane for contact definition
+projection_plane = {"y" : -1}
+# Communicate parameters to dependencies
 elasticity_utils.geom = geom
 contact_utils.geom = geom
 contact_utils.projection_plane = projection_plane
 
-b_limit = Eighth_sphere_hertzian.computeblimit()
+## Define BCs
+# Applied pressure 
+pressure = -0.5
+# Compute radius for refinement area
+b_limit = Eighth_sphere.computeblimit()
+# Spherical boundary which is not in contact
 def boundary_not_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (np.linalg.norm(x[0:3:2]-[center[0],center[2]], axis=-1)>b_limit)
-
+# Spherical boundary which is in contact
 def boundary_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (np.linalg.norm(x[0:3:2]-[center[0],center[2]], axis=-1)<=b_limit)
-
-def boundary_sliding_x(x, on_boundary):
+# Cut surface with normal along x-axis
+def boundary_cut_x(x, on_boundary):
     return on_boundary and np.isclose(x[0],center[0])
-
-def boundary_sliding_z(x, on_boundary):
+# Cut surface with normal along z-axis
+def boundary_cut_z(x, on_boundary):
     return on_boundary and np.isclose(x[2],center[2])
 
-# def bottom_point(x, on_boundary):
-#     points_at_x_0 = np.isclose(x[0],0)
-#     points_on_the_radius = np.isclose(np.linalg.norm(x[:2] - center[:2], axis=-1), radius)
-
-#     return on_boundary and points_on_the_radius and points_at_x_0
-
-# # Neumann BCs on non-contact zones of the radial surface of the sphere
-bc1 = dde.OperatorBC(geom, apply_zero_neumann_x_mixed_formulation, boundary_not_contact)
-bc2 = dde.OperatorBC(geom, apply_zero_neumann_y_mixed_formulation, boundary_not_contact)
-bc3 = dde.OperatorBC(geom, apply_zero_neumann_z_mixed_formulation, boundary_not_contact)
-# # Neumann BCs (sliding) on cut sections of the sphere
-bc4 = dde.OperatorBC(geom, apply_zero_neumann_x_mixed_formulation, boundary_sliding_x)
-bc5 = dde.OperatorBC(geom, apply_zero_neumann_z_mixed_formulation, boundary_sliding_z)
-# # Contact BCs
-# enforce tangential tractions to be zero in contact area
-bc6 = dde.OperatorBC(geom, zero_tangential_traction_component1_3d, boundary_contact)
-bc7 = dde.OperatorBC(geom, zero_tangential_traction_component2_3d, boundary_contact)
+## Apply BCs
+# Neumann BCs on non-contact zones of the radial surface of the sphere
+bc_zero_traction_x = dde.OperatorBC(geom, apply_zero_neumann_x_mixed_formulation, boundary_not_contact)
+bc_zero_traction_y = dde.OperatorBC(geom, apply_zero_neumann_y_mixed_formulation, boundary_not_contact)
+bc_zero_traction_z = dde.OperatorBC(geom, apply_zero_neumann_z_mixed_formulation, boundary_not_contact)
+# Neumann BCs (sliding) on cut sections of the sphere
+bc_sliding_x = dde.OperatorBC(geom, apply_zero_neumann_x_mixed_formulation, boundary_cut_x)
+bc_sliding_z = dde.OperatorBC(geom, apply_zero_neumann_z_mixed_formulation, boundary_cut_z)
+# Contact BCs
+# Zero tangential tractions in contact area
+bc_zero_tangential_traction_eta = dde.OperatorBC(geom, zero_tangential_traction_component1_3d, boundary_contact)
+bc_zero_tangential_traction_xi  = dde.OperatorBC(geom, zero_tangential_traction_component2_3d, boundary_contact)
 # KKT using fisher_burmeister
-bc8 = dde.OperatorBC(geom, zero_complementarity_function_based_fisher_burmeister_3d, boundary_contact)
+bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_complementarity_function_based_fisher_burmeister_3d, boundary_contact)
+bcs = [bc_zero_traction_x, bc_zero_traction_y, bc_zero_traction_z,
+       bc_sliding_x, bc_sliding_z,
+       bc_zero_tangential_traction_eta, bc_zero_tangential_traction_xi,
+       bc_zero_fischer_burmeister]
 
-# bc7 = dde.DirichletBC(geom, lambda _: 0, bottom_point, component=1)
-
+# Setup the data object
 n_dummy = 1
 data = dde.data.PDE(
     geom,
     pde_mixed_3d,
-    [bc1, bc2, bc3, bc4, bc5, bc6, bc7, bc8],
+    bcs,
     num_domain=n_dummy,
     num_boundary=n_dummy,
     num_test=n_dummy,
@@ -132,48 +136,68 @@ def output_transform(x, y):
                       sigma_xz*sigma_xz_surfaces
                       ], axis=1)
 
-# 3 inputs, 9 outputs for 3D 
-layer_size = [3] + [50] * 5 + [9]
+## Define the neural network
+layer_size = [3] + [50] * 5 + [9] # 3 inputs: x, y and z, 5 hidden layers with 50 neurons each, 9 outputs: ux, uy, uz, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz and sigma_xz
 activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
 
-model = dde.Model(data, net)
-# weights due to PDE
+## Adjust weights in the loss function
+# Weights due to PDE
 w_momentum_xx, w_momentum_yy, w_momentum_zz = 1e0, 1e0, 1e0
-# weights due to stress-stress coupling
+# Weights due to stress-stress coupling
 w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz = 1e0, 1e0, 1e0, 1e0, 1e0, 1e0
-# weights due to Neumann BCs
+# Weights due to Neumann BCs
 w_zero_traction_x, w_zero_traction_y, w_zero_traction_z = 1e0, 1e0, 1e0
 w_sliding_x, w_sliding_z = 1e0, 1e0
-# weights due to Contact BCs
+# Weights due to Contact BCs
 w_zero_tangential_traction_component1 = 1e0
 w_zero_tangential_traction_component2 = 1e0
 w_zero_fisher_burmeister = 5e2
-# single dirichlet
-# w_dirichlet = 1e0
 
 loss_weights = [w_momentum_xx, w_momentum_yy, w_momentum_zz, 
                 w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz, w_sliding_x, w_sliding_z, 
                 w_zero_traction_x, w_zero_traction_y, w_zero_traction_z,
                 w_zero_tangential_traction_component1, w_zero_tangential_traction_component2, w_zero_fisher_burmeister]
 
-model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian/hertzian_3d"
-restore_model = False
+## Train the model or use a pre-trained model
+model = dde.Model(data, net)
+model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian/hertzian_sphere_3d"
+simulation_case = f"eigth_sphere_linear"
+adam_iterations = 2000
 
-if not restore_model:
+if not restore_pretrained_model:
+    start_time_train = time.time()
+
     model.compile("adam", lr=0.001, loss_weights=loss_weights)
-    losshistory, train_state = model.train(iterations=2000, display_every=100)
-    # losshistory, train_state = model.train(epochs=2000, display_every=200, model_save_path=model_path) # use if you want to save the model
+    end_time_adam_compile = time.time()
+    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
+    end_time_adam_train = time.time()
 
     # dde.optimizers.config.set_LBFGS_options(maxiter=1000)
     model.compile("L-BFGS", loss_weights=loss_weights)
-    losshistory, train_state = model.train(display_every=200)
-    # losshistory, train_state = model.train(display_every=200, model_save_path=model_path) # same as above
+    end_time_LBFGS_compile = time.time()
+    losshistory, train_state = model.train(display_every=200, model_save_path=f"{model_path}/{simulation_case}")
+
+    end_time_train = time.time()
+    time_train = f"Total compilation and training time: {(end_time_train - start_time_train):.3f} seconds"
+    print(time_train)
+
+    # Retrieve the total number of iterations at the end of training
+    n_iterations = train_state.step
+
+    dde.saveplot(
+        losshistory, train_state, issave=True, isplot=False, output_dir=model_path, 
+        loss_fname=f"{simulation_case}-{n_iterations}_loss.dat", 
+        train_fname=f"{simulation_case}-{n_iterations}_train.dat", 
+        test_fname=f"{simulation_case}-{n_iterations}_test.dat"
+    )
+
 else:
-    n_epochs = 15302 
-    model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
+    n_iterations = 15302
+    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
+    model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path)
@@ -186,4 +210,14 @@ solutionFieldOnMeshToVtk3D(geom,
                            model, 
                            save_folder_path=str(Path(__file__).parent.parent.parent.parent), 
                            file_name="3D_hertzian_contact_eighth_sphere", 
-                           polar_transformation="cylindrical")
+                           polar_transformation="spherical")
+
+# Print times to output file
+if not restore_pretrained_model:
+    with open(f"{model_path}/{simulation_case}-{n_iterations}_times.txt", "w") as text_file:
+        print(f"Compilation and training times in [s]", file=text_file)
+        print(f"Adam compilation:    {(end_time_adam_compile - start_time_train):6.3f}", file=text_file)
+        print(f"Adam training:       {(end_time_adam_train - end_time_adam_compile):6.3f}", file=text_file)
+        print(f"L-BFGS compilation:  {(end_time_LBFGS_compile - end_time_adam_train):6.3f}", file=text_file)
+        print(f"L-BFGS training:     {(end_time_train - end_time_LBFGS_compile):6.3f}", file=text_file)
+        print(f"Total:               {(end_time_train - start_time_train):6.3f}", file=text_file)
