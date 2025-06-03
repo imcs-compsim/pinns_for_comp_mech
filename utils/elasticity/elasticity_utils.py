@@ -1,6 +1,7 @@
 import deepxde as dde
 from utils.geometry.geometry_utils import calculate_boundary_normals, calculate_boundary_normals_3D
 import deepxde.backend as bkd
+import tensorflow as tf
 
 # global variables
 lame = 1
@@ -764,3 +765,173 @@ def apply_zero_neumann_z_mixed_formulation(x, y, X):
     Tx, Ty, Tz, Tn, Tt_1, Tt_2 = get_tractions_mixed_3d(x, y, X)
 
     return Tz
+
+#################################################################################################################################################################################
+# Equations for nonlinear 3D elasticity
+#################################################################################################################################################################################
+
+def get_green_lagrange_strain_3d(x,y):
+    '''
+    Calculates the strain tensor components in 3D.
+
+    Parameters
+    ----------
+    x : Placeholder (tensor)
+        contains the placeholder for coordinates of input points
+    y : Placeholder (tensor)
+        contains the placeholder for network output
+
+    Returns 
+    -------
+    eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz: tensor
+        contains the components of strain tensor in 3D
+    '''
+    # Derivatives
+    dudx = dde.grad.jacobian(y, x, i=0, j=0)
+    dudy = dde.grad.jacobian(y, x, i=0, j=1)
+    dudz = dde.grad.jacobian(y, x, i=0, j=2)
+    dvdx = dde.grad.jacobian(y, x, i=1, j=0)
+    dvdy = dde.grad.jacobian(y, x, i=1, j=1)
+    dvdz = dde.grad.jacobian(y, x, i=1, j=2)
+    dwdx = dde.grad.jacobian(y, x, i=2, j=0)
+    dwdy = dde.grad.jacobian(y, x, i=2, j=1)
+    dwdz = dde.grad.jacobian(y, x, i=2, j=2)
+
+    # Normal strains
+    eps_xx = dudx + 1/2 * (dudx*dudx + dvdx*dvdx + dwdx*dwdx)
+    eps_yy = dvdy + 1/2 * (dudy*dudy + dvdy*dvdy + dwdy*dwdy)
+    eps_zz = dwdz + 1/2 * (dudz*dudz + dvdz*dvdz + dwdz*dwdz)
+    
+    # Shear strains
+    eps_xy = 1/2 * (dvdx + dudy + (dudx * dudy + dvdx * dvdy + dwdx * dwdy))
+    eps_yz = 1/2 * (dwdy + dvdz + (dudy * dudz + dvdy * dvdz + dwdy * dwdz))
+    eps_xz = 1/2 * (dudz + dwdx + (dudz * dudx + dvdz * dvdx + dwdz * dwdx))
+
+    return eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz 
+
+def get_neo_hookean_stress_tensor(x,y):
+    '''
+    Calculates the stress tensor components in 3D according to the neo-hookean material law.
+
+    Parameters
+    ----------
+    x : Placeholder (tensor)
+        contains the placeholder for coordinates of input points
+    y : Placeholder (tensor)
+        contains the placeholder for network output
+
+    Returns 
+    -------
+    sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz: tensor
+        contains the components of stress tensor in 3D
+    '''
+    eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz = get_green_lagrange_strain_3d(x,y)
+
+    nu,lame,shear,e_modul = problem_parameters()
+    
+    # preparations
+    c_xx = 2 * eps_xx + 1
+    c_yy = 2 * eps_yy + 1
+    c_zz = 2 * eps_zz + 1
+    c_xy = 2 * eps_xy
+    c_yz = 2 * eps_yz
+    c_xz = 2 * eps_xz
+
+    det_c = c_xx * c_yy * c_zz + 2 * c_xy * c_yz * c_xz - c_xx * c_yz ** 2 - c_yy * c_xz ** 2 - c_zz * c_xy ** 2
+
+    c_adj_xx = c_yy * c_zz - c_yz ** 2
+    c_adj_yy = c_xx * c_zz - c_xz ** 2
+    c_adj_zz = c_xx * c_yy - c_xy ** 2
+    c_adj_xy = c_xz * c_yz - c_xy * c_zz
+    c_adj_yz = c_xy * c_xz - c_yz * c_xx
+    c_adj_xz = c_xy * c_yz - c_xz * c_yy
+
+    # stresses
+    sigma_xx = shear + (lame * tf.math.log(tf.math.sqrt(det_c)) - shear) / det_c * c_adj_xx
+    sigma_yy = shear + (lame * tf.math.log(tf.math.sqrt(det_c)) - shear) / det_c * c_adj_yy
+    sigma_zz = shear + (lame * tf.math.log(tf.math.sqrt(det_c)) - shear) / det_c * c_adj_zz
+    sigma_xy = (lame * tf.math.log(tf.math.sqrt(det_c)) - shear) / det_c * c_adj_xy
+    sigma_yz = (lame * tf.math.log(tf.math.sqrt(det_c)) - shear) / det_c * c_adj_yz
+    sigma_xz = (lame * tf.math.log(tf.math.sqrt(det_c)) - shear) / det_c * c_adj_xz
+
+    return sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz
+
+def get_nonlinear_stress_coupling(x,y):
+    '''
+    Calculates the difference between predicted stresses and calculated stresses based on linear isotropic material law and predicted displacements in 3D.
+
+    Parameters
+    ----------
+    x : Placeholder (tensor)
+        contains the placeholder for coordinates of input points
+    y : Placeholder (tensor)
+        contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz
+
+    Returns
+    -------
+    term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor
+        difference between predicted stresses and calculated stresses in 3D
+    '''
+    
+    sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz = get_neo_hookean_stress_tensor(x,y)
+    
+    term_xx = sigma_xx - y[:, 3:4]
+    term_yy = sigma_yy - y[:, 4:5]
+    term_zz = sigma_zz - y[:, 5:6]
+    term_xy = sigma_xy - y[:, 6:7]
+    term_yz = sigma_yz - y[:, 7:8]
+    term_xz = sigma_xz - y[:, 8:9]
+    
+    return term_xx, term_yy, term_zz, term_xy, term_yz, term_xz
+
+def pde_nonlinear_mixed_3d(x, y):
+    '''
+    Calculates the momentum equation using predicted stresses and generates the terms for PDE of the mixed-variable formulation in 3D.
+
+    Parameters
+    ----------
+    x : Placeholder (tensor)
+        contains the placeholder for coordinates of input points
+    y : Placeholder (tensor)
+        contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz
+
+    Returns
+    -------
+    momentum_x, momentum_y, momentum_z, term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor
+        momentum_x, momentum_y, momentum_z: momentum terms based on derivatives of predicted stresses
+        term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: difference between predicted stresses and calculated stresses in X, Y, Z, XY, YZ, and XZ directions
+    '''
+    # Stress derivatives
+    sigma_xx_x = dde.grad.jacobian(y, x, i=3, j=0)
+    #sigma_xx_y = dde.grad.jacobian(y, x, i=3, j=1)
+    #sigma_xx_z = dde.grad.jacobian(y, x, i=3, j=2)
+    
+    #sigma_yy_x = dde.grad.jacobian(y, x, i=4, j=0)
+    sigma_yy_y = dde.grad.jacobian(y, x, i=4, j=1)
+    #sigma_yy_z = dde.grad.jacobian(y, x, i=4, j=2)
+    
+    #sigma_zz_x = dde.grad.jacobian(y, x, i=5, j=0)
+    #sigma_zz_y = dde.grad.jacobian(y, x, i=5, j=1)
+    sigma_zz_z = dde.grad.jacobian(y, x, i=5, j=2)
+    
+    sigma_xy_x = dde.grad.jacobian(y, x, i=6, j=0)
+    sigma_xy_y = dde.grad.jacobian(y, x, i=6, j=1)
+    #sigma_xy_z = dde.grad.jacobian(y, x, i=6, j=2)
+    
+    #sigma_yz_x = dde.grad.jacobian(y, x, i=7, j=0)
+    sigma_yz_y = dde.grad.jacobian(y, x, i=7, j=1)
+    sigma_yz_z = dde.grad.jacobian(y, x, i=7, j=2)
+    
+    sigma_xz_x = dde.grad.jacobian(y, x, i=8, j=0)
+    #sigma_xz_y = dde.grad.jacobian(y, x, i=8, j=1)
+    sigma_xz_z = dde.grad.jacobian(y, x, i=8, j=2)
+    
+    # Momentum equations
+    momentum_x = sigma_xx_x + sigma_xy_y + sigma_xz_z
+    momentum_y = sigma_yy_y + sigma_xy_x + sigma_yz_z
+    momentum_z = sigma_zz_z + sigma_xz_x + sigma_yz_y
+
+    # Material law
+    term_xx, term_yy, term_zz, term_xy, term_yz, term_xz = get_nonlinear_stress_coupling(x, y)
+
+    return [momentum_x, momentum_y, momentum_z, term_xx, term_yy, term_zz, term_xy, term_yz, term_xz]
