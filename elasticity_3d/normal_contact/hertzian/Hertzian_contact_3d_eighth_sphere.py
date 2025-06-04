@@ -21,7 +21,7 @@ from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = True
+restore_pretrained_model = False
 
 ## Create geometry
 # Dimensions of sphere
@@ -224,7 +224,7 @@ fem_results.point_data["displacement_prediction"] = prediction_displacement
 fem_results.point_data["prediction_stress"] = prediction_stress
 fem_results.point_data["error_displacement"] = error_displacement
 fem_results.point_data["error_stress"] = error_stress
-fem_results.save("3D_hertzian_contact_eighth_sphere_predictions.vtu", binary=True)
+fem_results.save(str(Path(__file__).parent.parent.parent.parent)+f"3D_hertzian_contact_eighth_sphere_predictions.vtu", binary=True)
 
 #########################################################################################################################################
 #### POST-PROCESSING #####
