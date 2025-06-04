@@ -4,6 +4,7 @@
 # Import required libraries
 import deepxde as dde
 import numpy as np
+import pyvista as pv
 from deepxde import backend as bkd
 from pathlib import Path
 import time
@@ -20,7 +21,7 @@ from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = False
+restore_pretrained_model = True
 
 ## Create geometry
 # Dimensions of sphere
@@ -58,10 +59,10 @@ pressure = -0.5
 b_limit = Eighth_sphere.computeblimit()
 # Spherical boundary which is not in contact
 def boundary_not_contact(x, on_boundary):
-    return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (np.linalg.norm(x[0:3:2]-[center[0],center[2]], axis=-1)>b_limit)
+    return on_boundary & np.isclose(np.linalg.norm(x - center, axis=-1), radius) & (np.linalg.norm(x-[center[0],center[1]-radius,center[2]], axis=-1)>b_limit)
 # Spherical boundary which is in contact
 def boundary_contact(x, on_boundary):
-    return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (np.linalg.norm(x[0:3:2]-[center[0],center[2]], axis=-1)<=b_limit)
+    return on_boundary & np.isclose(np.linalg.norm(x - center, axis=-1), radius) & (np.linalg.norm(x-[center[0],center[1]-radius,center[2]], axis=-1)<=b_limit)
 # Cut surface with normal along x-axis
 def boundary_cut_x(x, on_boundary):
     return on_boundary and np.isclose(x[0],center[0])
@@ -197,22 +198,37 @@ if not restore_pretrained_model:
     )
 
 else:
-    n_iterations = 9249
+    n_iterations = 15281
     model_restore_path = f"{model_path}/{simulation_case}-{n_iterations}.ckpt"
     model_loss_path = f"{model_path}/{simulation_case}-{n_iterations}_loss.dat"
     
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path)
-    
+
+# # Compare with results from 4C
+# # Predict solution at FEM nodes
+# fem_results = pv.read(str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian/hertzian_sphere_3d/fem_results_eighth_sphere_nonlinear.vtu")
+# prediction_points = fem_results.points
+# start_time_predict = time.time()
+# prediction_results = model.predict(prediction_points)
+# end_time_predict = time.time()
+
+# # Compute differences
+# prediction_displacement = prediction_results[:,0:3]
+# error_displacement = prediction_displacement - fem_results.point_data["displacement"]
+# prediction_stress = prediction_results[:,3:9]
+# error_stress = prediction_stress - fem_results.point_data["nodal_cauchy_stresses_xyz"]
+
+# # Save and return them in vtu file
+# fem_results.point_data["displacement_prediction"] = prediction_displacement
+# fem_results.point_data["prediction_stress"] = prediction_stress
+# fem_results.point_data["error_displacement"] = error_displacement
+# fem_results.point_data["error_stress"] = error_stress
+# fem_results.save("3D_hertzian_contact_eighth_sphere_nonlinear_predictions.vtu", binary=True)
+
 #########################################################################################################################################
 #### POST-PROCESSING #####
 #########################################################################################################################################
-
-solutionFieldOnMeshToVtk3D(geom, 
-                           model, 
-                           save_folder_path=str(Path(__file__).parent.parent.parent.parent), 
-                           file_name="3D_hertzian_contact_eighth_sphere_nonlinear",
-                           polar_transformation="spherical")
 
 # Print times to output file
 if not restore_pretrained_model:
@@ -224,3 +240,10 @@ if not restore_pretrained_model:
         print(f"L-BFGS compilation:  {(end_time_LBFGS_compile - end_time_adam_train):6.3f}", file=text_file)
         print(f"L-BFGS training:     {(end_time_train - end_time_LBFGS_compile):6.3f}", file=text_file)
         print(f"Total:               {(end_time_train - start_time_train):6.3f}", file=text_file)
+        # print(f"Prediction:          {(end_time_predict - start_time_predict):6.3f}", file=text_file)
+
+solutionFieldOnMeshToVtk3D(geom, 
+                           model, 
+                           save_folder_path=str(Path(__file__).parent.parent.parent.parent), 
+                           file_name="3D_hertzian_contact_eighth_sphere_nonlinear",
+                           polar_transformation="spherical")
