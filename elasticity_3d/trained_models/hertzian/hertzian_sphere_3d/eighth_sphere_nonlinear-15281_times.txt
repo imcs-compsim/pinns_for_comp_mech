@@ -1,0 +1,7 @@
+Compilation and training times in [s]
+Meshing took:         0.974
+Adam compilation:    88.553
+Adam training:       612.170
+L-BFGS compilation:  87.452
+L-BFGS training:     4608.607
+Total:               5396.781
