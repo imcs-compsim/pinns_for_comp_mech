@@ -65,10 +65,10 @@ def boundary_contact(x, on_boundary):
     return on_boundary & np.isclose(np.linalg.norm(x - center, axis=-1), radius) & (np.linalg.norm(x-[center[0],center[1]-radius,center[2]], axis=-1)<=b_limit)
 # Cut surface with normal along x-axis
 def boundary_cut_x(x, on_boundary):
-    return on_boundary and np.isclose(x[:,0],center[0])
+    return on_boundary & np.isclose(x[0],center[0])
 # Cut surface with normal along z-axis
 def boundary_cut_z(x, on_boundary):
-    return on_boundary and np.isclose(x[:,2],center[2])
+    return on_boundary & np.isclose(x[2],center[2])
 
 ## Apply BCs
 # Neumann BCs on non-contact zones of the radial surface of the sphere
