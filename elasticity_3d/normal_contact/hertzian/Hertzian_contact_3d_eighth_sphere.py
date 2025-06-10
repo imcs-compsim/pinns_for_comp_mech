@@ -69,6 +69,9 @@ def boundary_cut_x(x, on_boundary):
 # Cut surface with normal along z-axis
 def boundary_cut_z(x, on_boundary):
     return on_boundary & np.isclose(x[2],center[2])
+# Initial contact point
+def boundary_initial_contact(x, on_boundary):
+    return on_boundary & np.isclose(x[0],center[0]) & np.isclose(x[1],center[1]-radius) & np.isclose(x[2],center[2])
 
 ## Apply BCs
 # Neumann BCs on non-contact zones of the radial surface of the sphere
@@ -84,10 +87,13 @@ bc_zero_tangential_traction_eta = dde.OperatorBC(geom, zero_tangential_traction_
 bc_zero_tangential_traction_xi  = dde.OperatorBC(geom, zero_tangential_traction_component2_3d, boundary_contact)
 # KKT using fisher_burmeister
 bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_complementarity_function_based_fisher_burmeister_3d, boundary_contact)
+# Dirichlet BCs for initial contact point
+bc_initial_contact = dde.DirichletBC(geom, lambda _: 0, boundary_initial_contact, component=1)
 bcs = [bc_zero_traction_x, bc_zero_traction_y, bc_zero_traction_z,
        bc_sliding_x, bc_sliding_z,
        bc_zero_tangential_traction_eta, bc_zero_tangential_traction_xi,
-       bc_zero_fischer_burmeister]
+       bc_zero_fischer_burmeister,
+       bc_initial_contact]
 
 # Setup the data object
 n_dummy = 1
@@ -158,11 +164,14 @@ w_sliding_x, w_sliding_z = 1e0, 1e0
 w_zero_tangential_traction_component1 = 1e0
 w_zero_tangential_traction_component2 = 1e0
 w_zero_fisher_burmeister = 5e2
+# Weight due to Dirichlet BC for initial contact point
+w_dbc_initial_point = 1e0
 
 loss_weights = [w_momentum_xx, w_momentum_yy, w_momentum_zz, 
                 w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz, w_sliding_x, w_sliding_z, 
                 w_zero_traction_x, w_zero_traction_y, w_zero_traction_z,
-                w_zero_tangential_traction_component1, w_zero_tangential_traction_component2, w_zero_fisher_burmeister]
+                w_zero_tangential_traction_component1, w_zero_tangential_traction_component2, w_zero_fisher_burmeister,
+                w_dbc_initial_point]
 
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
@@ -224,7 +233,7 @@ fem_results.point_data["displacement_prediction"] = prediction_displacement
 fem_results.point_data["prediction_stress"] = prediction_stress
 fem_results.point_data["error_displacement"] = error_displacement
 fem_results.point_data["error_stress"] = error_stress
-fem_results.save(str(Path(__file__).parent.parent.parent.parent)+f"3D_hertzian_contact_eighth_sphere_predictions.vtu", binary=True)
+fem_results.save(str(Path(__file__).parent.parent.parent.parent)+f"/3D_hertzian_contact_eighth_sphere_predictions.vtu", binary=True)
 
 #########################################################################################################################################
 #### POST-PROCESSING #####
