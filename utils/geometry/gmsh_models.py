@@ -909,8 +909,12 @@ class Eighth_sphere_hertzian(object):
         
         arc_length = self.computeblimit()
         gmsh.initialize()
-        gmsh_sphere = gmsh.model.occ.addSphere(xc=self.center[0], yc=self.center[1], zc=self.center[2], radius=self.radius, angle1=0, angle2=np.pi/2, angle3=np.pi/2)
-        gmsh.model.occ.rotate(dimTags=[(3, gmsh_sphere)], x=self.center[0], y=self.center[1], z=self.center[2], ax=0, ay=0, az=1, angle=np.pi)
+        # Eighth sphere
+        # gmsh_sphere = gmsh.model.occ.addSphere(xc=self.center[0], yc=self.center[1], zc=self.center[2], radius=self.radius, angle1=0, angle2=np.pi/2, angle3=np.pi/2)
+        # gmsh.model.occ.rotate(dimTags=[(3, gmsh_sphere)], x=self.center[0], y=self.center[1], z=self.center[2], ax=0, ay=0, az=1, angle=np.pi)
+        # Half sphere
+        gmsh_sphere = gmsh.model.occ.addSphere(xc=self.center[0], yc=self.center[1], zc=self.center[2], radius=self.radius, angle1=0, angle2=np.pi/2, angle3=2*np.pi)
+        gmsh.model.occ.rotate(dimTags=[(3, gmsh_sphere)], x=self.center[0], y=self.center[1], z=self.center[2], ax=1, ay=0, az=0, angle=np.pi/2)
         gmsh.model.occ.synchronize()
         eps=1E-6
         p_contact_anticipated = [self.center[0],self.center[1]-self.radius,self.center[2]]
@@ -933,7 +937,39 @@ class Eighth_sphere_hertzian(object):
         gmsh.model.mesh.field.setNumbers(field_min, "FieldsList", [field_threshold])
         gmsh.model.mesh.field.setAsBackgroundMesh(field_min)
         gmsh.model.mesh.generate(3)
+        gmsh.model.mesh.setOutwardOrientation(gmsh_sphere)
+        # import matplotlib.pyplot as plt
+        # tol = 1e-6
+        # curved_surf_tag = None
+        # all_coords_flat = np.empty(0)
+        # all_normals_flat = np.empty(0)
+        # for dim, sTag in gmsh.model.getEntities(dim=2):
+        #     nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(2, sTag)
+        #     coords = np.array(nodeCoords).reshape(-1, 3)  # shape = (N, 3)
+        #     all_coords_flat = np.append(all_coords_flat, coords)
+        #     uv_flat = gmsh.model.getParametrization(2, sTag, coords.flatten().tolist())
+        #     normals_flat = gmsh.model.getNormal(sTag, uv_flat)
+        #     normals = np.array(normals_flat).reshape(-1,3)
+        #     all_normals_flat = np.append(all_normals_flat, normals)
 
+        # all_coords = np.array(all_coords_flat).reshape(-1,3)
+        # all_normals = np.array(all_normals_flat).reshape(-1,3)
+
+        # fig = plt.figure(figsize=(7,7))
+        # ax  = fig.add_subplot(111, projection='3d')
+        # ax.scatter(all_coords[:,0], all_coords[:,1], all_coords[:,2],
+        #         color='blue', s=12, label='Surface nodes')
+
+        # scale = 0.1  # shrink arrows to 10% length for visibility
+        # ax.quiver(
+        #     all_coords[:,0], all_coords[:,1], all_coords[:,2],
+        #     all_normals[:,0]*scale, all_normals[:,1]*scale, all_normals[:,2]*scale,
+        #     length=1.0, normalize=False,
+        #     color='red', linewidth=0.6, label='Gmsh normals'
+        # )
+        # ax.set_box_aspect([1,1,1])
+
+        # plt.show()
         if visualize_mesh:
             if '-nopopup' not in sys.argv:
                 gmsh.fltk.run()
