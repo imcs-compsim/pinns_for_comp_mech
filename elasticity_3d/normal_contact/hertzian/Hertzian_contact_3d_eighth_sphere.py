@@ -32,7 +32,7 @@ angle_deg = 15 # Angle of refinement area
 refine_times = 5 # Refinement multiplicator in refinement area
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 start_time_meshing = time.time()
-Eighth_sphere = Eighth_sphere_hertzian(radius=radius, center=center, mesh_size=0.1, angle=angle_deg, refine_times=refine_times, gmsh_options=gmsh_options)
+Eighth_sphere = Eighth_sphere_hertzian(radius=radius, center=center, mesh_size=0.05, angle=angle_deg, refine_times=refine_times, gmsh_options=gmsh_options)
 gmsh_model = Eighth_sphere.generateGmshModel(visualize_mesh=True)
 end_time_meshing = time.time()
 geom = GmshGeometry3D(gmsh_model)
@@ -63,12 +63,12 @@ def boundary_not_contact(x, on_boundary):
 # Spherical boundary which is in contact
 def boundary_contact(x, on_boundary):
     return on_boundary & np.isclose(np.linalg.norm(x - center, axis=-1), radius) & (np.linalg.norm(x-[center[0],center[1]-radius,center[2]], axis=-1)<=b_limit)
-# Cut surface with normal along x-axis
-def boundary_cut_x(x, on_boundary):
-    return on_boundary & np.isclose(x[0],center[0])
-# Cut surface with normal along z-axis
-def boundary_cut_z(x, on_boundary):
-    return on_boundary & np.isclose(x[2],center[2])
+# # Cut surface with normal along x-axis
+# def boundary_cut_x(x, on_boundary):
+#     return on_boundary & np.isclose(x[0],center[0])
+# # Cut surface with normal along z-axis
+# def boundary_cut_z(x, on_boundary):
+#     return on_boundary & np.isclose(x[2],center[2])
 
 ## Apply BCs
 # Neumann BCs on non-contact zones of the radial surface of the sphere
@@ -76,8 +76,8 @@ bc_zero_traction_x = dde.OperatorBC(geom, apply_zero_neumann_x_mixed_formulation
 bc_zero_traction_y = dde.OperatorBC(geom, apply_zero_neumann_y_mixed_formulation, boundary_not_contact)
 bc_zero_traction_z = dde.OperatorBC(geom, apply_zero_neumann_z_mixed_formulation, boundary_not_contact)
 # Neumann BCs (sliding) on cut sections of the sphere
-bc_sliding_x = dde.OperatorBC(geom, apply_zero_neumann_x_mixed_formulation, boundary_cut_x)
-bc_sliding_z = dde.OperatorBC(geom, apply_zero_neumann_z_mixed_formulation, boundary_cut_z)
+# bc_sliding_x = dde.OperatorBC(geom, apply_zero_neumann_x_mixed_formulation, boundary_cut_x)
+# bc_sliding_z = dde.OperatorBC(geom, apply_zero_neumann_z_mixed_formulation, boundary_cut_z)
 # Contact BCs
 # Zero tangential tractions in contact area
 bc_zero_tangential_traction_eta = dde.OperatorBC(geom, zero_tangential_traction_component1_3d, boundary_contact)
@@ -85,7 +85,7 @@ bc_zero_tangential_traction_xi  = dde.OperatorBC(geom, zero_tangential_traction_
 # KKT using fisher_burmeister
 bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_complementarity_function_based_fisher_burmeister_3d, boundary_contact)
 bcs = [bc_zero_traction_x, bc_zero_traction_y, bc_zero_traction_z,
-       bc_sliding_x, bc_sliding_z,
+    #    bc_sliding_x, bc_sliding_z,
        bc_zero_tangential_traction_eta, bc_zero_tangential_traction_xi,
        bc_zero_fischer_burmeister]
 
@@ -97,7 +97,7 @@ data = dde.data.PDE(
     bcs,
     num_domain=n_dummy,
     num_boundary=n_dummy,
-    num_test=n_dummy,
+    num_test=None,
     train_distribution = "Sobol"
 )
 
@@ -119,25 +119,24 @@ def output_transform(x, y):
     
     # define surfaces
     top_surface = -y_loc
-    front_surface = -z_loc
-    back_surface = radius + z_loc
-    right_surface = -x_loc
+    cut_x_surface = -x_loc
+    cut_z_surface = z_loc
     
     # define the surfaces where shear forces will be applied.
-    sigma_xy_surfaces = top_surface*right_surface
-    sigma_yz_surfaces = top_surface*front_surface*back_surface
-    sigma_xz_surfaces = front_surface*back_surface*right_surface
+    sigma_xy_surfaces = cut_x_surface*cut_z_surface
+    sigma_yz_surfaces = cut_x_surface*cut_z_surface
+    sigma_xz_surfaces = cut_x_surface*cut_z_surface
     
-    return bkd.concat([u*(right_surface)/e_modul, #displacement in x direction is 0 at x=0
-                      v/e_modul,
-                      w*(back_surface)*(front_surface)/e_modul, #displacement in z direction is 0 at z=0
-                      sigma_xx, 
-                      pressure + sigma_yy*(top_surface),
-                      sigma_zz,
-                      sigma_xy*sigma_xy_surfaces,
-                      sigma_yz*sigma_yz_surfaces,
-                      sigma_xz*sigma_xz_surfaces
-                      ], axis=1)
+    return bkd.concat([u/e_modul*cut_x_surface, #displacement in x direction is 0 at x=0
+                       v/e_modul,
+                       w/e_modul*cut_z_surface, #displacement in z direction is 0 at z=0
+                       sigma_xx, 
+                       pressure + sigma_yy*(top_surface),
+                       sigma_zz,
+                       sigma_xy*sigma_xy_surfaces,
+                       sigma_yz*sigma_yz_surfaces,
+                       sigma_xz*sigma_xz_surfaces
+                       ], axis=1)
 
 ## Define the neural network
 layer_size = [3] + [50] * 5 + [9] # 3 inputs: x, y and z, 5 hidden layers with 50 neurons each, 9 outputs: ux, uy, uz, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz and sigma_xz
@@ -153,14 +152,14 @@ w_momentum_xx, w_momentum_yy, w_momentum_zz = 1e0, 1e0, 1e0
 w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz = 1e0, 1e0, 1e0, 1e0, 1e0, 1e0
 # Weights due to Neumann BCs
 w_zero_traction_x, w_zero_traction_y, w_zero_traction_z = 1e0, 1e0, 1e0
-w_sliding_x, w_sliding_z = 1e0, 1e0
+# w_sliding_x, w_sliding_z = 1e0, 1e0
 # Weights due to Contact BCs
 w_zero_tangential_traction_component1 = 1e0
 w_zero_tangential_traction_component2 = 1e0
 w_zero_fisher_burmeister = 5e2
 
 loss_weights = [w_momentum_xx, w_momentum_yy, w_momentum_zz, 
-                w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz, w_sliding_x, w_sliding_z, 
+                w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz,# w_sliding_x, w_sliding_z, 
                 w_zero_traction_x, w_zero_traction_y, w_zero_traction_z,
                 w_zero_tangential_traction_component1, w_zero_tangential_traction_component2, w_zero_fisher_burmeister]
 

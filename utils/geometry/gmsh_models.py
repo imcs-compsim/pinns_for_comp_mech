@@ -910,11 +910,11 @@ class Eighth_sphere_hertzian(object):
         arc_length = self.computeblimit()
         gmsh.initialize()
         # Eighth sphere
-        # gmsh_sphere = gmsh.model.occ.addSphere(xc=self.center[0], yc=self.center[1], zc=self.center[2], radius=self.radius, angle1=0, angle2=np.pi/2, angle3=np.pi/2)
-        # gmsh.model.occ.rotate(dimTags=[(3, gmsh_sphere)], x=self.center[0], y=self.center[1], z=self.center[2], ax=0, ay=0, az=1, angle=np.pi)
+        gmsh_sphere = gmsh.model.occ.addSphere(xc=self.center[0], yc=self.center[1], zc=self.center[2], radius=self.radius, angle1=0, angle2=np.pi/2, angle3=np.pi/2)
+        gmsh.model.occ.rotate(dimTags=[(3, gmsh_sphere)], x=self.center[0], y=self.center[1], z=self.center[2], ax=0, ay=0, az=1, angle=np.pi)
         # Half sphere
-        gmsh_sphere = gmsh.model.occ.addSphere(xc=self.center[0], yc=self.center[1], zc=self.center[2], radius=self.radius, angle1=0, angle2=np.pi/2, angle3=2*np.pi)
-        gmsh.model.occ.rotate(dimTags=[(3, gmsh_sphere)], x=self.center[0], y=self.center[1], z=self.center[2], ax=1, ay=0, az=0, angle=np.pi/2)
+        # gmsh_sphere = gmsh.model.occ.addSphere(xc=self.center[0], yc=self.center[1], zc=self.center[2], radius=self.radius, angle1=0, angle2=np.pi/2, angle3=2*np.pi)
+        # gmsh.model.occ.rotate(dimTags=[(3, gmsh_sphere)], x=self.center[0], y=self.center[1], z=self.center[2], ax=1, ay=0, az=0, angle=np.pi/2)
         gmsh.model.occ.synchronize()
         eps=1E-6
         p_contact_anticipated = [self.center[0],self.center[1]-self.radius,self.center[2]]
