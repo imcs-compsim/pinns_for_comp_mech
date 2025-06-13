@@ -3,6 +3,7 @@
 ### based on the work of tsahin
 # Import required libraries
 import deepxde as dde
+dde.config.set_default_float("float64")
 import numpy as np
 import pyvista as pv
 from deepxde import backend as bkd
@@ -33,7 +34,7 @@ refine_times = 5 # Refinement multiplicator in refinement area
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 start_time_meshing = time.time()
 Eighth_sphere = Eighth_sphere_hertzian(radius=radius, center=center, mesh_size=0.05, angle=angle_deg, refine_times=refine_times, gmsh_options=gmsh_options)
-gmsh_model = Eighth_sphere.generateGmshModel(visualize_mesh=True)
+gmsh_model = Eighth_sphere.generateGmshModel(visualize_mesh=False)
 end_time_meshing = time.time()
 geom = GmshGeometry3D(gmsh_model)
 
@@ -118,20 +119,20 @@ def output_transform(x, y):
     z_loc = x[:, 2:3]
     
     # define surfaces
-    top_surface = -y_loc
     cut_x_surface = -x_loc
-    cut_z_surface = z_loc
+    top_surface   = -y_loc
+    cut_z_surface =  z_loc
     
     # define the surfaces where shear forces will be applied.
-    sigma_xy_surfaces = cut_x_surface*cut_z_surface
-    sigma_yz_surfaces = cut_x_surface*cut_z_surface
-    sigma_xz_surfaces = cut_x_surface*cut_z_surface
+    sigma_xy_surfaces = cut_x_surface * top_surface
+    sigma_yz_surfaces = top_surface   * cut_z_surface
+    sigma_xz_surfaces = cut_z_surface * cut_x_surface
     
     return bkd.concat([u/e_modul*cut_x_surface, #displacement in x direction is 0 at x=0
                        v/e_modul,
                        w/e_modul*cut_z_surface, #displacement in z direction is 0 at z=0
                        sigma_xx, 
-                       pressure + sigma_yy*(top_surface),
+                       pressure + sigma_yy*top_surface,
                        sigma_zz,
                        sigma_xy*sigma_xy_surfaces,
                        sigma_yz*sigma_yz_surfaces,
