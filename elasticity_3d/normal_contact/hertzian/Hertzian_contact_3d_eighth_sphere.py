@@ -7,6 +7,7 @@ dde.config.set_default_float("float64")
 import numpy as np
 import pyvista as pv
 from deepxde import backend as bkd
+import tensorflow as tf
 from pathlib import Path
 import time
 
@@ -139,6 +140,21 @@ def output_transform(x, y):
                        sigma_xz*sigma_xz_surfaces
                        ], axis=1)
 
+class BCWeightScheduler(dde.callbacks.Callback):
+    def __init__(self, schedule):
+        super().__init__()
+        self.schedule = sorted(schedule, key=lambda x: x[0])
+        self.activated = set()
+
+    def on_epoch_end(self):
+        epoch = self.model.train_state.epoch
+        sess = self.model.sess
+        for th, var, value in self.schedule:
+            if epoch >= th and var not in self.activated:
+                sess.run(tf.compat.v1.assign(var, value))
+                self.activated.add(var)
+                print(f"At epoch {epoch} {var.name} changed from 0 to {value}")
+
 ## Define the neural network
 layer_size = [3] + [50] * 5 + [9] # 3 inputs: x, y and z, 5 hidden layers with 50 neurons each, 9 outputs: ux, uy, uz, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz and sigma_xz
 activation = "tanh"
@@ -155,9 +171,12 @@ w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz = 1e0, 1e0, 1e0, 1e0, 1e0, 1e0
 w_zero_traction_x, w_zero_traction_y, w_zero_traction_z = 1e0, 1e0, 1e0
 # w_sliding_x, w_sliding_z = 1e0, 1e0
 # Weights due to Contact BCs
-w_zero_tangential_traction_component1 = 1e0
-w_zero_tangential_traction_component2 = 1e0
-w_zero_fisher_burmeister = 5e2
+w_zero_tangential_traction_component1 = tf.Variable(0.0, trainable=False, name="w_zero_tangential_traction_component1")
+w_zero_tangential_traction_component2 = tf.Variable(0.0, trainable=False, name="w_zero_tangential_traction_component2")
+w_zero_fisher_burmeister = tf.Variable(0.0, trainable=False, name="w_zero_fisher_burmeister")
+# w_zero_tangential_traction_component1 = 1e0
+# w_zero_tangential_traction_component2 = 1e0
+# w_zero_fisher_burmeister = 5e2
 
 loss_weights = [w_momentum_xx, w_momentum_yy, w_momentum_zz, 
                 w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz,# w_sliding_x, w_sliding_z, 
@@ -168,6 +187,7 @@ loss_weights = [w_momentum_xx, w_momentum_yy, w_momentum_zz,
 model = dde.Model(data, net)
 model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian/hertzian_sphere_3d"
 simulation_case = f"eighth_sphere_linear"
+initial_iterations = 500
 adam_iterations = 2000
 
 if not restore_pretrained_model:
@@ -175,7 +195,10 @@ if not restore_pretrained_model:
 
     model.compile("adam", lr=0.001, loss_weights=loss_weights)
     end_time_adam_compile = time.time()
-    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
+    scheduler = BCWeightScheduler([(initial_iterations, w_zero_tangential_traction_component1, 1e0),
+                                   (initial_iterations, w_zero_tangential_traction_component2, 1e0),
+                                   (initial_iterations, w_zero_fisher_burmeister, 5e2)])
+    losshistory, train_state = model.train(iterations=adam_iterations+initial_iterations, display_every=100, callbacks=[scheduler])
     end_time_adam_train = time.time()
 
     # dde.optimizers.config.set_LBFGS_options(maxiter=1000)
