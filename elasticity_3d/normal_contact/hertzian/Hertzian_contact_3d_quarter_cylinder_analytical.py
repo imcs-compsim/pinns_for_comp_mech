@@ -179,8 +179,8 @@ loss_weights = [w_momentum_xx, w_momentum_yy, w_momentum_zz,
                 w_zero_tangential_traction_component1, w_zero_tangential_traction_component2, w_zero_fisher_burmeister,
                 1,1,1]
 
-model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian/hertzian_3d_enhanced_analytical"
-restore_model = False
+model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian_enhanced/hertzian_3d_enhanced_analytical"
+restore_model = True
 
 if not restore_model:
     model.compile("adam", lr=0.001, loss_weights=loss_weights)
@@ -191,7 +191,7 @@ if not restore_model:
     losshistory, train_state = model.train(display_every=200)
     # losshistory, train_state = model.train(display_every=200, model_save_path=model_path) # same as above
 else:
-    n_epochs = 12973 
+    n_epochs = 15921 
     model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
     
     model.compile("adam", lr=0.001)
