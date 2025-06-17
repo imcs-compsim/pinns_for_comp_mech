@@ -4,9 +4,10 @@ from deepxde import backend as bkd
 from pathlib import Path
 import gmsh
 '''
-@author: tsahin
-
-Simple compression test for a 3D block, results seem identical to 2D.
+Quarter cylinder hertzian contact problem using a nonlinear complimentary problem (NCP) function
+Enhanced by results from analytical solution
+@author: svoelkl
+based on the work of tsahin
 '''
 
 from utils.geometry.custom_geometry import GmshGeometry3D
@@ -16,7 +17,6 @@ from utils.elasticity import elasticity_utils
 from utils.elasticity.elasticity_utils import pde_mixed_3d, problem_parameters
 from utils.elasticity.elasticity_utils import apply_zero_neumann_x_mixed_formulation, apply_zero_neumann_y_mixed_formulation, apply_zero_neumann_z_mixed_formulation
 from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
-from utils.geometry.geometry_utils import calculate_boundary_normals_3D
 
 from utils.contact_mech import contact_utils
 from utils.contact_mech.contact_utils import zero_tangential_traction_component1_3d, zero_tangential_traction_component2_3d, zero_complementarity_function_based_fisher_burmeister_3d
