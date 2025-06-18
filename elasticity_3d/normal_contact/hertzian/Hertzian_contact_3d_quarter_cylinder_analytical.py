@@ -6,8 +6,8 @@ import gmsh
 '''
 Quarter cylinder hertzian contact problem using a nonlinear complimentary problem (NCP) function
 Enhanced by results from analytical solution
-@author: svoelkl
-based on the work of tsahin
+@author: tsahin
+@clean, test: svoelkl
 '''
 
 from utils.geometry.custom_geometry import GmshGeometry3D
