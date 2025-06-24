@@ -21,7 +21,7 @@ from utils.contact_mech.contact_utils import zero_tangential_traction_component1
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = False
+restore_pretrained_model = True
 
 ## Create geometry
 # Get geometry from step file
@@ -246,7 +246,7 @@ if not restore_pretrained_model:
     )
 
 else:
-    n_iterations = 1544
+    n_iterations = 18402
     model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
     model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
