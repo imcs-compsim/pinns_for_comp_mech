@@ -1,4 +1,4 @@
-### Quarter cylinder hertzian contact problem
+### Quarter cylinder hertzian contact problem enhanced by the analytical solution
 ### @author: svoelkl, dwolff, apopp
 ### based on the work of tsahin
 # Import required libraries
@@ -84,6 +84,35 @@ bcs = [bc_zero_traction_x, bc_zero_traction_y, bc_zero_traction_z,
        bc_zero_tangential_traction_eta, bc_zero_tangential_traction_xi,
        bc_zero_fischer_burmeister]
 
+## Add analytical solution to enhance the training
+# Define constants
+p_max = 8.36
+b = 0.07611333607551958
+n_test = 50
+z = np.linspace(0,3*b,n_test).reshape(-1,1)
+# Compute stresses
+s_x = -p_max*((1+2*(z**2/b**2))/(np.sqrt(1+z**2/b**2)) - 2*np.abs(z/b))
+s_y = -p_max/(np.sqrt(1+z**2/b**2))
+s_z = -2*nu*p_max*(np.sqrt(1+z**2/b**2) - np.abs(z/b))
+# Create arrays with external data
+y_coord = np.linspace(-1,-0.7642,n_test).reshape(-1,1)
+ex_data_xyz_1 = np.hstack((np.zeros_like(y_coord), y_coord, -1*np.ones_like(y_coord)))
+ex_data_xyz_2 = np.hstack((np.zeros_like(y_coord), y_coord, -0.5*np.ones_like(y_coord)))
+ex_data_xyz_3 = np.hstack((np.zeros_like(y_coord), y_coord, np.zeros_like(y_coord)))
+ex_data_xyz = np.vstack((ex_data_xyz_1,ex_data_xyz_2,ex_data_xyz_3))
+s_x = np.vstack((s_x,s_x,s_x))
+s_y = np.vstack((s_y,s_y,s_y))
+s_z = np.vstack((s_z,s_z,s_z))
+
+# Define boundary conditions for experimental data
+observe_sigma_xx = dde.PointSetBC(ex_data_xyz, s_x, component=3)
+observe_sigma_yy = dde.PointSetBC(ex_data_xyz, s_y, component=4)
+observe_sigma_zz = dde.PointSetBC(ex_data_xyz, s_z, component=5)
+
+# Append to the list of boundary conditions
+bcs_data = [observe_sigma_xx, observe_sigma_yy, observe_sigma_zz]
+bcs.extend(bcs_data)
+
 # Setup the data object
 n_dummy = 1
 data = dde.data.PDE(
@@ -93,7 +122,8 @@ data = dde.data.PDE(
     num_domain=n_dummy,
     num_boundary=n_dummy,
     num_test=None,
-    train_distribution="Sobol"
+    train_distribution="Sobol",
+    anchors=ex_data_xyz
 )
 
 def output_transform(x, y):
@@ -164,16 +194,19 @@ w_zero_traction_x, w_zero_traction_y, w_zero_traction_z = 1e0, 1e0, 1e0
 w_zero_tangential_traction_component1 = 1e0
 w_zero_tangential_traction_component2 = 1e0
 w_zero_fisher_burmeister = 5e2
+# Weights due to external data
+w_ext_sigma_xx, w_ext_sigma_yy, w_ext_sigma_zz = 1e0, 1e0, 1e0
 
 loss_weights = [w_momentum_xx, w_momentum_yy, w_momentum_zz, 
                 w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz,  
                 w_zero_traction_x, w_zero_traction_y, w_zero_traction_z,
-                w_zero_tangential_traction_component1, w_zero_tangential_traction_component2, w_zero_fisher_burmeister]
+                w_zero_tangential_traction_component1, w_zero_tangential_traction_component2, w_zero_fisher_burmeister,
+                w_ext_sigma_xx, w_ext_sigma_yy, w_ext_sigma_zz]
 
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
 model_path = str(Path(__file__).parent)
-simulation_case = f"quarter_cylinder"
+simulation_case = f"quarter_cylinder_enhanced"
 adam_iterations = 2000
 
 if not restore_pretrained_model:
@@ -213,7 +246,7 @@ if not restore_pretrained_model:
     )
 
 else:
-    n_iterations = 1527
+    n_iterations = 1544
     model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
     model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
@@ -224,5 +257,5 @@ else:
 solutionFieldOnMeshToVtk3D(geom, 
                            model, 
                            save_folder_path=model_path, 
-                           file_name="Hertzian_contact_3d_quarter_cylinder", 
+                           file_name="Hertzian_contact_3d_quarter_cylinder_enhanced", 
                            polar_transformation="cylindrical")
