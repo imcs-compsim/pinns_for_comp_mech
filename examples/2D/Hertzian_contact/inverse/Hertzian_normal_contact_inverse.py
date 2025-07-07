@@ -1,6 +1,6 @@
 ### Quarter disc hertzian contact problem predicting external pressure with external data
-### @author: svoelkl, dwolff, apopp
-### based on the work of tsahin
+### @author: tsahin, svoelkl, dwolff, apopp
+### based on the initial work of tsahin
 # Import required libraries
 import deepxde as dde
 dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
