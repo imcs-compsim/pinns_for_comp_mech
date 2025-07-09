@@ -39,7 +39,8 @@ dev = [
   "pytest",
   "pytest-cov",
   "pytest-xdist",
-  "sphinx"
+  "sphinx",
+  "pre-commit"
 ]
 tf = [
   "tensorflow==2.7.0",
