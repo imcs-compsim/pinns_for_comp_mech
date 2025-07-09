@@ -1,0 +1,73 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+default_language_version:
+    python: python3.12
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ['--maxkb=1024']
+        exclude: '.*(\.ckpt\..*|\.pdf|\.csv)$'
+        name: Check for added large files
+      - id: check-ast
+        name: Check Python files for parse errors
+      - id: check-case-conflict
+        name: Check files for case conflicts on case-insensitive filesystems
+      - id: check-docstring-first
+        name: Check that no code is placed prior to docstrings
+      - id: check-executables-have-shebangs
+        name: Check that executables have shebangs
+      - id: check-illegal-windows-names
+        name: Check for illegal Windows filenames
+      - id: check-merge-conflict
+        name: Check for files that contain merge conflict strings
+      - id: check-shebang-scripts-are-executable
+        name: Check that shebang scripts are executable
+      - id: check-toml
+        name: Check valid TOML syntax
+      - id: check-yaml
+        name: Check valid YAML syntax
+      - id: debug-statements
+        name: Check for debugger imports
+      - id: end-of-file-fixer
+        name: Check for newline at end of file
+        exclude: '^LICENSE$'
+      - id: no-commit-to-branch
+        name: Check to not commit to main
+      - id: tests-should-end-in-test
+        name: Check that test files are named correctly
+      - id: trailing-whitespace
+        name: Check for trailing whitespaces and trims them
+  - repo: https://github.com/econchick/interrogate
+    rev: 1.7.0
+    hooks:
+      - id: interrogate
+        name: Run interrogate (linter for docstrings)
+        args: [--fail-under=100, --ignore-init-module, --style=google, -vv]
+        exclude: ^website/
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.16.1
+    hooks:
+      - id: mypy
+        name: Run mypy (static type checker for python)
+        args: ["--install-types", "--non-interactive", "--ignore-missing-imports", "--follow-imports=silent"]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.2
+    hooks:
+      - id: ruff # linter
+        name: Run ruff (linter for Python)
+        args: ["--fix", "--select", "I,TID252,F401"] # "I => sort imports, TID252 => ban relative imports, F401 => unused imports"
+      - id: ruff-format # formatter
+        name: Run ruff (formatter for Python)
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.34.0
+    hooks:
+      - id: typos
+        name: Run typo checker
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.17.2
+    hooks:
+      - id: yamlfmt
+        name: Run yamlfmt
+        args: ["-formatter", "retain_line_breaks_single=true", "trim_trailing_whitespace=true"]
