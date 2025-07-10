@@ -1,58 +1,65 @@
+### Quarter disc hertzian contact problem using the Deep Energy Method (DEM)
+### @author: svoelkl, dwolff, apopp
+### based on the work of tsahin
+# Import required libraries
 import deepxde as dde
+dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import os
-from pyevtk.hl import unstructuredGridToVTK
 from pathlib import Path
-import matplotlib.tri as tri
-import pandas as pd
 from deepxde.backend import tf
+import matplotlib.tri as tri
+from pyevtk.hl import unstructuredGridToVTK
+from deepxde import backend as bkd
+import time
 
+# Import custom modules
+from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
+from utils.geometry.gmsh_models import QuarterDisc
+from utils.elasticity.elasticity_utils import problem_parameters, elastic_strain_2d, stress_plane_strain
 from utils.geometry.geometry_utils import polar_transformation_2d
 from utils.elasticity import elasticity_utils
-
-from utils.elasticity.elasticity_utils import problem_parameters, elastic_strain_2d, stress_plane_strain, problem_parameters
-from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-
-from utils.geometry.gmsh_models import QuarterDisc
 from utils.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_2d, compute_elastic_properties, cauchy_stress_2D, first_piola_stress_tensor_2D
 from utils.hyperelasticity import hyperelasticity_utils
 from utils.contact_mech.contact_utils import calculate_gap_in_normal_direction_deep_energy
 from utils.contact_mech import contact_utils
-
-from deepxde import backend as bkd
-
+from utils.vpinns.quad_rule import GaussQuadratureRule
 from utils.deep_energy.deep_pde import DeepEnergyPDE
 
-from utils.vpinns.quad_rule import GaussQuadratureRule
+## Set custom Flag to either restore the model from pretrained
+## or simulate yourself
+restore_pretrained_model = False
 
-
-gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 11}
+## Create geometry
+# Dimensions of disk
 radius = 1
 center = [0,0]
-
+# Create the quarter disk using gmsh
+gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 11}
 Quarter_Disc = QuarterDisc(radius=radius, center=center, mesh_size=0.04, angle=225, refine_times=10, gmsh_options=gmsh_options)
-
 gmsh_model, x_loc_partition, y_loc_partition = Quarter_Disc.generateGmshModel(visualize_mesh=False)
-
+# Modifications to define a proper outer normal
 revert_curve_list = []
 revert_normal_dir_list = [1,2,2,1]
-
+# Define boundary selection map
 def on_boundary_circle_contact(x):
     return np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (x[0]>=x_loc_partition)
-
 def on_top(x):
     return np.isclose(x[1],0)
-
+def points_at_top(x):
+    cond_points_top = np.isclose(x, 0)
+    return cond_points_top
 boundary_selection_map = [{"boundary_function" : on_boundary_circle_contact, "tag" : "on_boundary_circle_contact"},
                           {"boundary_function" : on_top, "tag" : "on_top"},]
-
+# Define quadrature rule for interior
 quad_rule = GaussQuadratureRule(rule_name="gauss_legendre", dimension=2, ngp=2) # gauss_legendre gauss_labotto
 coord_quadrature, weight_quadrature = quad_rule.generate()
-
+# Define quadrature rule for boundary
 quad_rule_boundary_integral = GaussQuadratureRule(rule_name="gauss_legendre", dimension=1, ngp=6) # gauss_legendre gauss_labotto
 coord_quadrature_boundary, weight_quadrature_boundary = quad_rule_boundary_integral.generate()
-
+# Create geom object
 geom = GmshGeometryElementDeepEnergy(
                            gmsh_model,
                            dimension=2, 
@@ -63,21 +70,25 @@ geom = GmshGeometryElementDeepEnergy(
                            coord_quadrature_boundary=coord_quadrature_boundary,
                            weight_quadrature_boundary=weight_quadrature_boundary,
                            boundary_selection_map=boundary_selection_map)
-# change global variables in elasticity_utils
+# Define geometric parameters
+projection_plane = {"y" : -1} # projection plane formula
+
+## Adjust global definitions
+# Material parameters
 hyperelasticity_utils.e_modul = 50
 hyperelasticity_utils.nu = 0.3
 hyperelasticity_utils.stress_state = "plane_strain"
 nu,lame,shear,e_modul = compute_elastic_properties()
 
-# The applied pressure 
-ext_traction = 5
-
-# zero neumann BC functions need the geom variable to be 
+# Communicate parameters to dependencies
 elasticity_utils.geom = geom
-
-projection_plane = {"y" : -1} # projection plane formula
 contact_utils.projection_plane = projection_plane
 
+## Define BCs
+# Applied pressure 
+ext_traction = 5
+
+## Define energy potentials (internal energy, external work and contact work)
 def potential_energy(X, 
                      inputs, 
                      outputs, 
@@ -94,41 +105,35 @@ def potential_energy(X,
                      global_weights_boundary_t,
                      boundary_selection_tag):
     
+    ## Internal energy
+    # Get internal energy density
     internal_energy_density = strain_energy_neo_hookean_2d(inputs, outputs)
-    
+    # Compute internal energy
     internal_energy = global_element_weights_t[:,0:1]*global_element_weights_t[:,1:2]*(internal_energy_density[beg_pde:beg_boundary])*jacobian_t
-    ####################################################################################################################
-    # get the external work
-    # select the points where external force is applied
+
+    ## External work
+    # Select the points where external force is applied
     cond = boundary_selection_tag["on_top"]
     u_y = outputs[:,1:2][beg_boundary:][cond]
-    
+    # Get external work density
     external_force_density = -ext_traction*u_y
+    # Compute external work
     external_work = global_weights_boundary_t[cond]*(external_force_density)*jacobian_boundary_t[cond]
-    ####################################################################################################################
-    # contact work
+
+    ## Contact work
+    # Select the points on the boundary
     cond = boundary_selection_tag["on_boundary_circle_contact"]
-    
+    # Compute boundary gap
     gap_n = calculate_gap_in_normal_direction_deep_energy(inputs[beg_boundary:], outputs[beg_boundary:], X, mapped_normal_boundary_t, cond)
-    #gap_y = inputs[:,1:2][beg_boundary:][cond] + outputs[:,1:2][beg_boundary:][cond] + radius
-    #gap_n = tf.math.divide_no_nan(gap_y, tf.math.abs(mapped_normal_boundary_t[:,1:2][cond]))
+    # Get contact force density
     eta=3e4
     contact_force_density = 1/2*eta*bkd.relu(-gap_n)*bkd.relu(-gap_n)
+    # Compute contact work
     contact_work = global_weights_boundary_t[cond]*(contact_force_density)*jacobian_boundary_t[cond]
-    
-    ####################################################################################################################
-    # Reshape energy-work terms and sum over the gauss points  
-    # internal_energy_reshaped = bkd.sum(bkd.reshape(internal_energy, (n_e, n_gp)), dim=1)
-    # external_work_reshaped = bkd.sum(bkd.reshape(external_work, (n_e_boundary_external, n_gp_boundary)), dim=1)
-    # contact_work_reshaped = bkd.sum(bkd.reshape(contact_work, (n_e_boundary_contact, n_gp_boundary)), dim=1)
-    # sum over the elements and get the overall loss
-    # total_energy = bkd.reduce_sum(internal_energy_reshaped) - bkd.reduce_sum(external_work_reshaped) + bkd.reduce_sum(contact_work_reshaped)
     
     return [internal_energy, -external_work, contact_work]
 
-def points_at_top(x):
-    cond_points_top = np.isclose(x, 0)
-    return cond_points_top
+
 
 n_dummy = 1
 data = DeepEnergyPDE(
@@ -141,6 +146,10 @@ data = DeepEnergyPDE(
 )
 
 def output_transform(x, y):
+    '''
+    Enforce the following conditions in a hard way
+            u(x=0)=0
+    '''
     u = y[:, 0:1]
     v = y[:, 1:2]
 
@@ -149,26 +158,68 @@ def output_transform(x, y):
     
     return bkd.concat([u*(-x_loc)/e_modul, v/e_modul], axis=1)
 
-# two inputs x and y, output is ux and uy
-layer_size = [2] + [50] * 5 + [2]
+## Define the neural network
+layer_size = [2] + [50] * 5 + [2] # 2 inputs: x, y, 5 hidden layers with 50 neurons each, 2 outputs: ux, uy
 activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
 
+## Train the model or use a pre-trained model
 model = dde.Model(data, net)
-# if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
-model.compile("adam", lr=0.001)
-losshistory, train_state = model.train(epochs=5000, display_every=100)
+model_path = str(Path(__file__).parent)
+simulation_case = f"herztian_contact_nonlinear"
+adam_iterations = 5000
 
-# model.compile("L-BFGS")
-# model.train_step.optimizer_kwargs["options"]['maxiter']=1000
-# losshistory, train_state = model.train(display_every=200)
+if not restore_pretrained_model:
+    start_time_train = time.time()
 
-# # post
+    model.compile("adam", lr=0.001) # No adjustment of loss weights
+    end_time_adam_compile = time.time()
+    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
+    end_time_adam_train = time.time()
+
+    model.compile("L-BFGS-B") # No adjustment of loss weights
+    dde.optimizers.config.set_LBFGS_options(maxiter=1000)
+    end_time_LBFGS_compile = time.time()
+    losshistory, train_state = model.train(display_every=200, model_save_path=f"{model_path}/{simulation_case}")
+
+    end_time_train = time.time()
+    time_train = f"Total compilation and training time: {(end_time_train - start_time_train):.3f} seconds"
+    print(time_train)
+
+    # Retrieve the total number of iterations at the end of training
+    n_iterations = train_state.step
+    
+    # Print times to output file
+    with open(f"{model_path}/{simulation_case}-{n_iterations}_times.txt", "w") as text_file:
+        print(f"Compilation and training times in [s]", file=text_file)
+        print(f"Adam compilation:    {(end_time_adam_compile - start_time_train):6.3f}", file=text_file)
+        print(f"Adam training:       {(end_time_adam_train - end_time_adam_compile):6.3f}", file=text_file)
+        print(f"L-BFGS compilation:  {(end_time_LBFGS_compile - end_time_adam_train):6.3f}", file=text_file)
+        print(f"L-BFGS training:     {(end_time_train - end_time_LBFGS_compile):6.3f}", file=text_file)
+        print(f"Total:               {(end_time_train - start_time_train):6.3f}", file=text_file)
+
+    # Save results
+    dde.saveplot(
+        losshistory, train_state, issave=True, isplot=False, output_dir=model_path, 
+        loss_fname=f"{simulation_case}-{n_iterations}_loss.dat", 
+        train_fname=f"{simulation_case}-{n_iterations}_train.dat", 
+        test_fname=f"{simulation_case}-{n_iterations}_test.dat"
+    )
+
+else:
+    n_iterations = 17938
+    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
+    model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
+    
+    model.compile("adam", lr=0.001)
+    model.restore(save_path=model_restore_path)
+
+## Create a comparison with FEM results
+# Load the FEM results
 
 # X, offset, cell_types, dol_triangles = geom.get_mesh()
-# nu,lame,shear,e_modul = problem_parameters()
 
 # # start_time_calc = time.time()
 # output = model.predict(X)
