@@ -47,7 +47,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import matplotlib.tri as tri
-from deepxde.backend import tf
+from deepxde.backend import torch
 from pyevtk.hl import unstructuredGridToVTK
 
 from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, stress_to_traction_2d
@@ -125,7 +125,7 @@ data = dde.data.PDE(
     [bc1, bc2, bc3, bc4, bc5, bc6, bc7, bc8], # remove bc3 and bc4, if you want to enforce Dirichlet BC hardly
     num_domain=1500,
     num_boundary=500,
-    num_test=500,
+    num_test=None,
     train_distribution = "Sobol"
 )
 
@@ -138,7 +138,7 @@ def output_transform_hard(x, y):
     """
     u = y[:, 0:1]
     v = y[:, 1:2]
-    return tf.concat([ u*x, v*y], axis=1)
+    return torch.cat((u*x, v*y), axis=1)
 
 def output_transform_hard_scaled(x, y):
     """
@@ -150,7 +150,7 @@ def output_transform_hard_scaled(x, y):
 
     u = y[:, 0:1]
     v = y[:, 1:2]
-    return tf.concat([ u*x*0.001, v*y*0.001], axis=1)
+    return torch.cat((u*x*0.001, v*y*0.001), axis=1)
 
 def output_transform_scaled(x, y):
     """
@@ -160,7 +160,7 @@ def output_transform_scaled(x, y):
     """
     u = y[:, 0:1]
     v = y[:, 1:2]
-    return tf.concat([ u*0.001, v*0.001], axis=1)
+    return torch.cat((u*0.001, v*0.001), axis=1)
 
 # two inputs x and y, two outputs ux and uy
 layer_size = [2] + [50] * 5 + [2]
@@ -192,7 +192,7 @@ else:
 model = dde.Model(data, net)
 # train adam
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
-losshistory, train_state = model.train(epochs=4000, display_every=200)
+losshistory, train_state = model.train(iterations=4000, display_every=200)
 #train l-bfgs
 model.compile("L-BFGS", loss_weights=loss_weights)
 model.train()
