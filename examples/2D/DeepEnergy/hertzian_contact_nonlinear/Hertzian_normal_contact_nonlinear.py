@@ -5,20 +5,14 @@
 import deepxde as dde
 dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import os
+import pyvista as pv
 from pathlib import Path
-from deepxde.backend import tf
-import matplotlib.tri as tri
-from pyevtk.hl import unstructuredGridToVTK
 from deepxde import backend as bkd
 import time
 
 # Import custom modules
 from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
 from utils.geometry.gmsh_models import QuarterDisc
-from utils.elasticity.elasticity_utils import problem_parameters, elastic_strain_2d, stress_plane_strain
 from utils.geometry.geometry_utils import polar_transformation_2d
 from utils.elasticity import elasticity_utils
 from utils.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_2d, compute_elastic_properties, cauchy_stress_2D, first_piola_stress_tensor_2D
@@ -38,8 +32,10 @@ radius = 1
 center = [0,0]
 # Create the quarter disk using gmsh
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 11}
+start_time_meshing = time.time()
 Quarter_Disc = QuarterDisc(radius=radius, center=center, mesh_size=0.04, angle=225, refine_times=10, gmsh_options=gmsh_options)
 gmsh_model, x_loc_partition, y_loc_partition = Quarter_Disc.generateGmshModel(visualize_mesh=False)
+end_time_meshing = time.time()
 # Modifications to define a proper outer normal
 revert_curve_list = []
 revert_normal_dir_list = [1,2,2,1]
@@ -133,8 +129,6 @@ def potential_energy(X,
     
     return [internal_energy, -external_work, contact_work]
 
-
-
 n_dummy = 1
 data = DeepEnergyPDE(
     geom,
@@ -180,7 +174,6 @@ if not restore_pretrained_model:
     end_time_adam_train = time.time()
 
     model.compile("L-BFGS-B") # No adjustment of loss weights
-    dde.optimizers.config.set_LBFGS_options(maxiter=1000)
     end_time_LBFGS_compile = time.time()
     losshistory, train_state = model.train(display_every=200, model_save_path=f"{model_path}/{simulation_case}")
 
@@ -190,15 +183,6 @@ if not restore_pretrained_model:
 
     # Retrieve the total number of iterations at the end of training
     n_iterations = train_state.step
-    
-    # Print times to output file
-    with open(f"{model_path}/{simulation_case}-{n_iterations}_times.txt", "w") as text_file:
-        print(f"Compilation and training times in [s]", file=text_file)
-        print(f"Adam compilation:    {(end_time_adam_compile - start_time_train):6.3f}", file=text_file)
-        print(f"Adam training:       {(end_time_adam_train - end_time_adam_compile):6.3f}", file=text_file)
-        print(f"L-BFGS compilation:  {(end_time_LBFGS_compile - end_time_adam_train):6.3f}", file=text_file)
-        print(f"L-BFGS training:     {(end_time_train - end_time_LBFGS_compile):6.3f}", file=text_file)
-        print(f"Total:               {(end_time_train - start_time_train):6.3f}", file=text_file)
 
     # Save results
     dde.saveplot(
@@ -209,7 +193,7 @@ if not restore_pretrained_model:
     )
 
 else:
-    n_iterations = 17938
+    n_iterations = 21963
     model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
     model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
@@ -218,142 +202,28 @@ else:
 
 ## Create a comparison with FEM results
 # Load the FEM results
+fem_results = pv.read(str(Path(__file__).parent.parent)+f"/fem_reference_nonlinear/nonlinear_fem_reference.vtu")
+prediction_points = fem_results.points
+start_time_predict = time.time()
+prediction_displacement = model.predict(prediction_points[:,0:2])
+end_time_predict = time.time()
 
-# X, offset, cell_types, dol_triangles = geom.get_mesh()
+# Compute differences
+error_displacement = prediction_displacement - fem_results.point_data["displacement"]
 
-# # start_time_calc = time.time()
-# output = model.predict(X)
-# # end_time_calc = time.time()
-# # final_time = f'Prediction time: {(end_time_calc - start_time_calc):.3f} seconds'
-# # print(final_time)
+# Save and return them in vtu file
+fem_results.point_data["displacement_prediction"] = np.hstack((prediction_displacement, np.zeros((prediction_displacement.shape[0], 1)))) # add displacement in z to warp properly
+fem_results.point_data["error_displacement"] = np.hstack((error_displacement, np.zeros((error_displacement.shape[0], 1))))
+fem_results.save(str(Path(__file__).parent.parent.parent.parent.parent)+f"/Hertzian_normal_contact_nonlinear_predictions.vtu", binary=True)
 
-# u_x_pred, u_y_pred = output[:,0], output[:,1]
-# u_pred, v_pred = output[:,0], output[:,1]
-# sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_strain)
-
-
-# combined_disp = tuple(np.vstack((u_x_pred, u_y_pred, np.zeros(u_x_pred.shape[0]))))
-# combined_stress = tuple(np.vstack((sigma_xx.flatten(), sigma_yy.flatten(), sigma_xy.flatten())))
-
-# file_path = os.path.join(os.getcwd(), "deep_energy_hertzian")
-
-# x = X[:,0].flatten()
-# y = X[:,1].flatten()
-# z = np.zeros(y.shape)
-
-# #np.savetxt("Lame_inverse_large", X=np.hstack((X,output[:,0:2])))
-
-# unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
-#                       cell_types, pointData = { "displacement" : combined_disp,"stress" : combined_stress})
-
-
-###################################################################################
-############################## VISUALIZATION PARTS ################################
-###################################################################################
-
-# def polar_transformation_2d_tensor(T_xx, T_yy, T_xy, T_yx, X):
-#     '''
-#     Transforms a general 2nd-order 2D tensor (not necessarily symmetric) from Cartesian to polar coordinates.
-
-#     Parameters
-#     ----------
-#     X : numpy array, shape (N, 2)
-#         Coordinates of points.
-#     T_xx, T_yy, T_xy, T_yx : numpy arrays
-#         Components of the tensor in Cartesian coordinates.
-
-#     Returns
-#     -------
-#     T_rr, T_rtheta, T_thetar, T_thetatheta : numpy arrays
-#         Components of the tensor in polar coordinates.
-#     '''
-
-#     theta = np.arctan2(X[:, 1], X[:, 0])  # in radians
-#     cos_theta = np.cos(theta)
-#     sin_theta = np.sin(theta)
-
-#     # Rotation matrix components
-#     Q11 = cos_theta.reshape(-1,1)
-#     Q12 = sin_theta.reshape(-1,1)
-#     Q21 = -sin_theta.reshape(-1,1)
-#     Q22 = cos_theta.reshape(-1,1)
-
-#     # Perform the transformation using Einstein summation convention
-#     # T'_ij = Q_ip Q_jq T_pq
-#     T_rr = Q11 * (Q11 * T_xx + Q12 * T_yx) + Q12 * (Q11 * T_xy + Q12 * T_yy)
-#     T_rtheta = Q11 * (Q21 * T_xx + Q22 * T_yx) + Q12 * (Q21 * T_xy + Q22 * T_yy)
-#     T_thetar = Q21 * (Q11 * T_xx + Q12 * T_yx) + Q22 * (Q11 * T_xy + Q12 * T_yy)
-#     T_thetatheta = Q21 * (Q21 * T_xx + Q22 * T_yx) + Q22 * (Q21 * T_xy + Q22 * T_yy)
-
-#     return T_rr.astype(np.float32), T_rtheta.astype(np.float32), T_thetar.astype(np.float32), T_thetatheta.astype(np.float32)
-
-# fem_path = str(Path(__file__).parent.parent.parent)+"/elasticity_2d/Hertzian_fem/Hertzian_fem_fine_mesh.csv"
-# df = pd.read_csv(fem_path)
-# fem_results = df[["Points_0","Points_1","displacement_0","displacement_1","nodal_cauchy_stresses_xyz_0","nodal_cauchy_stresses_xyz_1","nodal_cauchy_stresses_xyz_3"]]
-# fem_results = fem_results.to_numpy()
-# node_coords_xy = fem_results[:,0:2]
-# displacement_fem = fem_results[:,2:4]
-# stress_fem = fem_results[:,4:7]
-
-# X = node_coords_xy
-# x = X[:,0].flatten()
-# y = X[:,1].flatten()
-# z = np.zeros(y.shape)
-# triangles = tri.Triangulation(x, y)
-
-# # predictions
-# start_time_calc = time.time()
-# output = model.predict(X)
-# end_time_calc = time.time()
-# final_time = f'Prediction time: {(end_time_calc - start_time_calc):.3f} seconds'
-# print(final_time)
-
-# u_pred, v_pred = output[:,0], output[:,1]
-# sigma_xx_pred, sigma_yy_pred, sigma_xy_pred, sigma_yx_pred = model.predict(X, operator=cauchy_stress_2D)
-# sigma_rr_pred, sigma_rtheta_pred, sigma_theta_r_pred, sigma_theta_pred = polar_transformation_2d_tensor(sigma_xx_pred, sigma_yy_pred, sigma_xy_pred, sigma_yx_pred, X)
-
-# combined_disp_pred = tuple(np.vstack((np.array(u_pred.tolist()),np.array(v_pred.tolist()),np.zeros(u_pred.shape[0]))))
-# combined_stress_pred = tuple(np.vstack((np.array(sigma_xx_pred.flatten().tolist()),np.array(sigma_yy_pred.flatten().tolist()),np.array(sigma_xy_pred.flatten().tolist()))))
-# combined_stress_polar_pred = tuple(np.vstack((np.array(sigma_rr_pred.flatten().tolist()),np.array(sigma_theta_pred.flatten().tolist()),np.array(sigma_rtheta_pred.flatten().tolist()))))
-
-# # fem
-# u_fem, v_fem = displacement_fem[:,0], displacement_fem[:,1]
-# sigma_xx_fem, sigma_yy_fem, sigma_xy_fem = stress_fem[:,0:1], stress_fem[:,1:2], stress_fem[:,2:3]
-# sigma_rr_fem, sigma_rtheta_fem, sigma_theta_r_fem, sigma_theta_fem= polar_transformation_2d_tensor(sigma_xx_fem, sigma_yy_fem, sigma_xy_fem, sigma_xy_fem, X)
-
-# combined_disp_fem = tuple(np.vstack((np.array(u_fem.tolist()),np.array(v_fem.tolist()),np.zeros(u_fem.shape[0]))))
-# combined_stress_fem = tuple(np.vstack((np.array(sigma_xx_fem.flatten().tolist()),np.array(sigma_yy_fem.flatten().tolist()),np.array(sigma_xy_fem.flatten().tolist()))))
-# combined_stress_polar_fem = tuple(np.vstack((np.array(sigma_rr_fem.flatten().tolist()),np.array(sigma_theta_fem.flatten().tolist()),np.array(sigma_rtheta_fem.flatten().tolist()))))
-
-# # error
-# error_disp_x = abs(np.array(u_pred.tolist()) - u_fem.flatten())
-# error_disp_y =  abs(np.array(v_pred.tolist()) - v_fem.flatten())
-# combined_error_disp = tuple(np.vstack((error_disp_x, error_disp_y,np.zeros(error_disp_x.shape[0]))))
-
-# error_stress_x = abs(np.array(sigma_xx_pred.flatten().tolist()) - sigma_xx_fem.flatten())
-# error_stress_y =  abs(np.array(sigma_yy_pred.flatten().tolist()) - sigma_yy_fem.flatten())
-# error_stress_xy =  abs(np.array(sigma_xy_pred.flatten().tolist()) - sigma_xy_fem.flatten())
-# combined_error_stress = tuple(np.vstack((error_stress_x, error_stress_y, error_stress_xy)))
-
-# error_polar_stress_x = abs(np.array(sigma_rr_pred.flatten().tolist()) - sigma_rr_fem.flatten())
-# error_polar_stress_y =  abs(np.array(sigma_theta_pred.flatten().tolist()) - sigma_theta_fem.flatten())
-# error_polar_stress_xy =  abs(np.array(sigma_rtheta_pred.flatten().tolist()) - sigma_rtheta_fem.flatten())
-# combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
-
-# file_path = os.path.join(os.getcwd(), "deep_energy_hertzian_normal_contact_nonlinear")
-
-# dol_triangles = triangles.triangles
-# offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
-# cell_types = np.ones(dol_triangles.shape[0])*5
-
-# unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
-#                       cell_types, pointData = {"displacement_pred" : combined_disp_pred,
-#                                                "displacement_fem" : combined_disp_fem,
-#                                                "stress_pred" : combined_stress_pred, 
-#                                                "stress_fem" : combined_stress_fem, 
-#                                                "polar_stress_pred" : combined_stress_polar_pred, 
-#                                                "polar_stress_fem" : combined_stress_polar_fem, 
-#                                                "error_disp" : combined_error_disp, 
-#                                                "error_stress" : combined_error_stress, 
-#                                                "error_polar_stress" : combined_error_polar_stress
-#                                             })
+# Print times to output file
+if not restore_pretrained_model:
+    with open(f"{model_path}/{simulation_case}-{n_iterations}_times.txt", "w") as text_file:
+        print(f"Compilation and training times in [s]", file=text_file)
+        print(f"Meshing took:        {(end_time_meshing - start_time_meshing):6.3f}", file=text_file)
+        print(f"Adam compilation:    {(end_time_adam_compile - start_time_train):6.3f}", file=text_file)
+        print(f"Adam training:       {(end_time_adam_train - end_time_adam_compile):6.3f}", file=text_file)
+        print(f"L-BFGS compilation:  {(end_time_LBFGS_compile - end_time_adam_train):6.3f}", file=text_file)
+        print(f"L-BFGS training:     {(end_time_train - end_time_LBFGS_compile):6.3f}", file=text_file)
+        print(f"Total:               {(end_time_train - start_time_train):6.3f}", file=text_file)
+        print(f"Prediction:          {(end_time_predict - start_time_predict):6.3f}", file=text_file)

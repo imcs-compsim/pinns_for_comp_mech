@@ -32,6 +32,7 @@ dependencies = [
   "numpy",
   "pandas",
   "pyevtk",
+  "pyvista",
   "seaborn",
   "triangle",
   "tensorflow==2.7.0",
