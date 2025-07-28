@@ -193,12 +193,21 @@ if not restore_pretrained_model:
     )
 
 else:
-    n_iterations = 21963
+    n_iterations = 22712
     model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
     model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path)
+
+# Output results to VTU
+file_path = str(Path(__file__).parent.parent.parent.parent.parent)+f"/Hertzian_normal_contact_nonlinear.vtk"
+
+solution_points = data.train_x
+pinn_results = pv.PolyData(np.hstack((solution_points, np.zeros((solution_points.shape[0], 1)))))
+solution_output = model.predict(solution_points)
+pinn_results["displacement"] = np.hstack((solution_output, np.zeros((solution_output.shape[0], 1))))
+pinn_results.save(file_path)
 
 ## Create a comparison with FEM results
 # Load the FEM results
@@ -212,6 +221,7 @@ end_time_predict = time.time()
 error_displacement = prediction_displacement - fem_results.point_data["displacement"]
 
 # Save and return them in vtu file
+fem_results.point_data["displacement"] = np.hstack((fem_results.point_data["displacement"], np.zeros((prediction_displacement.shape[0], 1)))) # add displacement in z to warp properly
 fem_results.point_data["displacement_prediction"] = np.hstack((prediction_displacement, np.zeros((prediction_displacement.shape[0], 1)))) # add displacement in z to warp properly
 fem_results.point_data["error_displacement"] = np.hstack((error_displacement, np.zeros((error_displacement.shape[0], 1))))
 fem_results.save(str(Path(__file__).parent.parent.parent.parent.parent)+f"/Hertzian_normal_contact_nonlinear_predictions.vtu", binary=True)
