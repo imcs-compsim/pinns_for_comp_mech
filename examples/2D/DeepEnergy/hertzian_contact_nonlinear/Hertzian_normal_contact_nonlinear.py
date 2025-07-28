@@ -173,6 +173,7 @@ if not restore_pretrained_model:
     losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
     end_time_adam_train = time.time()
 
+    dde.optimizers.config.set_LBFGS_options(maxiter=1000) # stop L-BFGS after 1000 iterations as it starts to oscillate otherwise
     model.compile("L-BFGS-B") # No adjustment of loss weights
     end_time_LBFGS_compile = time.time()
     losshistory, train_state = model.train(display_every=200, model_save_path=f"{model_path}/{simulation_case}")
@@ -193,7 +194,7 @@ if not restore_pretrained_model:
     )
 
 else:
-    n_iterations = 22712
+    n_iterations = 6116
     model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
     model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
