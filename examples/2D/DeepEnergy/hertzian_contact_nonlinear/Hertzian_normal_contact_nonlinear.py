@@ -24,7 +24,7 @@ from utils.deep_energy.deep_pde import DeepEnergyPDE
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = False
+restore_pretrained_model = True
 
 ## Create geometry
 # Dimensions of disk
@@ -218,13 +218,21 @@ prediction_displacement = model.predict(prediction_points[:,0:2])
 end_time_predict = time.time()
 
 # Compute differences
-error_displacement = prediction_displacement - fem_results.point_data["displacement"]
+fem_displacements = fem_results.point_data["displacement"]
+error_displacement = prediction_displacement - fem_displacements
 
 # Save and return them in vtu file
-fem_results.point_data["displacement"] = np.hstack((fem_results.point_data["displacement"], np.zeros((prediction_displacement.shape[0], 1)))) # add displacement in z to warp properly
+fem_results.point_data["displacement"] = np.hstack((fem_displacements, np.zeros((prediction_displacement.shape[0], 1)))) # add displacement in z to warp properly
 fem_results.point_data["displacement_prediction"] = np.hstack((prediction_displacement, np.zeros((prediction_displacement.shape[0], 1)))) # add displacement in z to warp properly
 fem_results.point_data["error_displacement"] = np.hstack((error_displacement, np.zeros((error_displacement.shape[0], 1))))
 fem_results.save(str(Path(__file__).parent.parent.parent.parent.parent)+f"/Hertzian_normal_contact_nonlinear_predictions.vtu", binary=True)
+
+# Output l2-error into console and file
+rel_err_l2_disp = np.linalg.norm(prediction_displacement - fem_displacements) / np.linalg.norm(fem_displacements)
+print("Relative L2 error for displacement: ", rel_err_l2_disp)
+with open(f"{model_path}/{simulation_case}-{n_iterations}_L2_error_norm.txt", "w") as text_file:
+    print(f"Relative L2 error for displacement: {rel_err_l2_disp:.8e}",   file=text_file)
+
 
 # Print times to output file
 if not restore_pretrained_model:
