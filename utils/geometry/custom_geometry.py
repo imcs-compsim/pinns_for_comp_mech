@@ -4,6 +4,7 @@ from deepxde import config
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import time
 
 class GmshGeometry3D(Geometry):
     def __init__(self, gmsh_model, external_dim_size=None, target_surface_ids=None):
@@ -1197,7 +1198,14 @@ class GmshGeometryElementDeepEnergy(Geometry):
         # obtain element information
         if self.coord_quadrature is not None:
             self.n_gp = self.weight_quadrature.shape[0]
+            print("--------------------------------------------------------------------------------------------------------------")
+            print("Building element-based information...")
+            t_start = time.time()
             self.get_element_info()
+            t_end = time.time()
+            elapsed_time = t_end - t_start
+            print(f"Element-based information is built and it took:{elapsed_time:.4f} seconds")
+            print("--------------------------------------------------------------------------------------------------------------")
         
         self.borders = borders
         if external_dim_size:
@@ -1467,16 +1475,16 @@ class GmshGeometryElementDeepEnergy(Geometry):
             n_x, n_y, n_z = n
 
             # case 1 Handle [0, 0, 1]
-            if np.isclose(n_z, 1):
+            if np.allclose(n, [0, 0, 1]):
                 t_1 = np.array([0, 1, 0])
                 t_2 = np.array([-1, 0, 0])
             # case 2 Handle [0, 0, -1]
-            elif np.isclose(n_z, -1):
+            elif np.allclose(n, [0, 0, -1]):
                 t_1 = np.array([0, 1, 0])
                 t_2 = np.array([1, 0, 0])
             else:
                 t_1 = np.array([n_y, -n_x, 0]) / np.sqrt(n_x**2 + n_y**2)
-                t_2 = np.cross(n, t_1)
+                t_2 = np.cross(n, t_1) #t_2 = t_2 / np.linalg.norm(t_2)?
 
             # check if all normal_boundary (let's call it as n), t1 and t2 are perpedicular to each, meaning 
             # n . t_1 = 0, n . t_2 = 0, and t_1 . t-2 = 0
@@ -1734,6 +1742,10 @@ class GmshGeometryElementDeepEnergy(Geometry):
             N2 = 1/2*(1+quadrature_coordinate) 
             mapped_coordinate = N1*coordinate_list[0] + N2*coordinate_list[1]
             
+            # Following is also identical
+            # coords = np.vstack([coord for coord in coordinate_list])
+            # N_stack = np.hstack((N1,N2))
+            # mapped_coordinate = np.matmul(N_stack, coords) 
             return mapped_coordinate
         # 2D biliniear mapping (quad4 and tri3)
         elif dimension == 2:
