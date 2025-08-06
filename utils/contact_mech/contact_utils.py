@@ -376,10 +376,10 @@ def calculate_gap_in_normal_direction_deep_energy(x, y, X, mapped_normal_boundar
         gap_z = x_z - proj_z
 
     # Calculate the gap in the normal direction
-    #gap_n = -(gap_x[cond]*nx[cond] + gap_y[cond]*ny[cond])
+    # gap_n = -(gap_x[cond]*nx[cond] + gap_y[cond]*ny[cond])
     gap_n = gap_y[cond]
-    if X.shape[1] == 3:
-        gap_n = gap_n - gap_z[cond]*nz
+    # if X.shape[1] == 3:
+    #     gap_n = gap_n - gap_z[cond]*nz
     #gap_n = -(gap_y[cond]*ny)
 
     return gap_n
