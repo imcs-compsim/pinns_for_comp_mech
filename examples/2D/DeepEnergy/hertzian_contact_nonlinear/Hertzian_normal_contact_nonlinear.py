@@ -216,23 +216,32 @@ fem_results = pv.read(str(Path(__file__).parent.parent)+f"/fem_reference_nonline
 prediction_points = fem_results.points
 start_time_predict = time.time()
 prediction_displacement = model.predict(prediction_points[:,0:2])
+prediction_sigma_xx, prediction_sigma_yy, prediction_sigma_xy, _ = model.predict(prediction_points[:,0:2], operator=cauchy_stress_2D)
+prediction_stresses = np.hstack((prediction_sigma_xx,prediction_sigma_yy,np.zeros_like(prediction_sigma_xx),prediction_sigma_xy,np.zeros_like(prediction_sigma_xx),np.zeros_like(prediction_sigma_xx)))
 end_time_predict = time.time()
 
 # Compute differences
 fem_displacements = fem_results.point_data["displacement"]
 error_displacement = prediction_displacement - fem_displacements
+fem_stresses = fem_results.point_data["nodal_cauchy_stresses_xyz"]
+error_stresses = prediction_stresses - fem_stresses
 
 # Save and return them in vtu file
 fem_results.point_data["displacement"] = np.hstack((fem_displacements, np.zeros((prediction_displacement.shape[0], 1)))) # add displacement in z to warp properly
 fem_results.point_data["displacement_prediction"] = np.hstack((prediction_displacement, np.zeros((prediction_displacement.shape[0], 1)))) # add displacement in z to warp properly
 fem_results.point_data["error_displacement"] = np.hstack((error_displacement, np.zeros((error_displacement.shape[0], 1))))
+fem_results.point_data["stresses_prediction"] = prediction_stresses
+fem_results.point_data["error_stresses"] = error_stresses
 fem_results.save(str(Path(__file__).parent.parent.parent.parent.parent)+f"/Hertzian_normal_contact_nonlinear_predictions.vtu", binary=True)
 
 # Output l2-error into console and file
-rel_err_l2_disp = np.linalg.norm(prediction_displacement - fem_displacements) / np.linalg.norm(fem_displacements)
-print("Relative L2 error for displacement: ", rel_err_l2_disp)
+rel_err_l2_displacement = np.linalg.norm(prediction_displacement - fem_displacements) / np.linalg.norm(fem_displacements)
+rel_err_l2_stresses = np.linalg.norm(prediction_stresses - fem_stresses) / np.linalg.norm(fem_stresses)
+print("Relative L2 error for displacement: ", rel_err_l2_displacement)
+print("Relative L2 error for stresses:     ", rel_err_l2_stresses)
 with open(f"{model_path}/{simulation_case}-{n_iterations}_L2_error_norm.txt", "w") as text_file:
-    print(f"Relative L2 error for displacement: {rel_err_l2_disp:.8e}",   file=text_file)
+    print(f"Relative L2 error for displacement: {rel_err_l2_displacement:.8e}",   file=text_file)
+    print(f"Relative L2 error for stresses:     {rel_err_l2_stresses:.8e}"    ,   file=text_file)
 
 
 # Print times to output file
