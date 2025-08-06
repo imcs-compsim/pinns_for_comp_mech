@@ -222,9 +222,9 @@ end_time_predict = time.time()
 
 # Compute differences
 fem_displacements = fem_results.point_data["displacement"]
-error_displacement = prediction_displacement - fem_displacements
+error_displacement = abs(prediction_displacement - fem_displacements)
 fem_stresses = fem_results.point_data["nodal_cauchy_stresses_xyz"]
-error_stresses = prediction_stresses - fem_stresses
+error_stresses = abs(prediction_stresses - fem_stresses)
 
 # Save and return them in vtu file
 fem_results.point_data["displacement"] = np.hstack((fem_displacements, np.zeros((prediction_displacement.shape[0], 1)))) # add displacement in z to warp properly
