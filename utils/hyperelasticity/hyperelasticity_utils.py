@@ -280,6 +280,22 @@ def cauchy_stress_2D(x, y):
 
     return T_xx, T_yy, T_xy, T_yx
 
+def green_lagrange_strain_2D(x, y):
+    # Compute components of F
+    f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y)
+
+    # Right Cauchy-Green tensor: C = F^T * F
+    c_xx = f_xx**2 + f_yx**2
+    c_xy = f_xx * f_xy + f_yx * f_yy
+    c_yy = f_xy**2 + f_yy**2
+
+    # Green-Lagrange strain components: E = 0.5 * (C - I)
+    e_xx = 0.5 * (c_xx - 1.0)
+    e_yy = 0.5 * (c_yy - 1.0)
+    e_xy = 0.5 * c_xy
+
+    return e_xx, e_yy, e_xy
+
 def second_piola_stress_tensor_3D(x, y):
     # Deformation gradient
     f_xx, f_yy, f_zz, f_xy, f_yx, f_xz, f_zx, f_yz, f_zy = deformation_gradient_3D(x, y)
@@ -361,4 +377,26 @@ def cauchy_stress_3D(x, y):
 
     return T_xx, T_yy, T_zz, T_xy, T_yx, T_xz, T_zx, T_yz, T_zy
 
+def green_lagrange_strain_3D(x, y):
+    # Compute components of F
+    f_xx, f_yy, f_zz, f_xy, f_yx, f_xz, f_zx, f_yz, f_zy = deformation_gradient_3D(x, y)
+
+    # Construct C = Fᵀ F manually
+    c_xx = f_xx * f_xx + f_yx * f_yx + f_zx * f_zx
+    c_yy = f_xy * f_xy + f_yy * f_yy + f_zy * f_zy
+    c_zz = f_xz * f_xz + f_yz * f_yz + f_zz * f_zz
+
+    c_xy = f_xx * f_xy + f_yx * f_yy + f_zx * f_zy
+    c_xz = f_xx * f_xz + f_yx * f_yz + f_zx * f_zz
+    c_yz = f_xy * f_xz + f_yy * f_yz + f_zy * f_zz
+
+    # Green-Lagrange strain components: E = 0.5 * (C - I)
+    e_xx = 0.5 * (c_xx - 1.0)
+    e_yy = 0.5 * (c_yy - 1.0)
+    e_zz = 0.5 * (c_zz - 1.0)
+    e_xy = 0.5 * c_xy
+    e_xz = 0.5 * c_xz
+    e_yz = 0.5 * c_yz
+
+    return e_xx, e_yy, e_zz, e_xy, e_xz, e_yz
     
