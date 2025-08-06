@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/a11btasa/git_repos/github_imcs/pinns_for_comp_mech/deep_energy_examples/trained_models/beam/beam_nonlinear-5083.ckpt"
+all_model_checkpoint_paths: "/home/a11btasa/git_repos/github_imcs/pinns_for_comp_mech/deep_energy_examples/trained_models/beam/beam_nonlinear-5083.ckpt"
