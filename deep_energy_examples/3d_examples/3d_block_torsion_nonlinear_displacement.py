@@ -30,9 +30,11 @@ from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
 from utils.vpinns.quad_rule import GaussQuadratureRule
 
 from utils.hyperelasticity import hyperelasticity_utils
-from utils.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_3d, compute_elastic_properties, first_piola_stress_tensor_3D, cauchy_stress_3D
+from utils.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_3d, compute_elastic_properties, first_piola_stress_tensor_3D, cauchy_stress_3D, green_lagrange_strain_3D
 
 from utils.postprocess.save_normals_tangentials_to_vtk import export_normals_tangentials_to_vtk
+
+from deepxde.optimizers.config import LBFGS_options
 
 length = 4
 height = 1
@@ -178,14 +180,44 @@ net.apply_output_transform(output_transform)
 loss_weights=None
 
 model = dde.Model(data, net)
-model.compile("adam", lr=0.001)
-losshistory, train_state = model.train(epochs=3000, display_every=200) #3000
 
-dde.optimizers.set_LBFGS_options(
-                                maxiter=1000
-                                )
-model.compile("L-BFGS")
-losshistory, train_state = model.train(display_every=200)
+restore_model = True
+model_path = str(Path(__file__).parent.parent)+f"/trained_models/3d_torsion/3d_torsion_nonlinear"
+
+if not restore_model:
+    # model.compile("adam", lr=0.001)
+    # losshistory, train_state = model.train(epochs=stabilization_model_epoch, display_every=100)
+    
+    apply_load = True
+    
+    model.compile("adam", lr=0.001)
+    # losshistory, train_state = model.train(epochs=3000, display_every=100)
+    # if you want to save the model, run the following
+    losshistory, train_state = model.train(epochs=3000, display_every=100, model_save_path=model_path)
+    
+    # For pytorch
+    # LBFGS_options["iter_per_step"] = 1
+    # LBFGS_options["maxiter"] = 500
+    
+    LBFGS_options["maxiter"] = 1000
+    model.compile("L-BFGS")
+    losshistory, train_state = model.train(display_every=100)
+    # losshistory, train_state = model.train(display_every=100, model_save_path=model_path)
+    
+else:
+    n_epochs = 4007 
+    model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
+    
+    model.compile("adam", lr=0.001)
+    model.restore(save_path=model_restore_path)
+# 'train' took 110.185835 s adam for 5000 iter, and I tried with 3000 so 'train' took 68.116314 s
+# 'train' took 52.052350 s lbfgs, second is 'train' took 41.838312 s for 1018
+
+# dde.optimizers.set_LBFGS_options(
+#                                 maxiter=1000
+#                                 )
+# model.compile("L-BFGS")
+# losshistory, train_state = model.train(display_every=200)
 
 file_path =  "/home/a11btasa/git_repos/nonlinear-reference-results/block_torsion/output-structure.pvd"
 save_file_path = os.path.join(os.getcwd(), "deep_energy_3d_block_torsion_nonlinear")
@@ -200,31 +232,25 @@ X = data.points
 
 output = model.predict(X)
 sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yx, sigma_xz, sigma_zx, sigma_yz, sigma_zy = model.predict(X, operator=cauchy_stress_3D)
-p_xx, p_yy, p_zz, p_xy, p_yx, p_xz, p_zx, p_yz, p_zy = model.predict(X, operator=first_piola_stress_tensor_3D)
+eps_xx, eps_yy, eps_zz, eps_xy, eps_xz, eps_yz = model.predict(X, operator=green_lagrange_strain_3D)
 
-first_piola = np.column_stack((p_xx, p_yy, p_zz, p_xy, p_yz, p_xz))
 cauchy_stress = np.column_stack((sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz))
+strain = np.column_stack((eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz))
 displacement = np.column_stack((output[:,0:1], output[:,1:2], output[:,2:3]))
 
-data.point_data['pred_first_piola'] = first_piola
 data.point_data['pred_displacement'] = displacement
 data.point_data['pred_cauchy_stress'] = cauchy_stress
+data.point_data['pred_strain'] = strain
 
 disp_fem = data.point_data['displacement']
 stress_fem = data.point_data['nodal_cauchy_stresses_xyz']
 
 error_disp = abs((disp_fem - displacement))
 data.point_data['pointwise_displacement_error'] = error_disp
-# select xx, yy, and xy component (1st, 2nd and 4th column)
-columns = [0,1,3]
 error_stress = abs((stress_fem - cauchy_stress))
 data.point_data['pointwise_cauchystress_error'] = error_stress
 
 data.save(f"{save_file_path}.vtu")
-
-
-
-
 
 # X, offset, cell_types, elements = geom.get_mesh()
 
