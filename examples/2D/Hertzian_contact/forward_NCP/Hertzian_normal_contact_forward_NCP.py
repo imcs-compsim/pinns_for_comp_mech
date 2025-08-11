@@ -23,7 +23,7 @@ from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plan
 from utils.geometry.geometry_utils import polar_transformation_2d
 from utils.elasticity import elasticity_utils
 import utils.contact_mech.contact_utils as contact_utils
-from utils.contact_mech.contact_utils import zero_complimentarity_function_based_fischer_burmeister, zero_tangential_traction
+from utils.contact_mech.contact_utils import zero_complementarity_function_based_fischer_burmeister, zero_tangential_traction
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
@@ -70,7 +70,7 @@ bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x_mixed_formulation, boun
 bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y_mixed_formulation, boundary_circle_not_contact)
 
 # Contact BC
-bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_complimentarity_function_based_fischer_burmeister, boundary_circle_contact)
+bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_complementarity_function_based_fischer_burmeister, boundary_circle_contact)
 bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_circle_contact)
 bcs = [bc_zero_traction_x, bc_zero_traction_y, bc_zero_fischer_burmeister, bc_zero_tangential_traction]
 
