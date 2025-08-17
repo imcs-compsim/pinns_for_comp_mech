@@ -104,6 +104,7 @@ def matrix_inverse_2D(a_11, a_22, a_12, a_21):
     if determinant == 0:
         raise ValueError("The matrix is singular and does not have an inverse.")
     
+    # Compute the inverse
     a_xx_new = a_22 / determinant
     a_yy_new = a_11 / determinant
     a_xy_new = -a_12 / determinant
