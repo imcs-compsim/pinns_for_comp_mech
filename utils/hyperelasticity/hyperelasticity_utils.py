@@ -191,7 +191,7 @@ def strain_energy_neo_hookean_2d(x, y):
     C_yy = f_xy * f_xy + f_yy * f_yy
     
     if stress_state == "plane_strain":
-        # First invarient
+        # First invariant
         f_zz = 1
         I_1 = C_xx + C_yy + f_zz*f_zz
         # determinant
