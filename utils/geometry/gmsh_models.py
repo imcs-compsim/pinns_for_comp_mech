@@ -77,6 +77,393 @@ class QuarterCirclewithHole(object):
 
         return gmsh_model
 
+class RingQuarter(object):
+    def __init__(self, center, inner_radius, outer_radius, mesh_size=0.15, gmsh_options=None):
+        self.center = center
+        self.inner_radius = inner_radius
+        self.outer_radius = outer_radius
+        self.mesh_size = mesh_size
+        self.gmsh_options = gmsh_options
+
+    def generateGmshModel(self, visualize_mesh=False):
+        '''
+        Generates the quarter of a circle including a hole.
+
+        Parameters
+        ----------
+        visualize_mesh : boolean
+            a booelan value to show the mesh using Gmsh or not
+        Returns 
+        -------
+        gmsh_model: Object
+            gmsh model 
+        '''
+        # Parameters
+        xc = self.center[0]
+        yc = self.center[1]
+        zc = self.center[2]
+        r1 = self.inner_radius
+        r2 = self.outer_radius
+
+        # Mesh size.
+        lcar = self.mesh_size * r1
+
+        # create gmsh model instance
+        gmsh_model = gmsh.model
+        factory = gmsh_model.occ
+
+        # initialize gmsh
+        gmsh.initialize(sys.argv)
+
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMin", lcar)
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMax", lcar)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if type(value).__name__ == 'str':
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+        
+        #gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
+
+        gmsh_model.add("QuarterCirclewithHole")
+
+        # Actually allows for a filled ellipse.
+        # create the small disk
+        s1 = factory.addDisk(xc, yc, zc, r1, r1)
+        # create the large disk
+        s2 = factory.addDisk(xc, yc, zc, r2, r2)
+        # create the rectangle
+        s3 = factory.addRectangle(xc, yc, zc, -r2, -r2)
+        # substract the small disk from the large one
+        s4, ss4 = factory.cut([(2, s2)], [(2, s1)])
+        # intersect it with the rectangle
+        factory.intersect(s4, [(2, s3)])
+
+        gmsh_model.occ.synchronize()
+
+        # generate mesh
+        gmsh_model.mesh.generate(2)
+
+        if visualize_mesh:
+            if '-nopopup' not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model
+
+class QuarterTorus3D(object):
+    def __init__(self, center, major_radius, tube_radius,
+                 mesh_size=0.01, gmsh_options=None):
+        self.center = center  # [x, y, z]
+        self.major_radius = major_radius  # Distance from center to tube center
+        self.tube_radius = tube_radius    # Radius of tube
+        self.mesh_size = mesh_size
+        self.gmsh_options = gmsh_options
+
+    def generateGmshModel(self, visualize_mesh=False):
+        '''
+        Generates a 3D half torus geometry and meshes it.
+
+        Parameters
+        ----------
+        visualize_mesh : bool
+            Whether to open the mesh in the Gmsh GUI after generation.
+        write_mesh_file : bool
+            Whether to write the mesh to a .msh file.
+        filename : str
+            The name of the file to write the mesh to (if write_mesh_file=True).
+
+        Returns
+        -------
+        gmsh_model : The gmsh model instance.
+        '''
+        xc, yc, zc = self.center
+        R = self.major_radius
+        r = self.tube_radius
+        lcar = self.mesh_size
+
+        gmsh.initialize(sys.argv)
+        gmsh_model = gmsh.model
+        factory = gmsh_model.occ
+        gmsh_model.add("HalfTorus")
+
+        # Apply mesh options
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMin", lcar)
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMax", lcar)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if isinstance(value, str):
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+
+        # 1. Create full torus
+        torus = factory.addTorus(xc, yc, zc, R, r, angle=np.pi/2)
+        factory.rotate([(3, torus)], xc, yc, zc, 0, 0, 1, 2*np.pi / 2)  # Rotate 90° CCW about Z
+
+        # 2. Create a cutting box to keep only half
+        cut_box = factory.addBox(xc - (R+r), yc - (R+r), zc,
+                                 R+r, R+r, -r)
+
+        # 3. Cut torus with box to get half-torus
+        cut_volume, _ = factory.cut([(3, torus)], [(3, cut_box)],
+                                    removeObject=True, removeTool=True)
+
+        # 4. Synchronize and generate mesh
+        gmsh_model.occ.synchronize()
+        gmsh_model.mesh.generate(3)
+
+        if visualize_mesh:
+            if '-nopopup' not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model
+
+class RingQuarter3D(object):
+    def __init__(self, center, inner_radius, outer_radius, thickness=0.1, mesh_size=0.15, num_elements=5, gmsh_options=None):
+        self.center = center
+        self.inner_radius = inner_radius
+        self.outer_radius = outer_radius
+        self.mesh_size = mesh_size
+        self.thickness = thickness
+        self.num_elements = num_elements
+        self.gmsh_options = gmsh_options
+
+    def generateGmshModel(self, visualize_mesh=False):
+        '''
+        Generates a quarter of a ring with a hole, extruded into 3D and meshed with hexahedral elements.
+
+        Parameters
+        ----------
+        visualize_mesh : bool
+            Whether to open the mesh in the Gmsh GUI after generation.
+        write_mesh_file : bool
+            Whether to write the mesh to a .msh file.
+        filename : str
+            The name of the file to write the mesh to (if write_mesh_file=True).
+
+        Returns
+        -------
+        gmsh_model : Object
+            The gmsh model instance.
+        '''
+        xc, yc, zc = self.center
+        r1 = self.inner_radius
+        r2 = self.outer_radius
+        lcar = self.mesh_size * r1
+
+        gmsh.initialize(sys.argv)
+        gmsh_model = gmsh.model
+        factory = gmsh_model.occ
+        gmsh_model.add("QuarterRingWithHole")
+
+        # Set mesh size
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMin", lcar)
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMax", lcar)
+        gmsh.option.setNumber("Mesh.RecombineAll", 1)
+        gmsh.option.setNumber("Mesh.SubdivisionAlgorithm", 1)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if isinstance(value, str):
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+
+        # Construct 2D geometry: quarter ring with hole
+        s_inner = factory.addDisk(xc, yc, zc, r1, r1)
+        s_outer = factory.addDisk(xc, yc, zc, r2, r2)
+        # add the rectangle
+        rect = factory.addRectangle(xc, yc, zc, -r2, -r2)                
+
+        ring_surface, _ = factory.cut([(2, s_outer)], [(2, s_inner)], removeObject=True, removeTool=True)
+        quarter_ring, _ = factory.intersect(ring_surface, [(2, rect)], removeObject=True, removeTool=True)
+
+        gmsh_model.occ.synchronize()
+
+        # Recombine for quad mesh
+        for s in quarter_ring:
+            gmsh_model.mesh.setRecombine(2, s[1])
+
+        # Extrude into 3D (along z-axis)
+        thickness = self.thickness
+        volumes = []
+        for s in quarter_ring:
+            extruded = factory.extrude([s], 0, 0, thickness, numElements=[self.num_elements], recombine=True)
+            volumes.extend([e for e in extruded if e[0] == 3])
+
+        gmsh_model.occ.synchronize()
+
+        # Generate 3D mesh
+        gmsh_model.mesh.generate(3)
+
+        if visualize_mesh:
+            if '-nopopup' not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model
+
+class RingHalf3D(object):
+    def __init__(self, center, inner_radius, outer_radius, thickness=0.1, mesh_size=0.15, num_elements=5, gmsh_options=None):
+        self.center = center
+        self.inner_radius = inner_radius
+        self.outer_radius = outer_radius
+        self.mesh_size = mesh_size
+        self.thickness = thickness
+        self.num_elements = num_elements
+        self.gmsh_options = gmsh_options
+
+    def generateGmshModel(self, visualize_mesh=False):
+        '''
+        Generates a quarter of a ring with a hole, extruded into 3D and meshed with hexahedral elements.
+
+        Parameters
+        ----------
+        visualize_mesh : bool
+            Whether to open the mesh in the Gmsh GUI after generation.
+        write_mesh_file : bool
+            Whether to write the mesh to a .msh file.
+        filename : str
+            The name of the file to write the mesh to (if write_mesh_file=True).
+
+        Returns
+        -------
+        gmsh_model : Object
+            The gmsh model instance.
+        '''
+        xc, yc, zc = self.center
+        r1 = self.inner_radius
+        r2 = self.outer_radius
+        lcar = self.mesh_size * r1
+
+        gmsh.initialize(sys.argv)
+        gmsh_model = gmsh.model
+        factory = gmsh_model.occ
+        gmsh_model.add("QuarterRingWithHole")
+
+        # Set mesh size
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMin", lcar)
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMax", lcar)
+        gmsh.option.setNumber("Mesh.RecombineAll", 1)
+        gmsh.option.setNumber("Mesh.SubdivisionAlgorithm", 1)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if isinstance(value, str):
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+
+        # Construct 2D geometry: quarter ring with hole
+        s_inner = factory.addDisk(xc, yc, zc, r1, r1)
+        s_outer = factory.addDisk(xc, yc, zc, r2, r2)
+        rect = factory.addRectangle(xc + r2, yc, zc, -2 * r2, -2 * r2)
+
+        ring_surface, _ = factory.cut([(2, s_outer)], [(2, s_inner)], removeObject=True, removeTool=True)
+        quarter_ring, _ = factory.intersect(ring_surface, [(2, rect)], removeObject=True, removeTool=True)
+
+        gmsh_model.occ.synchronize()
+
+        # Recombine for quad mesh
+        for s in quarter_ring:
+            gmsh_model.mesh.setRecombine(2, s[1])
+
+        # Extrude into 3D (along z-axis)
+        thickness = self.thickness
+        volumes = []
+        for s in quarter_ring:
+            extruded = factory.extrude([s], 0, 0, thickness, numElements=[self.num_elements], recombine=True)
+            volumes.extend([e for e in extruded if e[0] == 3])
+
+        gmsh_model.occ.synchronize()
+
+        # Generate 3D mesh
+        gmsh_model.mesh.generate(3)
+
+        if visualize_mesh:
+            if '-nopopup' not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model
+
+    
+class RingHalf(object):
+    def __init__(self, center, inner_radius, outer_radius, mesh_size=0.15, gmsh_options=None):
+        self.center = center
+        self.inner_radius = inner_radius
+        self.outer_radius = outer_radius
+        self.mesh_size = mesh_size
+        self.gmsh_options = gmsh_options
+
+    def generateGmshModel(self, visualize_mesh=False):
+        '''
+        Generates the quarter of a circle including a hole.
+
+        Parameters
+        ----------
+        visualize_mesh : boolean
+            a booelan value to show the mesh using Gmsh or not
+        Returns 
+        -------
+        gmsh_model: Object
+            gmsh model 
+        '''
+        # Parameters
+        xc = self.center[0]
+        yc = self.center[1]
+        zc = self.center[2]
+        r1 = self.inner_radius
+        r2 = self.outer_radius
+
+        # Mesh size.
+        lcar = self.mesh_size * r1
+
+        # create gmsh model instance
+        gmsh_model = gmsh.model
+        factory = gmsh_model.occ
+
+        # initialize gmsh
+        gmsh.initialize(sys.argv)
+
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMin", lcar)
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMax", lcar)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if type(value).__name__ == 'str':
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+        
+        #gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
+
+        gmsh_model.add("QuarterCirclewithHole")
+
+        # Actually allows for a filled ellipse.
+        # create the small disk
+        s1 = factory.addDisk(xc, yc, zc, r1, r1)
+        # create the large disk
+        s2 = factory.addDisk(xc, yc, zc, r2, r2)
+        # create the rectangle
+        s3 = factory.addRectangle(xc+r2, yc, zc, -2*r2, -2*r2)
+        # substract the small disk from the large one
+        s4, ss4 = factory.cut([(2, s2)], [(2, s1)])
+        # intersect it with the rectangle
+        factory.intersect(s4, [(2, s3)])
+
+        gmsh_model.occ.synchronize()
+
+        # generate mesh
+        gmsh_model.mesh.generate(2)
+
+        if visualize_mesh:
+            if '-nopopup' not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model
+
 class CirclewithHole(object):
     def __init__(self, center, inner_radius, outer_radius, mesh_size=0.15, gmsh_options=None):
         self.center = center
@@ -442,6 +829,52 @@ class Block_2D(object):
 #                 gmsh.fltk.run()
 
 #         return gmsh_model
+
+class SphereEighthHertzian(object):
+    def __init__(self, radius=1.0, center=[0,0,0]):
+        self.radius = radius
+        self.center = center
+
+    def generateGmshModel(self, visualize_mesh=False):
+        gmsh.initialize()
+        gmsh.model.add("EighthSphere")
+
+        model = gmsh.model
+        occ = model.occ
+
+        # Full sphere
+        sphere = occ.addSphere(self.center[0], self.center[0], self.center[0], self.radius)
+
+        # Box to cut 1/8 (positive x, y, z)
+        box = occ.addBox(0, 0, 0, self.radius, -self.radius, self.radius)
+
+        # Intersect sphere with positive octant box
+        tag = occ.intersect([(3, sphere)], [(3, box)], removeObject=True, removeTool=True)[0][0]
+
+        # Synchronize CAD
+        occ.synchronize()
+
+        # Define mesh size field: Distance to sharp corner (origin)
+        gmsh.model.mesh.field.add("Distance", 1)
+        gmsh.model.mesh.field.setNumbers(1, "NodesList", [3])  # Node 1 = origin corner
+        gmsh.model.mesh.field.setNumber(1, "Sampling", 100)
+
+        gmsh.model.mesh.field.add("Threshold", 2)
+        gmsh.model.mesh.field.setNumber(2, "InField", 1)
+        gmsh.model.mesh.field.setNumber(2, "SizeMin", 0.03 * self.radius)
+        gmsh.model.mesh.field.setNumber(2, "SizeMax", 0.1 * self.radius)
+        gmsh.model.mesh.field.setNumber(2, "DistMin", 0.4 * self.radius)
+        gmsh.model.mesh.field.setNumber(2, "DistMax", 0.9 * self.radius)
+
+        gmsh.model.mesh.field.setAsBackgroundMesh(2)
+
+        # Generate 3D mesh
+        gmsh.model.mesh.generate(3)
+
+        if visualize_mesh:
+            gmsh.fltk.run()
+
+        return gmsh.model
 
 class Sphere_hertzian(object):
     def __init__(self, path):

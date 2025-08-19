@@ -322,6 +322,68 @@ def calculate_gap_in_normal_direction_3d(x, y, X):
 
     return gap_n
 
+def calculate_gap_in_normal_direction_deep_energy(x, y, X, mapped_normal_boundary_t, cond):
+    '''
+    Calculates the gap in normal direction in 3D.
+    
+    Parameters
+    ----------
+    x : tensor
+        The input arguments (coordinates x, y, and z).
+    y : tensor
+        The network output (predicted displacement in x, y, and z directions).
+    X : np.array
+        The input arguments as an array (coordinates x, y, and z).
+
+    Returns
+    -------
+    gap_n : tensor
+        Gap in normal direction in 3D.
+    '''
+    # normals
+    nx = mapped_normal_boundary_t[:,0:1]
+    ny = mapped_normal_boundary_t[:,1:2]
+    if X.shape[1] == 3: 
+        nz = mapped_normal_boundary_t[:,2:3]    
+    # Calculate the gap in all three directions: x, y, and z
+    # First get the current locations using reference locations and displacements: X_i + u_i
+    x_x = x[:, 0:1] + y[:, 0:1] # X_x + u_x
+    x_y = x[:, 1:2] + y[:, 1:2] # X_y + u_y
+    if X.shape[1] == 3: 
+        x_z = x[:, 2:3] + y[:, 2:3] # X_z + u_z
+    
+    # Get the projectection of the current location on to the desired projection plane
+    if projection_plane.get("x") is not None:
+        proj_x = projection_plane.get("x")
+        proj_y = x_y#x[:, 1:2]
+        if X.shape[1] == 3: 
+            proj_z = x_z#[:, 2:3]
+    elif projection_plane.get("y") is not None:
+        proj_x = x_x#[:, 0:1]
+        proj_y = projection_plane.get("y")
+        if X.shape[1] == 3: 
+            proj_z = x_z#x[:, 2:3]
+    elif projection_plane.get("z") is not None:
+        proj_x = x_x#x[:, 0:1]
+        proj_y = x_y#x[:, 1:2]
+        if X.shape[1] == 3: 
+            proj_z = projection_plane.get("z")
+    
+    # Calculate gaps in x, y, and z direction
+    gap_x = x_x - proj_x
+    gap_y = x_y - proj_y
+    if X.shape[1] == 3: 
+        gap_z = x_z - proj_z
+
+    # Calculate the gap in the normal direction
+    # gap_n = -(gap_x[cond]*nx[cond] + gap_y[cond]*ny[cond])
+    gap_n = gap_y[cond]
+    # if X.shape[1] == 3:
+    #     gap_n = gap_n - gap_z[cond]*nz
+    #gap_n = -(gap_y[cond]*ny)
+
+    return gap_n
+
 def zero_complementarity_function_based_fisher_burmeister_3d(x,y,X):
     '''
     Enforces KKT conditions using a complementarity function called Fisher-Burmeister based on ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf.
