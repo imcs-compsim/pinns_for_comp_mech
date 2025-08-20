@@ -228,10 +228,9 @@ loss_weights = [w_pde_1,w_pde_2,w_pde_3,w_pde_4,w_pde_5,w_zero_traction_x,w_zero
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
-losshistory, train_state = model.train(iterations=2000, display_every=100) 
-
-model.compile("L-BFGS-B", loss_weights=loss_weights)
-losshistory, train_state = model.train(display_every=200)
+losshistory, train_state = model.train(iterations=2000, display_every=100)
+model.compile("L-BFGS", loss_weights=loss_weights)
+losshistory, train_state = model.train(display_every=1000)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
