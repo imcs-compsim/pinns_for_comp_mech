@@ -62,9 +62,13 @@ def calculate_gap_in_normal_direction(x,y,X):
     # Here is the idea to calculate gap_n:
     # gap_n/|n| = gap_y/|ny| --> since n is unit vector |n|=1
     # gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
-    # gap_n = torch.where(torch.abs(normals[:, 1:2]) != 0, gap_y[cond] / torch.abs(normals[:, 1:2]), torch.zeros_like(gap_y[cond]))
-    gap_n = torch.nan_to_num(gap_y[cond] / torch.abs(normals[:, 1:2]), nan=0.0)
-    number_nan = sum(torch.isnan(gap_y[cond] / torch.abs(normals[:, 1:2])))
+    num = gap_y[cond]
+    den = torch.abs(normals[:, 1:2])
+    out = torch.zeros_like(num)
+    mask = den != 0
+    out[mask] = num[mask] / den[mask]
+    gap_n = out
+
     return gap_n
 
 def calculate_traction(x, y, X):
@@ -224,7 +228,7 @@ loss_weights = [w_pde_1,w_pde_2,w_pde_3,w_pde_4,w_pde_5,w_zero_traction_x,w_zero
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
-losshistory, train_state = model.train(epochs=2000, display_every=1) 
+losshistory, train_state = model.train(iterations=2000, display_every=100) 
 
 model.compile("L-BFGS-B", loss_weights=loss_weights)
 losshistory, train_state = model.train(display_every=200)
