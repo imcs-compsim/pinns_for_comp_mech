@@ -78,7 +78,7 @@ bc_zero_traction_z = dde.OperatorBC(geom, apply_zero_neumann_z_mixed_formulation
 # Contact BCs
 bc_zero_tangential_traction_eta = dde.OperatorBC(geom, zero_tangential_traction_component1_3d, boundary_contact)
 bc_zero_tangential_traction_xi  = dde.OperatorBC(geom, zero_tangential_traction_component2_3d, boundary_contact)
-# KKT using fisher_burmeister
+# KKT using fischer_burmeister
 bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_complementarity_function_based_fischer_burmeister_3d, boundary_contact)
 bcs = [bc_zero_traction_x, bc_zero_traction_y, bc_zero_traction_z,
        bc_zero_tangential_traction_eta, bc_zero_tangential_traction_xi,
@@ -163,12 +163,12 @@ w_zero_traction_x, w_zero_traction_y, w_zero_traction_z = 1e0, 1e0, 1e0
 # Weights due to Contact BCs
 w_zero_tangential_traction_component1 = 1e0
 w_zero_tangential_traction_component2 = 1e0
-w_zero_fisher_burmeister = 5e2
+w_zero_fischer_burmeister = 5e2
 
 loss_weights = [w_momentum_xx, w_momentum_yy, w_momentum_zz, 
                 w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz,  
                 w_zero_traction_x, w_zero_traction_y, w_zero_traction_z,
-                w_zero_tangential_traction_component1, w_zero_tangential_traction_component2, w_zero_fisher_burmeister]
+                w_zero_tangential_traction_component1, w_zero_tangential_traction_component2, w_zero_fischer_burmeister]
 
 ## Train the model or use a pre-trained model
 model = dde.Model(data, net)
