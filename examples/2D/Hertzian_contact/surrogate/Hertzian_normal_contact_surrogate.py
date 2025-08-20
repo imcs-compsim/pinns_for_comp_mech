@@ -9,7 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 from pathlib import Path
-from deepxde.backend import tf
+from deepxde.backend import torch
 import matplotlib.tri as tri
 from pyevtk.hl import unstructuredGridToVTK
 from matplotlib.ticker import MaxNLocator
@@ -25,11 +25,11 @@ from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plan
 from utils.geometry.geometry_utils import polar_transformation_2d
 from utils.elasticity import elasticity_utils
 import utils.contact_mech.contact_utils as contact_utils
-from utils.contact_mech.contact_utils import zero_complimentarity_function_based_fischer_burmeister, zero_tangential_traction
+from utils.contact_mech.contact_utils import zero_complementarity_function_based_fischer_burmeister, zero_tangential_traction
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = True
+restore_pretrained_model = False
 
 ## Create geometry
 # Dimensions of disk
@@ -76,7 +76,7 @@ bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x_mixed_formulation, boun
 bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y_mixed_formulation, boundary_circle_not_contact)
 
 # Contact BC
-bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_complimentarity_function_based_fischer_burmeister, boundary_circle_contact)
+bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_complementarity_function_based_fischer_burmeister, boundary_circle_contact)
 bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_circle_contact)
 bcs = [bc_zero_traction_x, bc_zero_traction_y, bc_zero_fischer_burmeister, bc_zero_tangential_traction]
 
@@ -88,7 +88,7 @@ data = dde.data.PDE(
     bcs,
     num_domain=n_dummy,
     num_boundary=n_dummy,
-    num_test=n_dummy,
+    num_test=None,
     train_distribution="Sobol"
 )
 
@@ -130,7 +130,7 @@ def output_transform(x, y):
     y_loc = x[:, 1:2]
     ext_traction = x[:, 2:3]
     
-    return tf.concat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
+    return torch.cat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
 
 ## Define the neural network
 # This time we also define the pressure as an input (in the previously described layers between borders)
@@ -168,7 +168,7 @@ if not restore_pretrained_model:
     losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
     end_time_adam_train = time.time()
 
-    model.compile("L-BFGS-B", loss_weights=loss_weights)
+    model.compile("L-BFGS", loss_weights=loss_weights)
     end_time_LBFGS_compile = time.time()
     losshistory, train_state = model.train(display_every=200, model_save_path=f"{model_path}/{simulation_case}")
 

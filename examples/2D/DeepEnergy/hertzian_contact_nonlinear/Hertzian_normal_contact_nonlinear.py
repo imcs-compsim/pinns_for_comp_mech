@@ -24,7 +24,7 @@ from utils.deep_energy.deep_pde import DeepEnergyPDE
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = True
+restore_pretrained_model = False
 
 ## Create geometry
 # Dimensions of disk
@@ -174,7 +174,7 @@ if not restore_pretrained_model:
     end_time_adam_train = time.time()
 
     dde.optimizers.config.set_LBFGS_options(maxiter=1000) # stop L-BFGS after 1000 iterations as it starts to oscillate otherwise
-    model.compile("L-BFGS-B") # No adjustment of loss weights
+    model.compile("L-BFGS") # No adjustment of loss weights
     end_time_LBFGS_compile = time.time()
     losshistory, train_state = model.train(display_every=200, model_save_path=f"{model_path}/{simulation_case}")
 

@@ -9,7 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 from pathlib import Path
-from deepxde.backend import tf
+from deepxde.backend import torch
 import matplotlib.tri as tri
 from pyevtk.hl import unstructuredGridToVTK
 import time
@@ -25,7 +25,7 @@ from utils.contact_mech.contact_utils import positive_normal_gap_sign, negative_
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = True
+restore_pretrained_model = False
 
 ## Create geometry
 # Dimensions of disk
@@ -82,7 +82,7 @@ data = dde.data.PDE(
     bcs,
     num_domain=n_dummy,
     num_boundary=n_dummy,
-    num_test=n_dummy,
+    num_test=None,
     train_distribution="Sobol"
 )
 
@@ -123,7 +123,7 @@ def output_transform(x, y):
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
     
-    return tf.concat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
+    return torch.cat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
 
 ## Define the neural network
 layer_size = [2] + [50] * 5 + [5] # 2 inputs: x and y, 5 hidden layers with 50 neurons each, 5 outputs: ux, uy, sigma_xx, sigma_yy and sigma_xy
@@ -164,7 +164,7 @@ if not restore_pretrained_model:
     losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
     end_time_adam_train = time.time()
 
-    model.compile("L-BFGS-B", loss_weights=loss_weights)
+    model.compile("L-BFGS", loss_weights=loss_weights)
     end_time_LBFGS_compile = time.time()
     losshistory, train_state = model.train(display_every=200, model_save_path=f"{model_path}/{simulation_case}")
 
@@ -174,7 +174,7 @@ if not restore_pretrained_model:
 
     # Retrieve the total number of iterations at the end of training
     n_iterations = train_state.step
-   
+
     dde.saveplot(
         losshistory, train_state, issave=True, isplot=False, output_dir=model_path, 
         loss_fname=f"{simulation_case}-{n_iterations}_loss.dat", 

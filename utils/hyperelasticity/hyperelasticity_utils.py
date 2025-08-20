@@ -1,7 +1,6 @@
 import deepxde as dde
 from deepxde.backend import get_preferred_backend
-import tensorflow as tf
- 
+from deepxde.backend import tf, torch
 
 # global variables
 lame = None
@@ -86,6 +85,8 @@ def bkd_log(x):
     if (backend_name=="tensorflow.compat.v1") or (backend_name=="tensorflow"):
         # return tf.math.log(x)
         return tf.math.log(tf.math.maximum(x, 1e-8))
+    elif backend_name=="pytorch":
+        return torch.log(torch.maximum(x, torch.tensor(1e-8, dtype=x.dtype, device=x.device)))
 
 def matrix_determinant_2D(a_11, a_22, a_12, a_21):
     # Calculate the determinant of the 2x2 matrix

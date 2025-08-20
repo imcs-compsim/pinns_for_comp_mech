@@ -53,9 +53,9 @@ For cluster, we should use `conda` since we had issues in terms of package insta
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
     ./Miniconda3-latest-Linux-x86_64.sh
     ```
-2. Create the virtual environment using `environment.yml` which includes all necessary packages. 
+2. Create the virtual environment using `env.yaml` which includes all necessary packages. 
     ```bash
-    conda env create -f environment.yml
+    conda env create -f env.yaml -y
     ```
 
 3. Activate the generated venv (`pinn-env`) 

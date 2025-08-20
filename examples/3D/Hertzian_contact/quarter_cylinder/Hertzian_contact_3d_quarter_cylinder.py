@@ -17,11 +17,11 @@ from utils.elasticity.elasticity_utils import pde_mixed_3d, problem_parameters
 from utils.elasticity.elasticity_utils import apply_zero_neumann_x_mixed_formulation, apply_zero_neumann_y_mixed_formulation, apply_zero_neumann_z_mixed_formulation
 from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
 from utils.contact_mech import contact_utils
-from utils.contact_mech.contact_utils import zero_tangential_traction_component1_3d, zero_tangential_traction_component2_3d, zero_complementarity_function_based_fisher_burmeister_3d
+from utils.contact_mech.contact_utils import zero_tangential_traction_component1_3d, zero_tangential_traction_component2_3d, zero_complementarity_function_based_fischer_burmeister_3d
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = True
+restore_pretrained_model = False
 
 ## Create geometry
 # Get geometry from step file
@@ -79,7 +79,7 @@ bc_zero_traction_z = dde.OperatorBC(geom, apply_zero_neumann_z_mixed_formulation
 bc_zero_tangential_traction_eta = dde.OperatorBC(geom, zero_tangential_traction_component1_3d, boundary_contact)
 bc_zero_tangential_traction_xi  = dde.OperatorBC(geom, zero_tangential_traction_component2_3d, boundary_contact)
 # KKT using fisher_burmeister
-bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_complementarity_function_based_fisher_burmeister_3d, boundary_contact)
+bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_complementarity_function_based_fischer_burmeister_3d, boundary_contact)
 bcs = [bc_zero_traction_x, bc_zero_traction_y, bc_zero_traction_z,
        bc_zero_tangential_traction_eta, bc_zero_tangential_traction_xi,
        bc_zero_fischer_burmeister]
@@ -184,7 +184,7 @@ if not restore_pretrained_model:
     losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
     end_time_adam_train = time.time()
 
-    model.compile("L-BFGS-B", loss_weights=loss_weights)
+    model.compile("L-BFGS", loss_weights=loss_weights)
     end_time_LBFGS_compile = time.time()
     losshistory, train_state = model.train(display_every=200, model_save_path=f"{model_path}/{simulation_case}")
 
