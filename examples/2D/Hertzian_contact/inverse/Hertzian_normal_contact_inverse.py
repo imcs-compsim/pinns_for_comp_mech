@@ -27,7 +27,7 @@ from utils.contact_mech.contact_utils import zero_complementarity_function_based
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = False
+restore_pretrained_model = True
 
 ## Create geometry
 # Dimensions of disk

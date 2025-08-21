@@ -27,7 +27,7 @@ from utils.contact_mech.contact_utils import zero_complementarity_function_based
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = False
+restore_pretrained_model = True
 
 ## Create geometry
 # Dimensions of disk
@@ -191,7 +191,7 @@ if not restore_pretrained_model:
         
         return steps, pde_loss, neumann_loss
 else:
-    n_iterations = 17770
+    n_iterations = 17000
     model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
     model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     

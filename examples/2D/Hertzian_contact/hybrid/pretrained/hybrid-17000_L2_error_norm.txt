@@ -1,0 +1,2 @@
+Relative L2 error for displacement: 1.27761370e-03
+Relative L2 error for stress:       3.24918298e-02
