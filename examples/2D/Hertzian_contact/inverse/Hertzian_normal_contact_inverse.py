@@ -217,7 +217,7 @@ if not restore_pretrained_model:
 
     model.compile("L-BFGS", loss_weights=loss_weights, external_trainable_variables=external_var_list)
     end_time_LBFGS_compile = time.time()
-    losshistory, train_state = model.train(callbacks=[variable], display_every=200, model_save_path=f"{model_path}/{simulation_case}")
+    losshistory, train_state = model.train(callbacks=[variable], display_every=1000, model_save_path=f"{model_path}/{simulation_case}")
 
     end_time_train = time.time()
     time_train = f"Total compilation and training time: {(end_time_train - start_time_train):.3f} seconds"
@@ -233,12 +233,12 @@ if not restore_pretrained_model:
         test_fname=f"{simulation_case}-{n_iterations}_test.dat"
     )
 else:
-    n_iterations = 18416
-    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
+    n_iterations = 17000
+    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.pt"
     model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     parameter_file_name = f"{model_path}/pretrained/{simulation_case}-{str(n_iterations)}_identified_pressure.dat"
     
-    model.compile("adam", lr=0.001)
+    model.compile("L-BFGS", external_trainable_variables=external_var_list)
     model.restore(save_path=model_restore_path)
 
 ## Visualize the predicted pressure

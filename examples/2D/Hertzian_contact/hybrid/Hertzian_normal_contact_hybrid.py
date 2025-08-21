@@ -238,10 +238,10 @@ if not restore_pretrained_model:
         return steps, pde_loss, neumann_loss
 else:
     n_iterations = 17000
-    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
+    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.pt"
     model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
-    model.compile("adam", lr=0.001)
+    model.compile("L-BFGS")
     model.restore(save_path=model_restore_path)
     def calculate_loss():
         losses = np.loadtxt(model_loss_path),
