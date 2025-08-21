@@ -235,9 +235,9 @@ def zero_complementarity_function_based_popp(x,y,X):
 
     return Pn-tf.math.maximum(tf.constant(0, dtype=tf.float32), Pn-c_complementarity*gn)
 
-def zero_complementarity_function_based_fisher_burmeister(x,y,X):
+def zero_complementarity_function_based_fischer_burmeister(x,y,X):
     '''
-    Enforces KKT conditions using a complementarity function called Fisher-Burmeister based on ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf.
+    Enforces KKT conditions using a complementarity function called Fischer-Burmeister based on ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf.
     This function is mathematically equal to combination of the following functions:
         - positive_normal_gap_sign
         - negative_normal_traction_sign
@@ -384,9 +384,9 @@ def calculate_gap_in_normal_direction_deep_energy(x, y, X, mapped_normal_boundar
 
     return gap_n
 
-def zero_complementarity_function_based_fisher_burmeister_3d(x,y,X):
+def zero_complementarity_function_based_fischer_burmeister_3d(x,y,X):
     '''
-    Enforces KKT conditions using a complementarity function called Fisher-Burmeister based on ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf.
+    Enforces KKT conditions using a complementarity function called Fischer-Burmeister based on ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf.
     This function is mathematically equal to combination of the following functions:
         - positive_normal_gap_sign
         - negative_normal_traction_sign

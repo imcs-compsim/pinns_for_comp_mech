@@ -12,7 +12,7 @@ from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain
 from utils.contact_mech.contact_utils import zero_tangential_traction, positive_normal_gap_sign, negative_normal_traction_sign, zero_complimentary
 from utils.contact_mech.contact_utils import positive_normal_gap_adopted_sigmoid, negative_normal_traction_adopted_sigmoid
-from utils.contact_mech.contact_utils import zero_complementarity_function_based_popp, zero_complementarity_function_based_fisher_burmeister
+from utils.contact_mech.contact_utils import zero_complementarity_function_based_popp, zero_complementarity_function_based_fischer_burmeister
 from utils.elasticity import elasticity_utils
 from utils.contact_mech import contact_utils
 
@@ -26,7 +26,7 @@ In this script, four different methods are described to enforce the Karush-Kuhn-
    - ref: https://arxiv.org/abs/2203.09789
  - A complementarity function: Pn-max(0, Pn-c*gn) used often in computational contact mechanics
    - ref: https://onlinelibrary.wiley.com/doi/abs/10.1002/nme.2614
- - A complementarity function called Fisher-Burmeister
+ - A complementarity function called Fischer-Burmeister
    - ref: https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf
 
 @author: tsahin
@@ -74,7 +74,7 @@ contact_utils.geom = geom
 def boundary_contact(x, on_boundary):
     return on_boundary and np.isclose(x[1],0)
 
-method_list = ["KKT_inequality_sign", "KKT_inequality_sigmoid", "complementarity_popp", "fisher_burmeister"]
+method_list = ["KKT_inequality_sign", "KKT_inequality_sigmoid", "complementarity_popp", "fischer_burmeister"]
 method_name = "KKT_inequality_sigmoid"
 
 # Karush-Kuhn-Tucker conditions for frictionless contact
@@ -98,10 +98,10 @@ elif method_name == "complementarity_popp":
     bc_zero_complementarity = dde.OperatorBC(geom, zero_complementarity_function_based_popp, boundary_contact)
     bcs_ = [bc_zero_complementarity,bc_zero_tangential_traction]
     output_file_name = f"Patch_complementarity_function_c_{c_complementarity}"
-elif method_name == "fisher_burmeister":
-    bc_zero_complementarity = dde.OperatorBC(geom, zero_complementarity_function_based_fisher_burmeister, boundary_contact)
+elif method_name == "fischer_burmeister":
+    bc_zero_complementarity = dde.OperatorBC(geom, zero_complementarity_function_based_fischer_burmeister, boundary_contact)
     bcs_ = [bc_zero_complementarity,bc_zero_tangential_traction]
-    output_file_name = "Patch_fisher_burmeister"
+    output_file_name = "Patch_fischer_burmeister"
 else:
     raise Exception("Method name does not exist!")
 
@@ -170,7 +170,7 @@ restore_model = True
 model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/patch/{method_name}/{method_name}"
 
 # number epochs required for restoring model
-n_epoch_dict = {"KKT_inequality_sign": 2265, "KKT_inequality_sigmoid": 2272, "fisher_burmeister": 2394}
+n_epoch_dict = {"KKT_inequality_sign": 2265, "KKT_inequality_sigmoid": 2272, "fischer_burmeister": 2394}
 
 if not restore_model:
     model.compile("adam", lr=0.001)
