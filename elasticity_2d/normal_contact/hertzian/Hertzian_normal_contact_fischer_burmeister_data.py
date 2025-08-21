@@ -1,15 +1,15 @@
 import deepxde as dde
+dde.config.set_default_float("float64")
 import numpy as np
 import pandas as pd
 import os
 from pathlib import Path
-from deepxde.backend import tf
+from deepxde.backend import torch
 import matplotlib.tri as tri
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pyevtk.hl import unstructuredGridToVTK
 import time
-
 
 from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import QuarterDisc
@@ -22,17 +22,16 @@ from utils.elasticity import elasticity_utils
 from utils.contact_mech import contact_utils
 
 '''
-Solves Hertzian normal contact example inluding simulation data from BACI.
+Solves Hertzian normal contact example inluding simulation data from 4C.
 
 @author: tsahin
 '''
-#dde.config.real.set_float64()
 
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 radius = 1
 center = [0,0]
 
-Quarter_Disc = QuarterDisc(radius=radius, center=center, mesh_size=0.005, angle=255, refine_times=100, gmsh_options=gmsh_options)
+Quarter_Disc = QuarterDisc(radius=radius, center=center, mesh_size=0.008, angle=265, refine_times=100, gmsh_options=gmsh_options)
 
 gmsh_model, x_loc_partition, y_loc_partition = Quarter_Disc.generateGmshModel(visualize_mesh=False)
 
@@ -73,13 +72,19 @@ def calculate_gap_in_normal_direction(x,y,X):
 
     # Here is the idea to calculate gap_n:
     # gap_n/|n| = gap_y/|ny| --> since n is unit vector |n|=1
-    gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
-    
+    # gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
+    num = gap_y[cond]
+    den = torch.abs(normals[:, 1:2])
+    out = torch.zeros_like(num)
+    mask = den != 0
+    out[mask] = num[mask] / den[mask]
+    gap_n = out
+
     return gap_n
 
 def zero_fischer_burmeister(x,y,X):
     '''
-    Enforces KKT conditions using Fisher-Burmeister equation
+    Enforces KKT conditions using Fischer-Burmeister equation
     '''
     # ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf
     Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
@@ -88,7 +93,7 @@ def zero_fischer_burmeister(x,y,X):
     a = gn
     b = -Pn
     
-    return a + b - tf.sqrt(tf.maximum(a**2+b**2, 1e-9))
+    return a + b - torch.sqrt(torch.maximum(a**2+b**2, torch.tensor(1e-9, dtype=a.dtype, device=a.device)))
 
 def boundary_circle_not_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (x[0]<x_loc_partition)
@@ -172,7 +177,7 @@ data = dde.data.PDE(
     bcs,
     num_domain=n_dummy,
     num_boundary=n_dummy,
-    num_test=n_dummy,
+    num_test=None,
     train_distribution = "Sobol",
     anchors=(ex_data_xy if add_external_data else None)
 )
@@ -214,7 +219,7 @@ def output_transform(x, y):
     y_loc = x[:, 1:2]
     
     #return tf.concat([u*(-x_loc), ext_dips + v*(-y_loc), sigma_xx, sigma_yy, sigma_xy*(x_loc)*(y_loc)], axis=1)
-    return tf.concat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
+    return torch.cat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
 
 # 2 inputs: x and y, 5 outputs: ux, uy, sigma_xx, sigma_yy and sigma_xy
 layer_size = [2] + [50] * 5 + [5]
@@ -229,7 +234,7 @@ w_pde_1,w_pde_2,w_pde_3,w_pde_4,w_pde_5 = 1e0,1e0,1e0,1e0,1e0
 w_zero_traction_x, w_zero_traction_y = 1e0,1e0
 # weights due to Contact BC
 w_zero_tangential_traction = 1e0
-w_zero_fischer_burmeister = 1e3
+w_zero_fischer_burmeister = 1e4
 # weights due to external data
 w_ext_u, w_ext_v, w_ext_sigma_xx, w_ext_sigma_yy, w_ext_sigma_xy = 1e4,1e4,1e-1,1e-1,1e-1
 
@@ -239,14 +244,12 @@ if add_external_data:
     loss_weights_data = [w_ext_u, w_ext_v, w_ext_sigma_xx, w_ext_sigma_yy, w_ext_sigma_xy]
     loss_weights.extend(loss_weights_data)
 
-# restore the model
-model_path = str(Path(__file__).parent.parent.parent)+"/trained_models/hertzian/data_enhancement/hertzian"
-n_epochs = 24876 
-model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
-
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
-model.restore(save_path=model_restore_path)
+losshistory, train_state = model.train(iterations=3000, display_every=100) 
+
+model.compile("L-BFGS", loss_weights=loss_weights)
+losshistory, train_state = model.train(display_every=1000)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
@@ -304,7 +307,7 @@ error_polar_stress_y =  abs(np.array(sigma_theta_pred.flatten().tolist()) - sigm
 error_polar_stress_xy =  abs(np.array(sigma_rtheta_pred.flatten().tolist()) - sigma_rtheta_fem.flatten())
 combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
 
-file_path = os.path.join(os.getcwd(), "Hertzian_normal_contact_fisher_burmeister_data_255")
+file_path = os.path.join(os.getcwd(), "Hertzian_normal_contact_fischer_burmeister_data")
 
 dol_triangles = triangles.triangles
 offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
@@ -321,3 +324,33 @@ unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset,
                                                "error_stress" : combined_error_stress, 
                                                "error_polar_stress" : combined_error_polar_stress
                                             })
+
+## Plot the normal traction on contact domain, analytical vs predicted
+nu,lame,shear,e_modul = problem_parameters()
+X, _, _, _ = geom.get_mesh()
+
+output = model.predict(X)
+sigma_xx_pred, sigma_yy_pred, sigma_xy_pred = output[:,2:3], output[:,3:4], output[:,4:5]
+sigma_rr_pred, sigma_theta_pred, sigma_rtheta_pred = polar_transformation_2d(sigma_xx_pred, sigma_yy_pred, sigma_xy_pred, X)
+
+x_contact_lim = 2*np.sqrt(2*radius**2*abs(ext_traction)*(1-nu**2)/(e_modul*np.pi))
+x_contact_cond = np.logical_and(np.isclose(np.linalg.norm(X - center, axis=-1), radius), X[:,0]>-x_contact_lim)
+node_coords_x_contact = X[x_contact_cond][:,0]
+node_coords_x_contact = abs(node_coords_x_contact)
+
+pc_analytical = 4*radius*abs(ext_traction)/(np.pi*x_contact_lim**2)*np.sqrt(x_contact_lim**2-node_coords_x_contact**2)
+pc_predicted = -sigma_rr_pred[x_contact_cond]
+
+sns.set_theme()
+fig, ax = plt.subplots(figsize=(10,8))
+
+ax.scatter(node_coords_x_contact,pc_analytical,label="true")
+ax.scatter(node_coords_x_contact,pc_predicted,label="prediction")
+
+ax.legend(fontsize=20)
+ax.set_xlabel("|x|", fontsize=24)
+ax.set_ylabel(r"$P_n$", fontsize=24)
+ax.tick_params(axis='both', which='major', labelsize=18)
+plt.tight_layout()
+
+plt.savefig("pressure_analy_pred.png", dpi=300)

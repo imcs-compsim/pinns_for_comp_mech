@@ -1,14 +1,13 @@
 import deepxde as dde
+dde.config.set_default_float("float64")
 import numpy as np
 import pandas as pd
 import os
 from pathlib import Path
-from deepxde.backend import tf
+from deepxde.backend import torch
 import matplotlib.tri as tri
 from pyevtk.hl import unstructuredGridToVTK
 import time
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import QuarterDisc
@@ -16,7 +15,6 @@ from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plan
 from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from utils.elasticity import elasticity_utils
 
-#dde.config.set_default_float("float64")
 
 '''
 @author: tsahin
@@ -27,7 +25,7 @@ gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 radius = 1
 center = [0,0]
 
-Quarter_Disc = QuarterDisc(radius=radius, center=center, mesh_size=0.005, angle=255, refine_times=100, gmsh_options=gmsh_options)
+Quarter_Disc = QuarterDisc(radius=radius, center=center, mesh_size=0.005, angle=265, refine_times=1, gmsh_options=gmsh_options)
 
 gmsh_model, x_loc_partition, y_loc_partition = Quarter_Disc.generateGmshModel(visualize_mesh=False)
 
@@ -63,8 +61,14 @@ def calculate_gap_in_normal_direction(x,y,X):
 
     # Here is the idea to calculate gap_n:
     # gap_n/|n| = gap_y/|ny| --> since n is unit vector |n|=1
-    gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
-    
+    # gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
+    num = gap_y[cond]
+    den = torch.abs(normals[:, 1:2])
+    out = torch.zeros_like(num)
+    mask = den != 0
+    out[mask] = num[mask] / den[mask]
+    gap_n = out
+
     return gap_n
 
 def calculate_traction(x, y, X):
@@ -83,9 +87,9 @@ def calculate_traction(x, y, X):
 # Karush-Kuhn-Tucker conditions for frictionless contact
 # gn>=0 (positive_normal_gap), Pn<=0 (negative_normal_traction), Tt=0 (zero_tangential_traction) and gn.Pn=0 (zero_complimentary)
 
-def zero_fisher_burmeister(x,y,X):
+def zero_fischer_burmeister(x,y,X):
     '''
-    Enforces KKT conditions using Fisher-Burmeister equation
+    Enforces KKT conditions using Fischer-Burmeister equation
     '''
     # ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf
     Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
@@ -94,7 +98,7 @@ def zero_fisher_burmeister(x,y,X):
     a = gn
     b = -Pn
     
-    return a + b - tf.sqrt(tf.maximum(a**2+b**2, 1e-9))
+    return a + b - torch.sqrt(torch.maximum(a**2+b**2, torch.tensor(1e-9, dtype=a.dtype, device=a.device)))
 
 def zero_tangential_traction(x,y,X):
     '''
@@ -131,17 +135,17 @@ bc_zero_traction_x = dde.OperatorBC(geom, zero_neumann_x, boundary_circle_not_co
 bc_zero_traction_y = dde.OperatorBC(geom, zero_neumann_y, boundary_circle_not_contact)
 
 # Contact BC
-bc_zero_fisher_burmeister = dde.OperatorBC(geom, zero_fisher_burmeister, boundary_circle_contact)
+bc_zero_fischer_burmeister = dde.OperatorBC(geom, zero_fischer_burmeister, boundary_circle_contact)
 bc_zero_tangential_traction = dde.OperatorBC(geom, zero_tangential_traction, boundary_circle_contact)
 
 n_dummy = 1
 data = dde.data.PDE(
     geom,
     pde_mixed_plane_strain,
-    [bc_zero_traction_x,bc_zero_traction_y,bc_zero_tangential_traction,bc_zero_fisher_burmeister],
+    [bc_zero_traction_x,bc_zero_traction_y,bc_zero_tangential_traction,bc_zero_fischer_burmeister],
     num_domain=n_dummy,
     num_boundary=n_dummy,
-    num_test=n_dummy,
+    num_test=None,
     train_distribution = "Sobol"
 )
 
@@ -182,7 +186,7 @@ def output_transform(x, y):
     y_loc = x[:, 1:2]
     
     #return tf.concat([u*(-x_loc), ext_dips + v*(-y_loc), sigma_xx, sigma_yy, sigma_xy*(x_loc)*(y_loc)], axis=1)
-    return tf.concat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
+    return torch.cat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
 
 # 2 inputs: x and y, 5 outputs: ux, uy, sigma_xx, sigma_yy and sigma_xy
 layer_size = [2] + [50] * 5 + [5]
@@ -200,18 +204,16 @@ w_pde_1,w_pde_2,w_pde_3,w_pde_4,w_pde_5 = 1e0,1e0,1e0,1e0,1e0
 w_zero_traction_x, w_zero_traction_y = 1e0,1e0
 # weights due to Contact BC
 w_zero_tangential_traction = 1e0
-w_zero_fisher_burmeister = 1e3
+w_zero_fischer_burmeister = 1e4
 
-loss_weights = [w_pde_1,w_pde_2,w_pde_3,w_pde_4,w_pde_5,w_zero_traction_x,w_zero_traction_y,w_zero_tangential_traction,w_zero_fisher_burmeister]
-
-# store the model
-model_path = str(Path(__file__).parent.parent.parent)+"/trained_models/hertzian/pure/hertzian"
-n_epochs = 15528 # trained model has 3106 iterations
-model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
+loss_weights = [w_pde_1,w_pde_2,w_pde_3,w_pde_4,w_pde_5,w_zero_traction_x,w_zero_traction_y,w_zero_tangential_traction,w_zero_fischer_burmeister]
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
-model.restore(save_path=model_restore_path)
+losshistory, train_state = model.train(iterations=2000, display_every=100) 
+
+model.compile("L-BFGS", loss_weights=loss_weights)
+losshistory, train_state = model.train(display_every=1000)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
@@ -270,7 +272,7 @@ error_polar_stress_y =  abs(np.array(sigma_theta_pred.flatten().tolist()) - sigm
 error_polar_stress_xy =  abs(np.array(sigma_rtheta_pred.flatten().tolist()) - sigma_rtheta_fem.flatten())
 combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
 
-file_path = os.path.join(os.getcwd(), "Hertzian_normal_contact_fisher_burmeister_w_e3_255")
+file_path = os.path.join(os.getcwd(), "Hertzian_normal_contact_fischer_burmeister")
 
 dol_triangles = triangles.triangles
 offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)

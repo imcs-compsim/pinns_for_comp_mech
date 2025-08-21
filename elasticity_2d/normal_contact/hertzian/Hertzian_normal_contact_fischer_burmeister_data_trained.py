@@ -4,13 +4,16 @@ import pandas as pd
 import os
 from pathlib import Path
 from deepxde.backend import tf
+import matplotlib.tri as tri
 import matplotlib.pyplot as plt
 import seaborn as sns
+from pyevtk.hl import unstructuredGridToVTK
+import time
 
 
 from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import QuarterDisc
-from utils.geometry.geometry_utils import calculate_boundary_normals
+from utils.geometry.geometry_utils import polar_transformation_2d, calculate_boundary_normals
 
 from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, calculate_traction_mixed_formulation
 from utils.elasticity.elasticity_utils import zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
@@ -19,11 +22,10 @@ from utils.elasticity import elasticity_utils
 from utils.contact_mech import contact_utils
 
 '''
-Solves an inverse problem to identify external pressure in Hertzian contact example.
+Solves Hertzian normal contact example inluding simulation data from BACI.
 
 @author: tsahin
 '''
-###########################################
 #dde.config.real.set_float64()
 
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
@@ -38,20 +40,16 @@ revert_curve_list = []
 revert_normal_dir_list = [1,2,2,1]
 geom = GmshGeometry2D(gmsh_model, revert_curve_list=revert_curve_list, revert_normal_dir_list=revert_normal_dir_list)
 
-# Material properties
-e_actual = 199.99999999999997
-nu_actual = 0.3
-e_predicted = e_actual
-nu_predicted = nu_actual
-
-# change global variables in elasticity_utils
-elasticity_utils.geom = geom
-elasticity_utils.lame = e_predicted*nu_predicted/((1+nu_predicted)*(1-2*nu_predicted))
-elasticity_utils.shear = e_predicted/(2*(1+nu_predicted))
+# # change global variables in elasticity_utils, they are used for getting the material properties for analytical model
+lame = 115.38461538461539
+shear = 76.92307692307692
+elasticity_utils.lame = lame
+elasticity_utils.shear = shear
+nu,lame,shear,e_modul = problem_parameters() # with dimensions, will be used for analytical solution
+# This will lead to e_modul=200 and nu=0.3
 
 # The applied pressure 
-ext_traction_actual = -0.5 
-ext_traction_predicted= dde.Variable(-0.1)
+ext_traction = -0.5
 
 # zero neumann BC functions need the geom variable to be 
 elasticity_utils.geom = geom
@@ -81,7 +79,7 @@ def calculate_gap_in_normal_direction(x,y,X):
 
 def zero_fischer_burmeister(x,y,X):
     '''
-    Enforces KKT conditions using Fisher-Burmeister equation
+    Enforces KKT conditions using fischer-Burmeister equation
     '''
     # ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf
     Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
@@ -133,13 +131,27 @@ if add_external_data:
     on_boundary_ = np.logical_or(np.logical_or(on_radius,on_right),on_top)
     
     # we will take only 100 points from boundary and 100 points from domain
-    n_boundary = 200
-    n_domain = 200
+    n_boundary = 100
+    n_domain = 100
 
     # 
     ex_data_xy = np.vstack((node_coords_xy[on_boundary_][:n_boundary],node_coords_xy[~on_boundary_][:n_domain]))
     ex_data_disp = np.vstack((displacement_fem[on_boundary_][:n_boundary],displacement_fem[~on_boundary_][:n_domain]))
     ex_data_stress = np.vstack((stress_fem[on_boundary_][:n_boundary],stress_fem[~on_boundary_][:n_domain]))
+
+    # visualize points 
+    # sns.set_theme()
+    # fig, ax = plt.subplots(figsize=(10,8))
+    
+    # ax.scatter(node_coords_xy[on_boundary_][:n_boundary,0],node_coords_xy[on_boundary_][:n_boundary,1], label="boundary pts.")
+    # ax.scatter(node_coords_xy[~on_boundary_][:n_domain,0],node_coords_xy[~on_boundary_][:n_domain,1], label="collocation pts.")
+    # ax.set_xlabel(r"$x$", fontsize=24)
+    # ax.set_ylabel(r"$y$", fontsize=24)
+    # ax.tick_params(axis='both', which='major', labelsize=18)
+    
+    # ax.legend(fontsize=20)
+    # plt.savefig("Hertzian_data_dist.png",dpi=200)
+    # plt.show()
 
     # define boundary conditions for experimental data
     observe_u = dde.PointSetBC(ex_data_xy, ex_data_disp[:,0:1], component=0)
@@ -202,7 +214,7 @@ def output_transform(x, y):
     y_loc = x[:, 1:2]
     
     #return tf.concat([u*(-x_loc), ext_dips + v*(-y_loc), sigma_xx, sigma_yy, sigma_xy*(x_loc)*(y_loc)], axis=1)
-    return tf.concat([u*(-x_loc)/e_predicted, v/e_predicted, sigma_xx, ext_traction_predicted + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
+    return tf.concat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
 
 # 2 inputs: x and y, 5 outputs: ux, uy, sigma_xx, sigma_yy and sigma_xy
 layer_size = [2] + [50] * 5 + [5]
@@ -227,24 +239,85 @@ if add_external_data:
     loss_weights_data = [w_ext_u, w_ext_v, w_ext_sigma_xx, w_ext_sigma_yy, w_ext_sigma_xy]
     loss_weights.extend(loss_weights_data)
 
+# restore the model
+model_path = str(Path(__file__).parent.parent.parent)+"/trained_models/hertzian/data_enhancement/hertzian"
+n_epochs = 24876 
+model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
+
 model = dde.Model(data, net)
+model.compile("adam", lr=0.001, loss_weights=loss_weights)
+model.restore(save_path=model_restore_path)
 
-external_var_list = []
+###################################################################################
+############################## VISUALIZATION PARTS ################################
+###################################################################################
 
-if not isinstance(e_predicted, float):
-    external_var_list.append(e_predicted)
-if not isinstance(nu_predicted, float):
-    external_var_list.append(nu_predicted)
-if not isinstance(ext_traction_predicted, float):
-    external_var_list.append(ext_traction_predicted)
+df = pd.read_csv(fem_path)
+fem_results = df[["Points_0","Points_1","displacement_0","displacement_1","nodal_cauchy_stresses_xyz_0","nodal_cauchy_stresses_xyz_1","nodal_cauchy_stresses_xyz_3"]]
+fem_results = fem_results.to_numpy()
+node_coords_xy = fem_results[:,0:2]
+displacement_fem = fem_results[:,2:4]
+stress_fem = fem_results[:,4:7]
 
-parameter_file_name = str(Path(__file__).parent)+"/identified_pressure.dat"
+X = node_coords_xy
+x = X[:,0].flatten()
+y = X[:,1].flatten()
+z = np.zeros(y.shape)
+triangles = tri.Triangulation(x, y)
 
-variable = dde.callbacks.VariableValue(external_var_list, period=10, filename=parameter_file_name)
+# predictions
+start_time_calc = time.time()
+output = model.predict(X)
+end_time_calc = time.time()
+final_time = f'Prediction time: {(end_time_calc - start_time_calc):.3f} seconds'
+print(final_time)
 
-n_iter_adam = 2000
-model.compile("adam", lr=0.001, external_trainable_variables=external_var_list)
-losshistory, train_state = model.train(epochs=n_iter_adam, callbacks=[variable], display_every=100)
+u_pred, v_pred = output[:,0], output[:,1]
+sigma_xx_pred, sigma_yy_pred, sigma_xy_pred = output[:,2:3], output[:,3:4], output[:,4:5]
+sigma_rr_pred, sigma_theta_pred, sigma_rtheta_pred = polar_transformation_2d(sigma_xx_pred, sigma_yy_pred, sigma_xy_pred, X)
 
-model.compile("L-BFGS-B", external_trainable_variables=external_var_list)
-losshistory, train_state = model.train(callbacks=[variable], display_every=100)
+combined_disp_pred = tuple(np.vstack((np.array(u_pred.tolist()),np.array(v_pred.tolist()),np.zeros(u_pred.shape[0]))))
+combined_stress_pred = tuple(np.vstack((np.array(sigma_xx_pred.flatten().tolist()),np.array(sigma_yy_pred.flatten().tolist()),np.array(sigma_xy_pred.flatten().tolist()))))
+combined_stress_polar_pred = tuple(np.vstack((np.array(sigma_rr_pred.tolist()),np.array(sigma_theta_pred.tolist()),np.array(sigma_rtheta_pred.tolist()))))
+
+# fem
+u_fem, v_fem = displacement_fem[:,0], displacement_fem[:,1]
+sigma_xx_fem, sigma_yy_fem, sigma_xy_fem = stress_fem[:,0:1], stress_fem[:,1:2], stress_fem[:,2:3]
+sigma_rr_fem, sigma_theta_fem, sigma_rtheta_fem = polar_transformation_2d(sigma_xx_fem, sigma_yy_fem, sigma_xy_fem, X)
+
+combined_disp_fem = tuple(np.vstack((np.array(u_fem.tolist()),np.array(v_fem.tolist()),np.zeros(u_fem.shape[0]))))
+combined_stress_fem = tuple(np.vstack((np.array(sigma_xx_fem.flatten().tolist()),np.array(sigma_yy_fem.flatten().tolist()),np.array(sigma_xy_fem.flatten().tolist()))))
+combined_stress_polar_fem = tuple(np.vstack((np.array(sigma_rr_fem.tolist()),np.array(sigma_theta_fem.tolist()),np.array(sigma_rtheta_fem.tolist()))))
+
+# error
+error_disp_x = abs(np.array(u_pred.tolist()) - u_fem.flatten())
+error_disp_y =  abs(np.array(v_pred.tolist()) - v_fem.flatten())
+combined_error_disp = tuple(np.vstack((error_disp_x, error_disp_y,np.zeros(error_disp_x.shape[0]))))
+
+error_stress_x = abs(np.array(sigma_xx_pred.flatten().tolist()) - sigma_xx_fem.flatten())
+error_stress_y =  abs(np.array(sigma_yy_pred.flatten().tolist()) - sigma_yy_fem.flatten())
+error_stress_xy =  abs(np.array(sigma_xy_pred.flatten().tolist()) - sigma_xy_fem.flatten())
+combined_error_stress = tuple(np.vstack((error_stress_x, error_stress_y, error_stress_xy)))
+
+error_polar_stress_x = abs(np.array(sigma_rr_pred.flatten().tolist()) - sigma_rr_fem.flatten())
+error_polar_stress_y =  abs(np.array(sigma_theta_pred.flatten().tolist()) - sigma_theta_fem.flatten())
+error_polar_stress_xy =  abs(np.array(sigma_rtheta_pred.flatten().tolist()) - sigma_rtheta_fem.flatten())
+combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
+
+file_path = os.path.join(os.getcwd(), "Hertzian_normal_contact_fischer_burmeister_data_255")
+
+dol_triangles = triangles.triangles
+offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
+cell_types = np.ones(dol_triangles.shape[0])*5
+
+unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
+                      cell_types, pointData = {"displacement_pred" : combined_disp_pred,
+                                               "displacement_fem" : combined_disp_fem,
+                                               "stress_pred" : combined_stress_pred, 
+                                               "stress_fem" : combined_stress_fem, 
+                                               "polar_stress_pred" : combined_stress_polar_pred, 
+                                               "polar_stress_fem" : combined_stress_polar_fem, 
+                                               "error_disp" : combined_error_disp, 
+                                               "error_stress" : combined_error_stress, 
+                                               "error_polar_stress" : combined_error_polar_stress
+                                            })
