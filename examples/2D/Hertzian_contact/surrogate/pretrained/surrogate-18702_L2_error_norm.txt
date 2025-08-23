@@ -1,3 +1,0 @@
-At an external pressure of p=0.45 the relative L2 error for contact pressure is 1.66523338e-01
-At an external pressure of p=0.98 the relative L2 error for contact pressure is 2.76896063e-01
-At an external pressure of p=1.5 the relative L2 error for contact pressure is 3.54578213e-01

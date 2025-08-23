@@ -24,7 +24,7 @@ from utils.deep_energy.deep_pde import DeepEnergyPDE
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = False
+restore_pretrained_model = True
 
 ## Create geometry
 # Dimensions of disk
@@ -176,7 +176,7 @@ if not restore_pretrained_model:
     dde.optimizers.config.set_LBFGS_options(maxiter=1000) # stop L-BFGS after 1000 iterations as it starts to oscillate otherwise
     model.compile("L-BFGS") # No adjustment of loss weights
     end_time_LBFGS_compile = time.time()
-    losshistory, train_state = model.train(display_every=200, model_save_path=f"{model_path}/{simulation_case}")
+    losshistory, train_state = model.train(display_every=1000, model_save_path=f"{model_path}/{simulation_case}")
 
     end_time_train = time.time()
     time_train = f"Total compilation and training time: {(end_time_train - start_time_train):.3f} seconds"
@@ -194,11 +194,11 @@ if not restore_pretrained_model:
     )
 
 else:
-    n_iterations = 6116
-    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
+    n_iterations = 6000
+    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.pt"
     model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
-    model.compile("adam", lr=0.001)
+    model.compile("L-BFGS")
     model.restore(save_path=model_restore_path)
 
 # Output results to VTU

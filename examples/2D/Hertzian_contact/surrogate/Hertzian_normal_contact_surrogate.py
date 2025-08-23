@@ -29,7 +29,7 @@ from utils.contact_mech.contact_utils import zero_complementarity_function_based
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = False
+restore_pretrained_model = True
 
 ## Create geometry
 # Dimensions of disk
@@ -170,7 +170,7 @@ if not restore_pretrained_model:
 
     model.compile("L-BFGS", loss_weights=loss_weights)
     end_time_LBFGS_compile = time.time()
-    losshistory, train_state = model.train(display_every=200, model_save_path=f"{model_path}/{simulation_case}")
+    losshistory, train_state = model.train(display_every=1000, model_save_path=f"{model_path}/{simulation_case}")
 
     end_time_train = time.time()
     time_train = f"Total compilation and training time: {(end_time_train - start_time_train):.3f} seconds"
@@ -199,11 +199,11 @@ if not restore_pretrained_model:
         
         return steps, pde_loss, neumann_loss
 else:
-    n_iterations = 18702
-    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.ckpt"
+    n_iterations = 17000
+    model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.pt"
     model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
-    model.compile("adam", lr=0.001)
+    model.compile("L-BFGS")
     model.restore(save_path=model_restore_path)
     def calculate_loss():
         losses = np.loadtxt(model_loss_path),
