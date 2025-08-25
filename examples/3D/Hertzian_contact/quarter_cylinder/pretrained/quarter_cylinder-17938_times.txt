@@ -1,6 +1,0 @@
-Compilation and training times in [s]
-Adam compilation:     9.604
-Adam training:       86.191
-L-BFGS compilation:   6.501
-L-BFGS training:     708.868
-Total:               811.164
