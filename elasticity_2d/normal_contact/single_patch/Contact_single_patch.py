@@ -1,7 +1,7 @@
 import deepxde as dde
 import numpy as np
 import os
-from deepxde.backend import tf
+from deepxde.backend import torch
 from pyevtk.hl import unstructuredGridToVTK
 
 from utils.geometry.gmsh_models import Block_2D
@@ -152,7 +152,7 @@ def output_transform(x, y):
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
     
-    return tf.concat([u*(x_loc),v, sigma_xx*(l_beam-x_loc), ext_traction + sigma_yy*(h_beam-y_loc),sigma_xy*(l_beam-x_loc)*(x_loc)*(h_beam-y_loc)], axis=1)
+    return torch.cat([u*(x_loc),v, sigma_xx*(l_beam-x_loc), ext_traction + sigma_yy*(h_beam-y_loc),sigma_xy*(l_beam-x_loc)*(x_loc)*(h_beam-y_loc)], axis=1)
 
 # two inputs x and y, 5 outputs are ux, uy, sigma_xx, sigma_yy and sigma_xy
 layer_size = [2] + [50] * 5 + [5]
