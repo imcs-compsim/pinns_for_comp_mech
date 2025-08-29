@@ -5,6 +5,8 @@
 import deepxde as dde
 dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 from deepxde import backend as bkd
 from pathlib import Path
 import time
@@ -259,3 +261,42 @@ solutionFieldOnMeshToVtk3D(geom,
                            save_folder_path=model_path, 
                            file_name="Hertzian_contact_3d_quarter_cylinder_enhanced", 
                            polar_transformation="cylindrical")
+
+## Add analytical solution to get the error of the training
+# Define constants
+p_max = 8.36
+b = 0.07611333607551958
+n_compare = 100
+plot_width = 5*b
+# Analytical Solution
+y_range_analytical = np.linspace(0,plot_width,n_compare).reshape(-1,1)
+s_x = -p_max*((1+2*(y_range_analytical**2/b**2))/(np.sqrt(1+y_range_analytical**2/b**2)) - 2*np.abs(y_range_analytical/b))
+s_y = -p_max/(np.sqrt(1+y_range_analytical**2/b**2))
+s_z = -2*nu*p_max*(np.sqrt(1+y_range_analytical**2/b**2) - np.abs(y_range_analytical/b))
+
+# Prediction on theses points
+y_range_prediction = np.linspace(-1,-1+plot_width,n_compare).reshape(-1,1)
+prediction_points = np.hstack((np.zeros_like(y_range_prediction), y_range_prediction, -0.75*np.ones_like(y_range_prediction)))
+
+start_time_predict = time.time()
+prediction = model.predict(prediction_points)
+end_time_predict = time.time()
+
+# Plot predicted and analytical solution
+fig, ax = plt.subplots(figsize=(8,4.5))
+ax.plot(y_range_analytical/b, s_x/-p_max, linewidth = 3, color="blue", label="$\sigma_{xx}^{analytical}$")
+ax.plot(y_range_analytical/b, prediction[:,3]/-p_max, linewidth = 3, color="blue", marker="*", markersize=8, markeredgecolor="black", markevery=4, alpha=0.5, label="$\sigma_{xx}^{predicted}$")
+ax.plot(y_range_analytical/b, s_y/-p_max, linewidth = 3, color="orange", label="$\sigma_{yy}^{analytical}$")
+ax.plot(y_range_analytical/b, prediction[:,4]/-p_max, linewidth = 3, color="orange", marker="*", markersize=8, markeredgecolor="black", markevery=4, alpha=0.5, label="$\sigma_{yy}^{predicted}$")
+ax.plot(y_range_analytical/b, s_z/-p_max, linewidth = 3, color="green", label="$\sigma_{zz}^{analytical}$")
+ax.plot(y_range_analytical/b, prediction[:,5]/-p_max, linewidth = 3, color="green", marker="*", markersize=8, markeredgecolor="black", markevery=4, alpha=0.5, label="$\sigma_{zz}^{predicted}$")
+ax.set_xlabel(r"Distance to contact surface", fontsize=16)
+ax.xaxis.set_major_formatter(FuncFormatter(lambda v, pos: "0" if np.isclose(v, 0) else f"{v}b"))
+# ax.xaxis.set_major_locator(MultipleLocator(0.5 * b))
+ax.set_ylabel(r"Ratio of stress to to $p_{max}$", fontsize=16)
+ax.tick_params(axis="both", which="major", labelsize=12)
+ax.legend(fontsize=14)
+ax.grid()
+plt.tight_layout()
+fig.savefig(f"{model_path}/{simulation_case}-{n_iterations}_pressure.png", dpi=300)
+plt.show()
