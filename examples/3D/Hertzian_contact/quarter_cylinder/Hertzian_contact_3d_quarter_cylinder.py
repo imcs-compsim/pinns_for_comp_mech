@@ -174,7 +174,7 @@ loss_weights = [w_momentum_xx, w_momentum_yy, w_momentum_zz,
 model = dde.Model(data, net)
 model_path = str(Path(__file__).parent)
 simulation_case = f"quarter_cylinder"
-adam_iterations = 2000
+adam_iterations = 5000
 
 if not restore_pretrained_model:
     start_time_train = time.time()
@@ -213,7 +213,7 @@ if not restore_pretrained_model:
     )
 
 else:
-    n_iterations = 17480
+    n_iterations = 20000
     model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.pt"
     model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
