@@ -2,7 +2,7 @@ import deepxde as dde
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from deepxde.backend import tf
+from deepxde.backend import torch
 from pyevtk.hl import unstructuredGridToVTK
 
 '''
@@ -91,7 +91,7 @@ data = dde.data.PDE(
 def output_transform(x, y):
     u = y[:, 0:1]
     v = y[:, 1:2]
-    return tf.concat([ u*x*0.001, v*y*0.001], axis=1)
+    return torch.cat([ u*x*0.001, v*y*0.001], axis=1)
 
 # two inputs x and y, output is ux and uy
 layer_size = [2] + [50] * 5 + [2]
