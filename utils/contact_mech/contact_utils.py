@@ -61,10 +61,9 @@ def calculate_gap_in_normal_direction(x,y,X):
     # gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
     num = gap_y[cond]
     den = torch.abs(normals[:, 1:2])
-    out = torch.zeros_like(num)
+    gap_n = torch.zeros_like(num)
     mask = den != 0
-    out[mask] = num[mask] / den[mask]
-    gap_n = out
+    gap_n[mask] = num[mask] / den[mask]
     
     return gap_n
 
