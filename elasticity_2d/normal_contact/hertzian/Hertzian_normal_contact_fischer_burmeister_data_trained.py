@@ -22,7 +22,7 @@ from utils.elasticity import elasticity_utils
 from utils.contact_mech import contact_utils
 
 '''
-Solves Hertzian normal contact example inluding simulation data from BACI.
+Solves Hertzian normal contact example inluding simulation data from 4C.
 
 @author: tsahin
 '''

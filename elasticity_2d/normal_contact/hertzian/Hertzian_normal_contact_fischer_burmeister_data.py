@@ -1,5 +1,4 @@
 import deepxde as dde
-dde.config.set_default_float("float64")
 import numpy as np
 import pandas as pd
 import os
@@ -20,6 +19,8 @@ from utils.elasticity.elasticity_utils import zero_neumann_x_mixed_formulation, 
 from utils.contact_mech.contact_utils import zero_tangential_traction
 from utils.elasticity import elasticity_utils
 from utils.contact_mech import contact_utils
+
+dde.config.set_default_float("float64")
 
 '''
 Solves Hertzian normal contact example inluding simulation data from 4C.

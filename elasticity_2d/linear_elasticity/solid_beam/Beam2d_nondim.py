@@ -1,5 +1,4 @@
 import deepxde as dde
-dde.config.set_default_float("float64")
 import numpy as np
 import os
 from deepxde.backend import torch
@@ -11,6 +10,7 @@ from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import Block_2D
 from utils.elasticity import elasticity_utils
 
+dde.config.set_default_float("float64")
 
 '''
 The correct order for the normals --> 1 2 1 1

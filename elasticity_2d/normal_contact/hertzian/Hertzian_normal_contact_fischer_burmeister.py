@@ -1,5 +1,4 @@
 import deepxde as dde
-dde.config.set_default_float("float64")
 import numpy as np
 import pandas as pd
 import os
@@ -15,6 +14,7 @@ from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plan
 from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from utils.elasticity import elasticity_utils
 
+dde.config.set_default_float("float64")
 
 '''
 @author: tsahin
