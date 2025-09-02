@@ -1,7 +1,7 @@
 import deepxde as dde
 import numpy as np
 import os
-from deepxde.backend import torch
+import deepxde.backend as bkd
 from pyevtk.hl import unstructuredGridToVTK
 
 from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
@@ -133,7 +133,7 @@ data = dde.data.PDE(
 
 # non-dimensionalize the input using characteristic length 
 def input_transform(x):
-    return torch.cat((x[:,0:1]/characteristic_length, x[:,1:2]/characteristic_length), axis=1)
+    return bkd.concat((x[:,0:1]/characteristic_length, x[:,1:2]/characteristic_length), axis=1)
 
 # two inputs x and y, output is ux and uy
 layer_size = [2] + [50] * 3 + [2]

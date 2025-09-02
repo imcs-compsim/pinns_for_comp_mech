@@ -47,7 +47,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import matplotlib.tri as tri
-from deepxde.backend import torch
+import deepxde.backend as bkd
 from pyevtk.hl import unstructuredGridToVTK
 
 from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, stress_to_traction_2d
@@ -138,7 +138,7 @@ def output_transform_hard(x, y):
     """
     u = y[:, 0:1]
     v = y[:, 1:2]
-    return torch.cat((u*x, v*y), axis=1)
+    return bkd.concat((u*x, v*y), axis=1)
 
 def output_transform_hard_scaled(x, y):
     """
@@ -150,7 +150,7 @@ def output_transform_hard_scaled(x, y):
 
     u = y[:, 0:1]
     v = y[:, 1:2]
-    return torch.cat((u*x*0.001, v*y*0.001), axis=1)
+    return bkd.concat((u*x*0.001, v*y*0.001), axis=1)
 
 def output_transform_scaled(x, y):
     """
@@ -160,7 +160,7 @@ def output_transform_scaled(x, y):
     """
     u = y[:, 0:1]
     v = y[:, 1:2]
-    return torch.cat((u*0.001, v*0.001), axis=1)
+    return bkd.concat((u*0.001, v*0.001), axis=1)
 
 # two inputs x and y, two outputs ux and uy
 layer_size = [2] + [50] * 5 + [2]

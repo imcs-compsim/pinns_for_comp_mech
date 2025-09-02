@@ -2,7 +2,7 @@ import deepxde as dde
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from deepxde.backend import torch
+import deepxde.backend as bkd
 from pyevtk.hl import unstructuredGridToVTK
 import matplotlib as mpl
 mpl.rcParams['mathtext.fontset'] = 'stix'
@@ -137,7 +137,7 @@ def output_transform(x, y):
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
     
-    return torch.cat([u*(x_loc)/e_modul,v*(y_loc)/e_modul, sigma_xx, sigma_yy, sigma_xy*x_loc*y_loc], axis=1)
+    return bkd.concat([u*(x_loc)/e_modul,v*(y_loc)/e_modul, sigma_xx, sigma_yy, sigma_xy*x_loc*y_loc], axis=1)
 # two inputs x and y, output is ux and uy
 layer_size = [2] + [30] * 5 + [5]
 activation = "tanh"
