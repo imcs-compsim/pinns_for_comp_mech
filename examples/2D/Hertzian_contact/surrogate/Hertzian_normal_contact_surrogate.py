@@ -3,7 +3,6 @@
 ### based on the work of tsahin
 # Import required libraries
 import deepxde as dde
-dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -26,6 +25,8 @@ from utils.geometry.geometry_utils import polar_transformation_2d
 from utils.elasticity import elasticity_utils
 import utils.contact_mech.contact_utils as contact_utils
 from utils.contact_mech.contact_utils import zero_complementarity_function_based_fischer_burmeister, zero_tangential_traction
+
+dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself

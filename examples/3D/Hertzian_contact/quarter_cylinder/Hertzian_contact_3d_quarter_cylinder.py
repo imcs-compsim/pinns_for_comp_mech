@@ -3,7 +3,6 @@
 ### based on the work of tsahin
 # Import required libraries
 import deepxde as dde
-dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
@@ -20,6 +19,8 @@ from utils.elasticity.elasticity_utils import apply_zero_neumann_x_mixed_formula
 from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
 from utils.contact_mech import contact_utils
 from utils.contact_mech.contact_utils import zero_tangential_traction_component1_3d, zero_tangential_traction_component2_3d, zero_complementarity_function_based_fischer_burmeister_3d
+
+dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself

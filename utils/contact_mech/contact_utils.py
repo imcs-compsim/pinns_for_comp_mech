@@ -66,10 +66,9 @@ def calculate_gap_in_normal_direction(x,y,X):
     elif backend_name=="pytorch":
         num = gap_y[cond]
         den = torch.abs(normals[:, 1:2])
-        out = torch.zeros_like(num)
+        gap_n = torch.zeros_like(num)
         mask = den != 0
-        out[mask] = num[mask] / den[mask]
-        gap_n = out
+        gap_n[mask] = num[mask] / den[mask]
     
     return gap_n
 
