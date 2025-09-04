@@ -21,6 +21,7 @@ keywords = ["physics-informed neural networks", "computational mechanics", "cont
 readme = "README.md"
 
 # Dependencies of the project that need to be installed to use this project properly
+requires-python = "==3.12"
 dependencies = [
   "scipy",
   "deepxde",
