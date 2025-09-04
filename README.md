@@ -25,7 +25,7 @@ This framework relies on the `deepxde` package for training PINNs.
 
 `deepxde` needs one of the following packages for the backend-calculation.  
 - PyTorch (preferred backend)
-- TensorFlow (this backend will be removed in the future)
+- TensorFlow (not supported by all examples, remaining support might be dropped in the future)
 
 You can specify your backend of choice when seting up this framework by running
 * for Tensorflow
