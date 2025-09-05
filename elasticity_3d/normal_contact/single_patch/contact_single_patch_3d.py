@@ -2,7 +2,6 @@ import deepxde as dde
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from deepxde.backend import tf
 from pyevtk.hl import unstructuredGridToVTK
 from pathlib import Path
 
@@ -25,7 +24,7 @@ from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk
 from utils.geometry.geometry_utils import calculate_boundary_normals_3D
 
 from utils.contact_mech import contact_utils
-from utils.contact_mech.contact_utils import zero_tangential_traction_component1_3d, zero_tangential_traction_component2_3d, zero_complementarity_function_based_fisher_burmeister_3d
+from utils.contact_mech.contact_utils import zero_tangential_traction_component1_3d, zero_tangential_traction_component2_3d, zero_complementarity_function_based_fischer_burmeister_3d
 
 length = 1
 height = 1
@@ -67,8 +66,8 @@ def boundary_contact(x, on_boundary):
 bc1 = dde.OperatorBC(geom, zero_tangential_traction_component1_3d, boundary_contact)
 bc2 = dde.OperatorBC(geom, zero_tangential_traction_component2_3d, boundary_contact)
 
-# KKT using fisher_burmeister
-bc3 = dde.OperatorBC(geom, zero_complementarity_function_based_fisher_burmeister_3d, boundary_contact)
+# KKT using fischer_burmeister
+bc3 = dde.OperatorBC(geom, zero_complementarity_function_based_fischer_burmeister_3d, boundary_contact)
 
 n_dummy = 1
 data = dde.data.PDE(

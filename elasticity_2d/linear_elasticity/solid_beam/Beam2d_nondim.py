@@ -1,7 +1,7 @@
 import deepxde as dde
 import numpy as np
 import os
-from deepxde.backend import tf
+import deepxde.backend as bkd
 from pyevtk.hl import unstructuredGridToVTK
 
 from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
@@ -10,6 +10,7 @@ from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import Block_2D
 from utils.elasticity import elasticity_utils
 
+dde.config.set_default_float("float64")
 
 '''
 The correct order for the normals --> 1 2 1 1
@@ -126,13 +127,13 @@ data = dde.data.PDE(
     [bc1, bc2, bc3, bc4, bc5, bc6],
     num_domain=n_dummy,
     num_boundary=n_dummy,
-    num_test=n_dummy,
+    num_test=None,
     train_distribution = "Sobol",
 )
 
 # non-dimensionalize the input using characteristic length 
 def input_transform(x):
-    return tf.concat([x[:,0:1]/characteristic_length, x[:,1:2]/characteristic_length], axis=1)
+    return bkd.concat((x[:,0:1]/characteristic_length, x[:,1:2]/characteristic_length), axis=1)
 
 # two inputs x and y, output is ux and uy
 layer_size = [2] + [50] * 3 + [2]
@@ -144,7 +145,7 @@ loss_weights=[1,1,1e0,1e0,1,1,1,1]
 model = dde.Model(data, net)
 
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
-losshistory, train_state = model.train(epochs=5000, display_every=200)
+losshistory, train_state = model.train(iterations=5000, display_every=200)
 
 model.compile("L-BFGS",loss_weights=loss_weights)
 model.train()

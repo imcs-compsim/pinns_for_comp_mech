@@ -19,7 +19,7 @@ from utils.elasticity.elasticity_utils import apply_zero_neumann_x_mixed_formula
 from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
 
 from utils.contact_mech import contact_utils
-from utils.contact_mech.contact_utils import zero_tangential_traction_component1_3d, zero_tangential_traction_component2_3d, zero_complementarity_function_based_fisher_burmeister_3d
+from utils.contact_mech.contact_utils import zero_tangential_traction_component1_3d, zero_tangential_traction_component2_3d, zero_complementarity_function_based_fischer_burmeister_3d
 
 path_to_step_file = str(Path(__file__).parent.parent.parent)+f"/step_files/hertzian_quarter_cylinder.stp"
 
@@ -72,8 +72,8 @@ bc3 = dde.OperatorBC(geom, apply_zero_neumann_z_mixed_formulation, boundary_not_
 # enforce tangential tractions to be zero
 bc4 = dde.OperatorBC(geom, zero_tangential_traction_component1_3d, boundary_contact)
 bc5 = dde.OperatorBC(geom, zero_tangential_traction_component2_3d, boundary_contact)
-# KKT using fisher_burmeister
-bc6 = dde.OperatorBC(geom, zero_complementarity_function_based_fisher_burmeister_3d, boundary_contact)
+# KKT using fischer_burmeister
+bc6 = dde.OperatorBC(geom, zero_complementarity_function_based_fischer_burmeister_3d, boundary_contact)
 
 # additional data
 p_max = 8.36
@@ -169,30 +169,30 @@ w_zero_traction_x, w_zero_traction_y, w_zero_traction_z = 1e0, 1e0, 1e0
 # weights due to Contact BCs
 w_zero_tangential_traction_component1 = 1e0
 w_zero_tangential_traction_component2 = 1e0
-w_zero_fisher_burmeister = 5e2
+w_zero_fischer_burmeister = 5e2
 # single dirichlet
 # w_dirichlet = 1e0
 
 loss_weights = [w_momentum_xx, w_momentum_yy, w_momentum_zz, 
                 w_s_xx, w_s_yy, w_s_zz, w_s_xy, w_s_yz, w_s_xz,  
                 w_zero_traction_x, w_zero_traction_y, w_zero_traction_z,
-                w_zero_tangential_traction_component1, w_zero_tangential_traction_component2, w_zero_fisher_burmeister,
+                w_zero_tangential_traction_component1, w_zero_tangential_traction_component2, w_zero_fischer_burmeister,
                 1,1,1]
 
 model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian_enhanced/hertzian_3d_enhanced_analytical"
-restore_model = True
+restore_model = False
 
 if not restore_model:
     model.compile("adam", lr=0.001, loss_weights=loss_weights)
-    losshistory, train_state = model.train(epochs=2000, display_every=100) 
-    # losshistory, train_state = model.train(epochs=2000, display_every=200, model_save_path=model_path) # use if you want to save the model
+    losshistory, train_state = model.train(iterations=2000, display_every=100)
+    # losshistory, train_state = model.train(iterations=2000, display_every=200, model_save_path=model_path) # use if you want to save the model
 
     model.compile("L-BFGS", loss_weights=loss_weights)
-    losshistory, train_state = model.train(display_every=200)
-    # losshistory, train_state = model.train(display_every=200, model_save_path=model_path) # same as above
+    losshistory, train_state = model.train(display_every=1000)
+    # losshistory, train_state = model.train(display_every=1000, model_save_path=model_path) # same as above
 else:
-    n_epochs = 15921 
-    model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
+    n_iterations = 15921 
+    model_restore_path = model_path + "-"+ str(n_iterations) + ".ckpt"
     
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path)

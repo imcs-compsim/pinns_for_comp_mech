@@ -42,7 +42,7 @@ Block_3D_obj = Block_3D_hex(origin=origin,
                             width=width,
                             divisions=[seed_l, seed_h, seed_w])
 
-gmsh_model = Block_3D_obj.generateGmshModel(visualize_mesh=True)
+gmsh_model = Block_3D_obj.generateGmshModel(visualize_mesh=False)
 
 geom = GmshGeometry3D(gmsh_model)
 
@@ -113,10 +113,10 @@ net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001)
-losshistory, train_state = model.train(epochs=1000, display_every=200)
+losshistory, train_state = model.train(iterations=1000, display_every=200)
 
 model.compile("L-BFGS")
-losshistory, train_state = model.train(display_every=200)
+losshistory, train_state = model.train(display_every=1000)
 
 solutionFieldOnMeshToVtk3D(geom, 
                            model, 

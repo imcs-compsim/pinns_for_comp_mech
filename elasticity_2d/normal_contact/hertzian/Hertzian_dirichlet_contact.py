@@ -2,7 +2,7 @@
 import deepxde as dde
 import numpy as np
 # Import tf if using backend tensorflow.compat.v1 or tensorflow
-from deepxde.backend import tf
+from deepxde.backend import torch
 
 from utils.elasticity.elasticity_utils import stress_plane_strain, momentum_2d 
 from utils.postprocess.elasticity_postprocessing import meshGeometry, postProcess
@@ -41,7 +41,7 @@ def calculate_gap(x, y, X):
 
     Returns
     -------
-    (1-tf.math.sign(gap))*gap: tensor
+    (1-torch.sign(gap))*gap: tensor
         gap between each node and contact level  
     '''
     y_0 = 0
@@ -50,7 +50,7 @@ def calculate_gap(x, y, X):
     
     gap = y_coordinate + y_displacement + y_0
 
-    return (1-tf.math.sign(gap))*gap
+    return (1-torch.sign(gap))*gap
 
 def calculate_pressure(x,y,X):
     '''
@@ -67,13 +67,13 @@ def calculate_pressure(x,y,X):
 
     Returns
     -------
-    (1+tf.math.sign(sigma_yy))*sigma_yy: tensor
+    (1+torch.sign(sigma_yy))*sigma_yy: tensor
         pressure on the surface 
     '''
 
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
 
-    return (1+tf.math.sign(sigma_yy))*sigma_yy
+    return (1+torch.sign(sigma_yy))*sigma_yy
 
 def product_gap_pressure(x,y,X):
     '''
@@ -127,7 +127,7 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, loss_weights=[1,1,1,1,1,1,1,1]) # loss_weights=[1,1,1,1,100,100,100,1]
-losshistory, train_state = model.train(epochs=3000, display_every=500)
+losshistory, train_state = model.train(iterations=3000, display_every=500)
 
 
 ###################################################################################

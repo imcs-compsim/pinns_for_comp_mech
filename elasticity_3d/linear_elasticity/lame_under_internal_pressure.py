@@ -41,7 +41,7 @@ curve_info = {"4":14, "8":14, "10":14,
               "6":18, "7":18, "2":18,}
 Lame_geom_obj = Geom_step_to_gmsh(path=path_to_step_file, curve_info=curve_info)
 
-gmsh_model = Lame_geom_obj.generateGmshModel(visualize_mesh=True)
+gmsh_model = Lame_geom_obj.generateGmshModel(visualize_mesh=False)
 
 # Target surface IDs for each set. 
 # This means if any surface is neighbor of any of following surfaces, then repeated nodes will take normals+tangenitals of the target surface 
@@ -159,20 +159,20 @@ net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
 
-restore_model = True
+restore_model = False
 model_path = str(Path(__file__).parent.parent)+f"/trained_models/lame/lame_3d"
 
 if not restore_model:
     model.compile("adam", lr=0.001)
-    losshistory, train_state = model.train(epochs=2000, display_every=100) 
-    # losshistory, train_state = model.train(epochs=2000, display_every=200, model_save_path=model_path) # use if you want to save the model
+    losshistory, train_state = model.train(iterations=2000, display_every=100) 
+    # losshistory, train_state = model.train(iterations=2000, display_every=200, model_save_path=model_path) # use if you want to save the model
 
     model.compile("L-BFGS")
-    losshistory, train_state = model.train(display_every=200)
+    losshistory, train_state = model.train(display_every=1000)
     # losshistory, train_state = model.train(display_every=200, model_save_path=model_path) # same as above
 else:
-    n_epochs = 11398 
-    model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
+    n_iterations = 11398 
+    model_restore_path = model_path + "-"+ str(n_iterations) + ".ckpt"
     
     model.compile("adam", lr=0.001)
     model.restore(save_path=model_restore_path)
@@ -352,7 +352,7 @@ compareModelPredictionAndAnalyticalSolution(model)
 #     axs[2].annotate(r"ADAM $\ \Leftarrow$ ", xy=[610,0.5], size=13)
 #     axs[2].annotate(r"$\Rightarrow \ $ L-BGFS", xy=[2150,0.5], size=13)
 #     axs[2].tick_params(axis="both", labelsize=12)
-#     axs[2].set_xlabel("Epochs", size=17)
+#     axs[2].set_xlabel("Iterations", size=17)
 #     axs[2].set_ylabel("MSE", size=17)
 #     axs[2].set_yscale('log')
 #     axs[2].legend(fontsize=13)

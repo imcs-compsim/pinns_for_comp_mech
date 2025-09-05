@@ -3,10 +3,9 @@ import numpy as np
 import pandas as pd
 import os
 from pathlib import Path
-from deepxde.backend import tf
+from deepxde.backend import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 
 from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.geometry.gmsh_models import QuarterDisc
@@ -18,13 +17,13 @@ from utils.contact_mech.contact_utils import zero_tangential_traction
 from utils.elasticity import elasticity_utils
 from utils.contact_mech import contact_utils
 
+dde.config.set_default_float("float64")
+
 '''
 Solves an inverse problem to identify external pressure in Hertzian contact example.
 
 @author: tsahin
 '''
-###########################################
-#dde.config.real.set_float64()
 
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 radius = 1
@@ -75,13 +74,18 @@ def calculate_gap_in_normal_direction(x,y,X):
 
     # Here is the idea to calculate gap_n:
     # gap_n/|n| = gap_y/|ny| --> since n is unit vector |n|=1
-    gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
-    
+    # gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
+    num = gap_y[cond]
+    den = torch.abs(normals[:, 1:2])
+    gap_n = torch.zeros_like(num)
+    mask = den != 0
+    gap_n[mask] = num[mask] / den[mask]
+
     return gap_n
 
 def zero_fischer_burmeister(x,y,X):
     '''
-    Enforces KKT conditions using Fisher-Burmeister equation
+    Enforces KKT conditions using Fischer-Burmeister equation
     '''
     # ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf
     Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
@@ -90,7 +94,7 @@ def zero_fischer_burmeister(x,y,X):
     a = gn
     b = -Pn
     
-    return a + b - tf.sqrt(tf.maximum(a**2+b**2, 1e-9))
+    return a + b - torch.sqrt(torch.maximum(a**2+b**2, torch.tensor(1e-9, dtype=a.dtype, device=a.device)))
 
 def boundary_circle_not_contact(x, on_boundary):
     return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), radius) and (x[0]<x_loc_partition)
@@ -160,7 +164,7 @@ data = dde.data.PDE(
     bcs,
     num_domain=n_dummy,
     num_boundary=n_dummy,
-    num_test=n_dummy,
+    num_test=None,
     train_distribution = "Sobol",
     anchors=(ex_data_xy if add_external_data else None)
 )
@@ -202,7 +206,7 @@ def output_transform(x, y):
     y_loc = x[:, 1:2]
     
     #return tf.concat([u*(-x_loc), ext_dips + v*(-y_loc), sigma_xx, sigma_yy, sigma_xy*(x_loc)*(y_loc)], axis=1)
-    return tf.concat([u*(-x_loc)/e_predicted, v/e_predicted, sigma_xx, ext_traction_predicted + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
+    return torch.cat([u*(-x_loc)/e_predicted, v/e_predicted, sigma_xx, ext_traction_predicted + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
 
 # 2 inputs: x and y, 5 outputs: ux, uy, sigma_xx, sigma_yy and sigma_xy
 layer_size = [2] + [50] * 5 + [5]
@@ -246,5 +250,5 @@ n_iter_adam = 2000
 model.compile("adam", lr=0.001, external_trainable_variables=external_var_list)
 losshistory, train_state = model.train(epochs=n_iter_adam, callbacks=[variable], display_every=100)
 
-model.compile("L-BFGS-B", external_trainable_variables=external_var_list)
-losshistory, train_state = model.train(callbacks=[variable], display_every=100)
+model.compile("L-BFGS", external_trainable_variables=external_var_list)
+losshistory, train_state = model.train(callbacks=[variable], display_every=1000)

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import os
 from pathlib import Path
-from deepxde.backend import tf
+from deepxde.backend import torch
 import matplotlib.tri as tri
 from pyevtk.hl import unstructuredGridToVTK
 import time
@@ -14,7 +14,7 @@ from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plan
 from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
 from utils.elasticity import elasticity_utils
 
-#dde.config.set_default_float("float64")
+dde.config.set_default_float("float64")
 
 '''
 @author: tsahin
@@ -61,8 +61,13 @@ def calculate_gap_in_normal_direction(x,y,X):
 
     # Here is the idea to calculate gap_n:
     # gap_n/|n| = gap_y/|ny| --> since n is unit vector |n|=1
-    gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
-    
+    # gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
+    num = gap_y[cond]
+    den = torch.abs(normals[:, 1:2])
+    gap_n = torch.zeros_like(num)
+    mask = den != 0
+    gap_n[mask] = num[mask] / den[mask]
+
     return gap_n
 
 def calculate_traction(x, y, X):
@@ -88,7 +93,7 @@ def positive_normal_gap(x, y, X):
     gn = calculate_gap_in_normal_direction(x, y, X)
 
     # If gn is negative, it will create contributions to overall loss. Aims is to get positive gap
-    return (1.0-tf.math.sign(gn))*gn
+    return (1.0-torch.sign(gn))*gn
 
 def negative_normal_traction(x,y,X):
     '''
@@ -97,7 +102,7 @@ def negative_normal_traction(x,y,X):
     Tx, Ty, Pn, Tt = calculate_traction(x, y, X)
 
     # If Pn is positive, it will create contributions to overall loss. Aims is to get negative normal traction
-    return (1.0+tf.math.sign(Pn))*Pn
+    return (1.0+torch.sign(Pn))*Pn
 
 def zero_tangential_traction(x,y,X):
     '''
@@ -155,7 +160,7 @@ data = dde.data.PDE(
     [bc_zero_traction_x,bc_zero_traction_y,bc_positive_normal_gap,bc_negative_normal_traction,bc_zero_tangential_traction,bc_zero_complimentary],
     num_domain=n_dummy,
     num_boundary=n_dummy,
-    num_test=n_dummy,
+    num_test=None,
     train_distribution = "Sobol"
 )
 
@@ -195,8 +200,8 @@ def output_transform(x, y):
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
     
-    #return tf.concat([u*(-x_loc), ext_dips + v*(-y_loc), sigma_xx, sigma_yy, sigma_xy*(x_loc)*(y_loc)], axis=1)
-    return tf.concat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
+    #return torch.cat([u*(-x_loc), ext_dips + v*(-y_loc), sigma_xx, sigma_yy, sigma_xy*(x_loc)*(y_loc)], axis=1)
+    return torch.cat([u*(-x_loc)/e_modul, v/e_modul, sigma_xx, ext_traction + sigma_yy*(-y_loc),sigma_xy*(x_loc)*(y_loc)], axis=1)
 
 # 2 inputs: x and y, 5 outputs: ux, uy, sigma_xx, sigma_yy and sigma_xy
 layer_size = [2] + [50] * 5 + [5]
@@ -222,10 +227,9 @@ loss_weights = [w_pde_1,w_pde_2,w_pde_3,w_pde_4,w_pde_5,w_zero_traction_x,w_zero
 
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
-losshistory, train_state = model.train(epochs=2000, display_every=100) 
-
-model.compile("L-BFGS-B", loss_weights=loss_weights)
-losshistory, train_state = model.train(display_every=200)
+losshistory, train_state = model.train(iterations=2000, display_every=100)
+model.compile("L-BFGS", loss_weights=loss_weights)
+losshistory, train_state = model.train(display_every=1000)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################

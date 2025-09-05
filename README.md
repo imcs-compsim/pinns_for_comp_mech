@@ -1,6 +1,6 @@
 # Physics-Informed Neural Networks for Computational Mechanics (pinns_for_comp_mech)
 
-Implementation of Physics-Informed Neural Networks (PINNs) for computational mechanics based on the deepXDE package.
+Implementation of Physics-Informed Neural Networks (PINNs) for computational mechanics based on the DeepXDE package.
 
 - Euler-Bernoulli beams
 - Heat equation problems
@@ -24,8 +24,8 @@ This framework relies on the `deepxde` package for training PINNs.
 > for instructions on how to do that.
 
 `deepxde` needs one of the following packages for the backend-calculation.  
-- Tensorflow
-- Pytorch
+- PyTorch (preferred backend)
+- TensorFlow (not supported by all examples, remaining support might be dropped in the future)
 
 You can specify your backend of choice when seting up this framework by running
 * for Tensorflow

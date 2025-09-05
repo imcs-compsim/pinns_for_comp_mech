@@ -1,7 +1,7 @@
 import deepxde as dde
 import numpy as np
 import os
-from deepxde.backend import tf
+import deepxde.backend as bkd
 from pyevtk.hl import unstructuredGridToVTK
 
 from utils.geometry.gmsh_models import Block_2D
@@ -10,7 +10,7 @@ from utils.geometry.custom_geometry import GmshGeometry2D
 from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_stress
 from utils.contact_mech.contact_utils import zero_tangential_traction, positive_normal_gap_sign, negative_normal_traction_sign, zero_complimentary
 from utils.contact_mech.contact_utils import positive_normal_gap_adopted_sigmoid, negative_normal_traction_adopted_sigmoid
-from utils.contact_mech.contact_utils import zero_complementarity_function_based_popp, zero_complementarity_function_based_fisher_burmeister
+from utils.contact_mech.contact_utils import zero_complementarity_function_based_popp, zero_complementarity_function_based_fischer_burmeister
 from utils.elasticity import elasticity_utils
 from utils.contact_mech import contact_utils
 
@@ -24,7 +24,7 @@ In this script, four different methods are described to enforce the Karush-Kuhn-
    - ref: https://arxiv.org/abs/2203.09789
  - A complementarity function: Pn-max(0, Pn-c*gn) used often in computational contact mechanics
    - ref: https://onlinelibrary.wiley.com/doi/abs/10.1002/nme.2614
- - A complementarity function called Fisher-Burmeister
+ - A complementarity function called Fischer-Burmeister
    - ref: https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf
 
 @author: tsahin
@@ -72,8 +72,8 @@ contact_utils.geom = geom
 def boundary_contact(x, on_boundary):
     return on_boundary and np.isclose(x[1],0)
 
-method_list = ["KKT_inequality_sign", "KKT_inequality_sigmoid", "complementarity_popp", "fisher_burmeister"]
-method_name = "fisher_burmeister"
+method_list = ["KKT_inequality_sign", "KKT_inequality_sigmoid", "complementarity_popp", "fischer_burmeister"]
+method_name = "fischer_burmeister"
 
 # Karush-Kuhn-Tucker conditions for frictionless contact
 # gn>=0 (positive_normal_gap), Pn<=0 (negative_normal_traction), Tt=0 (zero_tangential_traction) and gn.Pn=0 (zero_complimentary)
@@ -96,10 +96,10 @@ elif method_name == "complementarity_popp":
     bc_zero_complementarity = dde.OperatorBC(geom, zero_complementarity_function_based_popp, boundary_contact)
     bcs_ = [bc_zero_complementarity,bc_zero_tangential_traction]
     output_file_name = f"Patch_complementarity_function_c_{c_complementarity}"
-elif method_name == "fisher_burmeister":
-    bc_zero_complementarity = dde.OperatorBC(geom, zero_complementarity_function_based_fisher_burmeister, boundary_contact)
+elif method_name == "fischer_burmeister":
+    bc_zero_complementarity = dde.OperatorBC(geom, zero_complementarity_function_based_fischer_burmeister, boundary_contact)
     bcs_ = [bc_zero_complementarity,bc_zero_tangential_traction]
-    output_file_name = "Patch_fisher_burmeister"
+    output_file_name = "Patch_fischer_burmeister"
 else:
     raise Exception("Method name does not exist!")
 
@@ -152,7 +152,7 @@ def output_transform(x, y):
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
     
-    return tf.concat([u*(x_loc),v, sigma_xx*(l_beam-x_loc), ext_traction + sigma_yy*(h_beam-y_loc),sigma_xy*(l_beam-x_loc)*(x_loc)*(h_beam-y_loc)], axis=1)
+    return bkd.concat([u*(x_loc),v, sigma_xx*(l_beam-x_loc), ext_traction + sigma_yy*(h_beam-y_loc),sigma_xy*(l_beam-x_loc)*(x_loc)*(h_beam-y_loc)], axis=1)
 
 # two inputs x and y, 5 outputs are ux, uy, sigma_xx, sigma_yy and sigma_xy
 layer_size = [2] + [50] * 5 + [5]

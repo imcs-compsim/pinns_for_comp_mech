@@ -30,7 +30,7 @@ def adopted_sigmoid(delta,x):
     gap_n: tensor
         gap in normal direction
     '''
-    return 1/(1+tf.exp(-delta*x))
+    return 1/(1+torch.exp(-delta*x))
 
 def calculate_gap_in_normal_direction(x,y,X):
     '''
@@ -58,7 +58,12 @@ def calculate_gap_in_normal_direction(x,y,X):
 
     # Here is the idea to calculate gap_n:
     # gap_n/|n| = gap_y/|ny| --> since n is unit vector |n|=1
-    gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
+    # gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
+    num = gap_y[cond]
+    den = torch.abs(normals[:, 1:2])
+    gap_n = torch.zeros_like(num)
+    mask = den != 0
+    gap_n[mask] = num[mask] / den[mask]
     
     return gap_n
 
@@ -84,7 +89,7 @@ def positive_normal_gap_sign(x, y, X):
     gn = calculate_gap_in_normal_direction(x, y, X)
 
     # If gn is negative, it will create contributions to overall loss. Aims is to get positive gap
-    return (1.0-tf.math.sign(gn))*gn
+    return (1.0-torch.sign(gn))*gn
 
 def negative_normal_traction_sign(x,y,X):
     '''
@@ -108,7 +113,7 @@ def negative_normal_traction_sign(x,y,X):
     Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
 
     # If Pn is positive, it will create contributions to overall loss. Aims is to get negative normal traction
-    return (1.0+tf.math.sign(Pn))*Pn
+    return (1.0+torch.sign(Pn))*Pn
 
 def positive_normal_gap_adopted_sigmoid(x, y, X):
     '''
@@ -233,11 +238,11 @@ def zero_complementarity_function_based_popp(x,y,X):
     Tx, Ty, Pn, Tt = calculate_traction_mixed_formulation(x, y, X)
     gn = calculate_gap_in_normal_direction(x, y, X)
 
-    return Pn-tf.math.maximum(tf.constant(0, dtype=tf.float32), Pn-c_complementarity*gn)
+    return Pn-torch.maximum(torch.tensor(0.0, dtype=Pn.dtype, device=Pn.device),Pn-c_complementarity*gn)
 
-def zero_complementarity_function_based_fisher_burmeister(x,y,X):
+def zero_complementarity_function_based_fischer_burmeister(x,y,X):
     '''
-    Enforces KKT conditions using a complementarity function called Fisher-Burmeister based on ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf.
+    Enforces KKT conditions using a complementarity function called Fischer-Burmeister based on ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf.
     This function is mathematically equal to combination of the following functions:
         - positive_normal_gap_sign
         - negative_normal_traction_sign
@@ -264,7 +269,7 @@ def zero_complementarity_function_based_fisher_burmeister(x,y,X):
     a = gn
     b = -Pn
     
-    return a + b - tf.sqrt(tf.maximum(a**2+b**2, 1e-9))
+    return a + b - torch.sqrt(torch.maximum(a**2+b**2, torch.tensor(1e-9, dtype=a.dtype, device=a.device)))
 
 def calculate_gap_in_normal_direction_3d(x, y, X):
     '''
@@ -384,9 +389,9 @@ def calculate_gap_in_normal_direction_deep_energy(x, y, X, mapped_normal_boundar
 
     return gap_n
 
-def zero_complementarity_function_based_fisher_burmeister_3d(x,y,X):
+def zero_complementarity_function_based_fischer_burmeister_3d(x,y,X):
     '''
-    Enforces KKT conditions using a complementarity function called Fisher-Burmeister based on ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf.
+    Enforces KKT conditions using a complementarity function called Fischer-Burmeister based on ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf.
     This function is mathematically equal to combination of the following functions:
         - positive_normal_gap_sign
         - negative_normal_traction_sign
