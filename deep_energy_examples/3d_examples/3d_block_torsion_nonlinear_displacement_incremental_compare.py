@@ -8,7 +8,7 @@ from deepxde import backend as bkd
 import torch
 from pathlib import Path
 
-from pyevtk.hl import unstructuredGridToVTK
+import pyvista as pv
 
 dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 seed = 17
@@ -16,7 +16,7 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 if torch.cuda.is_available():
     torch.cuda.manual_seed_all(seed)
-
+torch.set_default_device("cpu")
 '''
 @author: svoelkl
 
@@ -202,38 +202,30 @@ for i in range(steps):
     model.compile("L-BFGS")
     losshistory, train_state = model.train(display_every=1000)
 
-    X, offset, cell_types, elements = geom.get_mesh()
+    # Compare with FEM reference
+    fem_path = str(Path(__file__).parent.parent+f"/fem_reference/fem_reference_3d_block_torsion_angle_{theta_deg:03}.vtu")
+    fem_reference = pv.read(fem_path)
+    displacement_fem = fem_reference.point_data["displacement"]
+    cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
+    
+    # Save results
+    points, _, cell_types, elements = geom.get_mesh()
+    n_nodes_per_cell = elements.shape[1]
+    n_cells = elements.shape[0]
+    cells = np.hstack([np.insert(elem, 0, n_nodes_per_cell) for elem in elements])
+    cells = np.array(cells, dtype=np.int64)
+    cell_types = np.array(cell_types, dtype=np.uint8)
+    grid = pv.UnstructuredGrid(cells, cell_types, points)
+    output = model.predict(points)
+    sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yx, sigma_xz, sigma_zx, sigma_yz, sigma_zy = model.predict(points, operator=cauchy_stress_3D)
+    cauchy_stress = np.column_stack((sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz))
+    displacement = np.column_stack((output[:,0:1], output[:,1:2], output[:,2:3]))
+    grid.point_data['pred_displacement'] = displacement
+    grid.point_data['pred_cauchy_stress'] = cauchy_stress
 
-    output = model.predict(X)
-    sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yx, sigma_xz, sigma_zx, sigma_yz, sigma_zy = model.predict(X, operator=cauchy_stress_3D)
-    p_xx, p_yy, p_zz, p_xy, p_yx, p_xz, p_zx, p_yz, p_zy = model.predict(X, operator=first_piola_stress_tensor_3D)
-
-    # .tolist() is applied to remove datatype
-    u_pred, v_pred, w_pred = output[:,0].tolist(), output[:,1].tolist(), output[:,2].tolist() # displacements
-    sigma_xx_pred, sigma_yy_pred, sigma_zz_pred = sigma_xx.flatten().tolist(), sigma_yy.flatten().tolist(), sigma_zz.flatten().tolist() # normal stresses
-    sigma_xy_pred, sigma_yz_pred, sigma_xz_pred = sigma_xy.flatten().tolist(), sigma_yz.flatten().tolist(), sigma_xz.flatten().tolist() # shear stresses
-    p_xx_pred, p_yy_pred, p_zz_pred = p_xx.flatten().tolist(), p_yy.flatten().tolist(), p_zz.flatten().tolist() # normal stresses
-    p_xy_pred, p_yz_pred, p_xz_pred = p_xy.flatten().tolist(), p_yz.flatten().tolist(), p_xz.flatten().tolist() # shear stresses
-
-    combined_disp_pred = tuple(np.vstack((u_pred, v_pred, w_pred)))
-    combined_normal_stress_pred = tuple(np.vstack((sigma_xx_pred, sigma_yy_pred, sigma_zz_pred))) 
-    combined_shear_stress_pred = np.vstack((sigma_xy_pred, sigma_yz_pred, sigma_xz_pred))
-    combined_normal_p_pred = tuple(np.vstack((p_xx_pred, p_yy_pred, p_zz_pred))) 
-    combined_shear_p_pred = np.vstack((p_xy_pred, p_yz_pred, p_xz_pred))
-
-    x = X[:,0].flatten()
-    y = X[:,1].flatten()
-    z = X[:,2].flatten()
 
     file_path = os.path.join(model_path, f"{simulation_case}_{i}")
-
-    unstructuredGridToVTK(file_path, x, y, z, elements.flatten(), offset, 
-                            cell_types, pointData = { "pred_displacement" : combined_disp_pred,
-                                                    "pred_normal_stress" : combined_normal_stress_pred,
-                                                    "pred_normal_stress_p" : combined_normal_p_pred,
-                                                    "pred_stress_xy": combined_shear_stress_pred[0],
-                                                    "pred_stress_yz": combined_shear_stress_pred[1],
-                                                    "pred_stress_xz": combined_shear_stress_pred[2]})
+    grid.save(file_path)
     
     model.net.built = False
 model.save(f"{model_path}/{simulation_case}")
