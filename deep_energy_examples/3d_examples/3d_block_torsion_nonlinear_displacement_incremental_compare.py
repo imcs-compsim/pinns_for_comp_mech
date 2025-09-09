@@ -16,7 +16,6 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 if torch.cuda.is_available():
     torch.cuda.manual_seed_all(seed)
-torch.set_default_device("cpu")
 '''
 @author: svoelkl
 
@@ -193,20 +192,20 @@ model_path = str(Path(__file__).parent)
 simulation_case = f"3d_block_torsion_nonlinear_displacement_incremental_compare"
 adam_iterations = 2000
 lbfgs_iterations = 3000
+rel_err_l2_disp = []
+rel_err_l2_stress = []
+l2_iteration = []
+
+# Incremental loop
 for i in range(steps):
     theta_deg = torsion_angle/steps*(i+1)
+    print(f"Currently twisted by {theta_deg}°.\n")
     model.compile("adam", lr=0.001)
     losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
 
     dde.optimizers.config.set_LBFGS_options(maxiter=lbfgs_iterations)
     model.compile("L-BFGS")
     losshistory, train_state = model.train(display_every=1000)
-
-    # Compare with FEM reference
-    fem_path = str(Path(__file__).parent.parent+f"/fem_reference/fem_reference_3d_block_torsion_angle_{theta_deg:03}.vtu")
-    fem_reference = pv.read(fem_path)
-    displacement_fem = fem_reference.point_data["displacement"]
-    cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
     
     # Save results
     points, _, cell_types, elements = geom.get_mesh()
@@ -217,15 +216,32 @@ for i in range(steps):
     cell_types = np.array(cell_types, dtype=np.uint8)
     grid = pv.UnstructuredGrid(cells, cell_types, points)
     output = model.predict(points)
+    displacement_pred = np.column_stack((output[:,0:1], output[:,1:2], output[:,2:3]))
     sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yx, sigma_xz, sigma_zx, sigma_yz, sigma_zy = model.predict(points, operator=cauchy_stress_3D)
-    cauchy_stress = np.column_stack((sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz))
-    displacement = np.column_stack((output[:,0:1], output[:,1:2], output[:,2:3]))
-    grid.point_data['pred_displacement'] = displacement
-    grid.point_data['pred_cauchy_stress'] = cauchy_stress
+    cauchy_stress_pred = np.column_stack((sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz))
+    grid.point_data['pred_displacement'] = displacement_pred
+    grid.point_data['pred_cauchy_stress'] = cauchy_stress_pred
 
+        ## Compare with FEM reference
+    if (theta_deg % 15 == 0) & (theta_deg <= torsion_angle):
+        fem_path = str(Path(__file__).parent.parent)
+        fem_reference = pv.read(fem_path+f"/fem_reference/fem_reference_3d_block_torsion_angle_{int(theta_deg):03}.vtu")
+        points_fem = fem_reference.points
+        displacement_fem = fem_reference.point_data["displacement"]
+        cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
+
+        # Compute values on FEM nodes
+        displacement_pred_on_fem_mesh = model.predict(points_fem)
+        sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, _, sigma_xz_pred_on_fem_mesh, _, sigma_yz_pred_on_fem_mesh, _ = model.predict(points_fem, operator=cauchy_stress_3D)
+        cauchy_stress_pred_on_fem_mesh = np.column_stack((sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, sigma_yz_pred_on_fem_mesh, sigma_xz_pred_on_fem_mesh))
+
+        # Compute L2-error
+        l2_iteration.append(train_state.step)
+        rel_err_l2_disp.append(np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem) / np.linalg.norm(displacement_fem))
+        rel_err_l2_stress.append(np.linalg.norm(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem) / np.linalg.norm(cauchy_stress_fem))
 
     file_path = os.path.join(model_path, f"{simulation_case}_{i}")
-    grid.save(file_path)
+    grid.save(f"{file_path}.vtu")
     
     model.net.built = False
 model.save(f"{model_path}/{simulation_case}")
@@ -236,14 +252,26 @@ dde.saveplot(
     test_fname=f"{simulation_case}-{steps*(adam_iterations+lbfgs_iterations)}_test.dat"
 )
 
-
 fig1, ax1 = plt.subplots(figsize=(10,8))
-ax1.plot(losshistory.steps, [sum(l) for l in losshistory.loss_train], color="b", lw=2, label="Energy", marker="x")
+ax1.plot(losshistory.steps, [sum(l) for l in losshistory.loss_train], color="b", lw=2, label="Internal energy", marker="x")
 ax1.set_xlabel("Iterations", size=17)
-ax1.set_ylabel("MSE", size=17)
+ax1.set_ylabel("Energy", size=17)
 ax1.set_yscale("log")
 ax1.tick_params(axis="both", labelsize=15)
 ax1.legend(fontsize=17)
 ax1.grid()
 plt.tight_layout()
 fig1.savefig(f"{model_path}/{simulation_case}-{steps*(adam_iterations+lbfgs_iterations)}_loss_plot.png", dpi=300)
+
+if l2_iteration:
+    fig2, ax2 = plt.subplots(figsize=(10,8))
+    ax2.plot(l2_iteration, rel_err_l2_disp, color="b", lw=2, label="$L_2$-error for displacement", marker="x")
+    ax2.plot(l2_iteration, rel_err_l2_stress, color="r", lw=2, label="$L_2$-error for cauchy stress", marker="x")
+    ax2.set_xlabel("Iterations", size=17)
+    ax2.set_ylabel("$L_2$ norm", size=17)
+    ax2.set_yscale("log")
+    ax2.tick_params(axis="both", labelsize=15)
+    ax2.legend(fontsize=17)
+    ax2.grid()
+    plt.tight_layout()
+    fig2.savefig(f"{model_path}/{simulation_case}-{steps*(adam_iterations+lbfgs_iterations)}_l2_norm_over_iterations.png", dpi=300)
