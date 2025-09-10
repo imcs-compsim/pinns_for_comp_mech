@@ -9,8 +9,6 @@ import pyvista as pv
 from pathlib import Path
 from deepxde import backend as bkd
 import time
-import torch 
-torch.set_default_device("cpu")
 
 # Import custom modules
 from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
@@ -26,7 +24,7 @@ from utils.contact_mech import contact_utils
 
 ## Set custom Flag to either restore the model from pretrained
 ## or simulate yourself
-restore_pretrained_model = False
+restore_pretrained_model = True
 
 ## Create geometry
 # Dimensions of disk
@@ -180,7 +178,7 @@ if not restore_pretrained_model:
     losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
     end_time_adam_train = time.time()
 
-    dde.optimizers.config.set_LBFGS_options(maxiter=1000) # stop L-BFGS after 1000 iterations as it starts to oscillate otherwise
+    dde.optimizers.config.set_LBFGS_options(maxiter=2000) # stop L-BFGS after 1000 iterations as it starts to oscillate otherwise
     model.compile("L-BFGS") # No adjustment of loss weights
     end_time_LBFGS_compile = time.time()
     losshistory, train_state = model.train(display_every=1000, model_save_path=f"{model_path}/{simulation_case}")
@@ -201,33 +199,16 @@ if not restore_pretrained_model:
     )
 
 else:
-    n_iterations = 6000
+    n_iterations = 7000
     model_restore_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}.pt"
     model_loss_path = f"{model_path}/pretrained/{simulation_case}-{n_iterations}_loss.dat"
     
     model.compile("L-BFGS")
     model.restore(save_path=model_restore_path)
 
-## Save simulated data to vtk
-# points, _, cell_types, elements = geom.get_mesh()
-# n_nodes_per_cell = elements.shape[1]
-# n_cells = elements.shape[0]
-# cells = np.hstack([np.insert(elem, 0, n_nodes_per_cell) for elem in elements])
-# cells = np.array(cells, dtype=np.int64)
-# cell_types = np.array(cell_types, dtype=np.uint8)
-# pinn_results = pv.UnstructuredGrid(cells, cell_types, points)
-# output = model.predict(points)
-
-# sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yx, sigma_xz, sigma_zx, sigma_yz, sigma_zy = model.predict(points, operator=cauchy_stress_3D)
-# cauchy_stress = np.column_stack((sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz))
-# displacement = np.column_stack((output[:,0:1], output[:,1:2], output[:,2:3]))
-# pinn_results.point_data['pred_displacement'] = displacement
-# pinn_results.point_data['pred_cauchy_stress'] = cauchy_stress
-# pinn_results.save(str(Path(__file__).parent.parent.parent.parent.parent)+f"/Hertzian_contact_3d_eighth_sphere.vtu", binary=True)
-
 ## Create a comparison with FEM results
 # Load the FEM results
-fem_results = pv.read(str(Path(__file__).parent.parent)+f"/fem_reference/eighth_sphere_nonlinear_fem_reference.vtu")
+fem_results = pv.read(str(Path(__file__).parent.parent.parent)+f"/fem_reference/eighth_sphere_nonlinear_fem_reference.vtu")
 prediction_points = fem_results.points
 start_time_predict = time.time()
 prediction_displacement = model.predict(prediction_points)
