@@ -593,6 +593,52 @@ class Block_2D(object):
 
 #         return gmsh_model
 
+class SphereEighthHertzian(object):
+    def __init__(self, radius=1.0, center=[0,0,0]):
+        self.radius = radius
+        self.center = center
+
+    def generateGmshModel(self, visualize_mesh=False):
+        gmsh.initialize()
+        gmsh.model.add("EighthSphere")
+
+        model = gmsh.model
+        occ = model.occ
+
+        # Full sphere
+        sphere = occ.addSphere(self.center[0], self.center[0], self.center[0], self.radius)
+
+        # Box to cut 1/8 (positive x, y, z)
+        box = occ.addBox(0, 0, 0, self.radius, -self.radius, self.radius)
+
+        # Intersect sphere with positive octant box
+        tag = occ.intersect([(3, sphere)], [(3, box)], removeObject=True, removeTool=True)[0][0]
+
+        # Synchronize CAD
+        occ.synchronize()
+
+        # Define mesh size field: Distance to sharp corner (origin)
+        gmsh.model.mesh.field.add("Distance", 1)
+        gmsh.model.mesh.field.setNumbers(1, "NodesList", [3])  # Node 1 = origin corner
+        gmsh.model.mesh.field.setNumber(1, "Sampling", 100)
+
+        gmsh.model.mesh.field.add("Threshold", 2)
+        gmsh.model.mesh.field.setNumber(2, "InField", 1)
+        gmsh.model.mesh.field.setNumber(2, "SizeMin", 0.03 * self.radius)
+        gmsh.model.mesh.field.setNumber(2, "SizeMax", 0.1 * self.radius)
+        gmsh.model.mesh.field.setNumber(2, "DistMin", 0.4 * self.radius)
+        gmsh.model.mesh.field.setNumber(2, "DistMax", 0.9 * self.radius)
+
+        gmsh.model.mesh.field.setAsBackgroundMesh(2)
+
+        # Generate 3D mesh
+        gmsh.model.mesh.generate(3)
+
+        if visualize_mesh:
+            gmsh.fltk.run()
+
+        return gmsh.model
+
 class Sphere_hertzian(object):
     def __init__(self, path):
         self.path = path
