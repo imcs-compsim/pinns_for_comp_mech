@@ -222,6 +222,8 @@ else:
     
     model.compile("L-BFGS")
     model.restore(save_path=model_restore_path)
+    # If you use a machine that doesnt have a GPU or the GPU does not support float64 (e.g., in MacOS) use this line instead
+    # model.restore(save_path=model_restore_path, device="cpu")
     
 # Output results to VTK
 solutionFieldOnMeshToVtk3D(geom, 
