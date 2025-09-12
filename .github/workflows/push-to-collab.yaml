@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout source repo (this one)
-        uses: imcs-compsim/checkout@v3
+        uses: checkout@v3
         with:
           fetch-depth: 0
           ref: release-4-collab
