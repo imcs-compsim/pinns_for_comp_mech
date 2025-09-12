@@ -1,0 +1,7 @@
+Compilation and training times in [s]
+Adam compilation:     1.142
+Adam training:       719.364
+L-BFGS compilation:   0.000
+L-BFGS training:     5755.020
+Total:               6475.527
+Prediction:           0.001
