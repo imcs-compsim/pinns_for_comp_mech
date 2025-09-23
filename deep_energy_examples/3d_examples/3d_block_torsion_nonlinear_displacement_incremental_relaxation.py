@@ -199,10 +199,8 @@ model = dde.Model(data, net)
 steps = 10
 torsion_angle = 150
 model_path = str(Path(__file__).parent)
-simulation_case = f"3d_block_torsion_nonlinear_displacement_incremental_learning_rate"
-learning_rate_adam = 1E-4
-learning_rate_total_decay = 1E-3
-learning_rate_step_decay = learning_rate_total_decay ** (1 / steps)
+simulation_case = f"3d_block_torsion_nonlinear_displacement_incremental_relaxation"
+learning_rate_adam = 1E-5
 adam_iterations = 5000
 adam_loops = 5
 lbfgs_iterations = 0
@@ -210,14 +208,17 @@ rel_err_l2_disp = []
 rel_err_l2_stress = []
 l2_iteration = []
 
+# Relaxation
+print(f"Relaxation step.\n")
+theta_deg = 0
+model.compile("adam", lr=learning_rate_adam)
+losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
+
 # Incremental loop
 for i in range(steps):
     theta_deg = torsion_angle/steps*(i+1)
-    learning_rate_adam *= learning_rate_step_decay
-
     for j in range(adam_loops):
         print(f"Adam loop number {j+1} for an angle of {theta_deg}°.\n")
-        print(f"Learning rate is currently {learning_rate_adam:.4e}.\n")
        
         model.compile("adam", lr=learning_rate_adam)
         losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)

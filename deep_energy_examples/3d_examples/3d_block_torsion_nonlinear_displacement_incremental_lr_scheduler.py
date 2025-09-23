@@ -199,11 +199,11 @@ model = dde.Model(data, net)
 steps = 10
 torsion_angle = 150
 model_path = str(Path(__file__).parent)
-simulation_case = f"3d_block_torsion_nonlinear_displacement_incremental_learning_rate"
+simulation_case = f"3d_block_torsion_nonlinear_displacement_incremental_lr_scheduler"
 learning_rate_adam = 1E-4
 learning_rate_total_decay = 1E-3
-learning_rate_step_decay = learning_rate_total_decay ** (1 / steps)
 adam_iterations = 5000
+exponential_decay = learning_rate_total_decay ** (1 / adam_iterations)
 adam_loops = 5
 lbfgs_iterations = 0
 rel_err_l2_disp = []
@@ -213,13 +213,10 @@ l2_iteration = []
 # Incremental loop
 for i in range(steps):
     theta_deg = torsion_angle/steps*(i+1)
-    learning_rate_adam *= learning_rate_step_decay
-
     for j in range(adam_loops):
         print(f"Adam loop number {j+1} for an angle of {theta_deg}°.\n")
-        print(f"Learning rate is currently {learning_rate_adam:.4e}.\n")
        
-        model.compile("adam", lr=learning_rate_adam)
+        model.compile("adam", lr=learning_rate_adam, decay=("exponential", exponential_decay))
         losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
 
         # dde.optimizers.config.set_LBFGS_options(maxiter=lbfgs_iterations)
