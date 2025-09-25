@@ -183,9 +183,7 @@ def output_transform(x, y):
 
     return bkd.concat([u_out, v_out, w_out], axis=1)
 
-
-
-# 3 inputs, 9 outputs for 3D 
+# 3 inputs, 3 outputs for 3D 
 layer_size = [3] + [50] * 5 + [3]
 activation = "tanh"
 initializer = "Glorot uniform"
@@ -193,13 +191,13 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
 loss_weights=None
 
-model = dde.Model(data, net)   
+model = dde.Model(data, net)
 
 # Model parameters 
 steps = 10
 torsion_angle = 150
 model_path = str(Path(__file__).parent)
-simulation_case = f"3d_block_torsion_nonlinear_displacement_incremental_expon_decay"
+simulation_case = f"3d_block_torsion_nonlinear_displacement_incremental_exponential_decay"
 learning_rate_adam = 1E-3
 learning_rate_total_decay = 1E-3
 adam_iterations = 5000
