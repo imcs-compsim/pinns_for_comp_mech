@@ -166,7 +166,7 @@ loss_weights=None
 model = dde.Model(data, net)
 
 # Model parameters 
-steps = 1
+steps = 10
 max_ext_traction = 5
 model_path = str(Path(__file__).parent)
 simulation_case = f"3d_hertzian_spherical_contact_incremental_exponential_decay"
@@ -175,6 +175,10 @@ learning_rate_total_decay = 1E-3
 adam_iterations = 5000
 exponential_decay = learning_rate_total_decay ** (1 / adam_iterations)
 lbfgs_iterations = 0
+rel_err_l2_disp = []
+rel_err_l2_stress = []
+l2_iteration = []
+relaxation_adam_iterations = 0
 relaxation = False
 
 if relaxation:
@@ -207,7 +211,28 @@ for i in range(steps):
     cauchy_stress_pred = np.column_stack((sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz))
     grid.point_data['pred_displacement'] = displacement_pred
     grid.point_data['pred_cauchy_stress'] = cauchy_stress_pred
-    file_path = os.path.join(model_path, f"{simulation_case}_{ext_traction:03}")
+
+    ## Compare with FEM reference
+    if ((ext_traction * 10) % 2 == 0) & (ext_traction <= max_ext_traction):
+        fem_path = str(Path(__file__).parent.parent)
+        fem_reference = pv.read(fem_path+f"/fem_reference/3d_sphere_contact_fem_reference_{int((ext_traction * 10)):02}.vtu")
+        points_fem = fem_reference.points
+        displacement_fem = fem_reference.point_data["displacement"]
+        cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
+
+        # Compute values on FEM nodes
+        displacement_pred_on_fem_mesh = model.predict(points_fem)
+        sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, _, sigma_xz_pred_on_fem_mesh, _, sigma_yz_pred_on_fem_mesh, _ = model.predict(points_fem, operator=cauchy_stress_3D)
+        cauchy_stress_pred_on_fem_mesh = np.column_stack((sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, sigma_yz_pred_on_fem_mesh, sigma_xz_pred_on_fem_mesh))
+
+        # Compute L2-error
+        l2_iteration.append(train_state.step)
+        rel_err_l2_disp.append(np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem) / np.linalg.norm(displacement_fem))
+        print(f"Relative L2 error for displacement: {rel_err_l2_disp[-1]}")
+        rel_err_l2_stress.append(np.linalg.norm(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem) / np.linalg.norm(cauchy_stress_fem))
+        print(f"Relative L2 error for stress:       {rel_err_l2_stress[-1]}")
+
+    file_path = os.path.join(model_path, f"{simulation_case}_{int(ext_traction * 10):02}")
     grid.save(f"{file_path}.vtu")
 
 model.save(f"{model_path}/{simulation_case}")
@@ -217,3 +242,40 @@ dde.saveplot(
     train_fname=f"{simulation_case}-{relaxation_adam_iterations+steps*(adam_iterations+lbfgs_iterations)}_train.dat", 
     test_fname=f"{simulation_case}-{relaxation_adam_iterations+steps*(adam_iterations+lbfgs_iterations)}_test.dat"
 )
+
+fig1, ax1 = plt.subplots(1,2,figsize=(20,8))
+ax1[0].plot(losshistory.steps, [loss[0] for loss in losshistory.loss_train], label="Internal energy", marker="x")
+ax1[0].plot(losshistory.steps, [loss[1] for loss in losshistory.loss_train], label="External work", marker="x")
+ax1[0].plot(losshistory.steps, [loss[2] for loss in losshistory.loss_train], label="Contact work", marker="x")
+ax1[0].plot(losshistory.steps, [sum(losses) for losses in losshistory.loss_train], label="Total energy", marker="x")
+ax1[0].set_xlabel("Iterations", size=17)
+ax1[0].set_ylabel("Energy", size=17)
+ax1[0].tick_params(axis="both", labelsize=15)
+ax1[0].legend(fontsize=17)
+ax1[0].grid()
+
+ax1[1].plot(losshistory.steps, [abs(loss[0]) for loss in losshistory.loss_train], label="Internal energy", marker="x")
+ax1[1].plot(losshistory.steps, [abs(loss[1]) for loss in losshistory.loss_train], label="External work", marker="x")
+ax1[1].plot(losshistory.steps, [abs(loss[2]) for loss in losshistory.loss_train], label="Contact work", marker="x")
+ax1[1].plot(losshistory.steps, [abs(sum(losses)) for losses in losshistory.loss_train], label="Total energy", marker="x")
+ax1[1].set_xlabel("Iterations", size=17)
+ax1[1].set_ylabel("Energy", size=17)
+ax1[1].set_yscale("log")
+ax1[1].tick_params(axis="both", labelsize=15)
+ax1[1].legend(fontsize=17)
+ax1[1].grid()
+plt.tight_layout()
+fig1.savefig(f"{model_path}/{simulation_case}-{relaxation_adam_iterations+steps*(adam_iterations+lbfgs_iterations)}_loss_plot.png", dpi=300)
+
+if l2_iteration:
+    fig2, ax2 = plt.subplots(figsize=(10,8))
+    ax2.plot(l2_iteration, rel_err_l2_disp, color="b", lw=2, label="$L_2$-error for displacement", marker="x")
+    ax2.plot(l2_iteration, rel_err_l2_stress, color="r", lw=2, label="$L_2$-error for cauchy stress", marker="x")
+    ax2.set_xlabel("Iterations", size=17)
+    ax2.set_ylabel("$L_2$ norm", size=17)
+    ax2.set_yscale("log")
+    ax2.tick_params(axis="both", labelsize=15)
+    ax2.legend(fontsize=17)
+    ax2.grid()
+    plt.tight_layout()
+    fig2.savefig(f"{model_path}/{simulation_case}-{relaxation_adam_iterations+steps*(adam_iterations+lbfgs_iterations)}_l2_norm_over_iterations.png", dpi=300)
