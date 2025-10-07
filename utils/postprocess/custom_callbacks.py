@@ -92,8 +92,50 @@ class SaveModelVTU(Callback):
 
             unstructuredGridToVTK(self.filename +"_"+ str(current_iteration), x, y, z, dol_triangles.flatten(), offset,
                                 cell_types, pointData = pointData)     
-            
 
-      
+class LossPlateauStopping(Callback):
+    """
+    Stop training if the training loss does not change significantly
+    within the last `patience` iterations.
+    """
 
+    def __init__(self, min_delta=1e-3, patience=1000, monitor="loss_train", start_from_iteration=0):
+        super().__init__()
+        self.monitor = monitor
+        self.patience = patience
+        self.min_delta = min_delta
+        self.last_loss = np.inf
+        self.wait = 0
+        self.stopped_iteration = 0
+        self.start_from_iteration = start_from_iteration
 
+    def on_train_begin(self):
+        self.wait = 0
+        self.stopped_iteration = 0
+
+    def on_epoch_end(self):
+        if self.model.train_state.iteration < self.start_from_iteration:
+            return
+        current = self.get_monitor_value()
+        if abs((self.last_loss - current)/current) < self.min_delta:
+            self.wait += 1
+            if self.wait >= self.patience:
+                self.stopped_iteration = self.model.train_state.iteration
+                self.model.stop_training = True
+        else:
+            self.wait = 0
+        self.last_loss = current
+
+    def on_train_end(self):
+        if self.stopped_iteration > 0:
+            print(f"Early stopping at iteration {self.stopped_iteration} as relative change of {self.monitor} was below {self.min_delta:.1E} for at least {self.patience} iterations.")
+
+    def get_monitor_value(self):
+        if self.monitor == "loss_train":
+            result = sum(self.model.train_state.loss_train)
+        elif self.monitor == "loss_test":
+            result = sum(self.model.train_state.loss_test)
+        else:
+            raise ValueError("The specified monitor function is incorrect.")
+
+        return result
