@@ -1,7 +1,17 @@
-# Physics-Informed Neural Networks for Computational Mechanics (pinns_for_comp_mech)
-
-Implementation of Physics-Informed Neural Networks (PINNs) for computational mechanics based on the DeepXDE package.
-
+# Physics-Informed Neural Networks for Computational Mechanics (CompSim-PINN)                                                                                            
+```
+ ██████  ██████  ███    ███ ██████  ███████ ██ ███    ███       ██████  ██ ███    ██ ███    ██
+██      ██    ██ ████  ████ ██   ██ ██      ██ ████  ████       ██   ██ ██ ████   ██ ████   ██
+██      ██    ██ ██ ████ ██ ██████  ███████ ██ ██ ████ ██ █████ ██████  ██ ██ ██  ██ ██ ██  ██
+██      ██    ██ ██  ██  ██ ██           ██ ██ ██  ██  ██       ██      ██ ██  ██ ██ ██  ██ ██
+ ██████  ██████  ██      ██ ██      ███████ ██ ██      ██       ██      ██ ██   ████ ██   ████                        
+```
+--------------------------------------------------------------------------------------
+                             A Multipurpose Python Framework for Computational Mechanics
+                              based on Physics-Informed Neural Networks (PINNs)
+--------------------------------------------------------------------------------------                                  
+### Included examples
+---
 - Euler-Bernoulli beams
   - Dynamic beam equation
   - Static beam equation
@@ -121,7 +131,7 @@ For cluster, we should use `conda` since we had issues in terms of package insta
 
 ## Citing 'pinns_for_comp_mech'
 
-Whenever you use or mention 'pinns_for_comp_mech' in some sort of scientific document/publication/presentation, please cite the following publication. It is publicly avaliable at [AMSES](https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3).
+Whenever you use or mention 'pinns_for_comp_mech' in some sort of scientific document/publication/presentation, please cite the following publications. They are publicly avaliable at [AMSES](https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3) and [ArXiv](https://arxiv.org/abs/2412.09022).
 
 ```
 @article{sahin2024,
@@ -134,7 +144,14 @@ Whenever you use or mention 'pinns_for_comp_mech' in some sort of scientific doc
   pages = {11},
   issn = {2213-7467},
   doi = {10.1186/s40323-024-00265-3},
-  urldate = {2024-05-08}
+  date = {2024-05-08}
+}
+
+@article{Sahin2024b,
+  title={Physics-Informed Neural Networks for Solving Contact Problems in Three Dimensions},
+  author={Sahin, Tarik and Wolff, Daniel and Popp, Alexander},
+  journal={arXiv preprint arXiv:2412.09022},
+  year={2024}
 }
 ```
 
