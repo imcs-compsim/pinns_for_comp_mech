@@ -129,9 +129,9 @@ For cluster, we should use `conda` since we had issues in terms of package insta
 
 ---
 
-## Citing 'pinns_for_comp_mech'
+## Citing 'CompSim-PINN'
 
-Whenever you use or mention 'pinns_for_comp_mech' in some sort of scientific document/publication/presentation, please cite the following publications. They are publicly avaliable at [AMSES](https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3) and [ArXiv](https://arxiv.org/abs/2412.09022).
+Whenever you use or mention 'CompSim-PINN' in some sort of scientific document/publication/presentation, please cite the following publications. They are publicly avaliable at [AMSES](https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3) and [ArXiv](https://arxiv.org/abs/2412.09022).
 
 ```
 @article{sahin2024,

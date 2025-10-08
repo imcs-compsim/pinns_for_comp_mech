@@ -4,13 +4,14 @@ build-backend = "hatchling.build"
 
 # General metadata for the project
 [project]
-name = "pinns-for-comp-mech"
+name = "CompSim-PINN"
 version = "2025.0.0"
 license = { text = "MIT" }
 authors = [
   {name = "Tarik Sahin", email = "tarik.sahin@unibw.de"},
   {name = "Max von Danwitz", email = "max.danwitz@unibw.de"},
   {name = "Daniel Wolff", email = "d.wolff@unibw.de"},
+  {name = "Simon Völkl", email = "simon.voelkl@unibw.de"},
 ]
 maintainers = [
   {name = "Tarik Sahin", email = "tarik.sahin@unibw.de"},
