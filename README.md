@@ -1,16 +1,43 @@
-# Physics-Informed Neural Networks for Computational Mechanics (pinns_for_comp_mech)
-
-Implementation of Physics-Informed Neural Networks (PINNs) for computational mechanics based on the DeepXDE package.
-
+# Physics-Informed Neural Networks for Computational Mechanics (CompSim-PINN)                                                                                            
+```
+ ██████  ██████  ███    ███ ██████  ███████ ██ ███    ███       ██████  ██ ███    ██ ███    ██
+██      ██    ██ ████  ████ ██   ██ ██      ██ ████  ████       ██   ██ ██ ████   ██ ████   ██
+██      ██    ██ ██ ████ ██ ██████  ███████ ██ ██ ████ ██ █████ ██████  ██ ██ ██  ██ ██ ██  ██
+██      ██    ██ ██  ██  ██ ██           ██ ██ ██  ██  ██       ██      ██ ██  ██ ██ ██  ██ ██
+ ██████  ██████  ██      ██ ██      ███████ ██ ██      ██       ██      ██ ██   ████ ██   ████                        
+```
+--------------------------------------------------------------------------------------
+                             A Multipurpose Python Framework for Computational Mechanics
+                              based on Physics-Informed Neural Networks (PINNs)
+--------------------------------------------------------------------------------------                                  
+### Included examples
+---
 - Euler-Bernoulli beams
+  - Dynamic beam equation
+  - Static beam equation
 - Heat equation problems
 - Linear elasticity
   - Four-point bending test
-  - Forward and inverse Lame` problems
+  - Forward and inverse Lamé problem
   - Solid beam
+  - 3D hollow sphere subjected to internal pressure
+  - 4D problem: 3D hollow sphere under time-dependent loading
 - Contact problems
-  - Contact between elastic body and rigid flat surface
-  - Hertzian contact problem
+  - 2D contact between an elastic block and a rigid surface
+  - 2D Hertzian contact problem
+  - 3D single contact patch test
+  - 3D cylindrical contact problem
+- Large deformation (Deep-energy methods)
+  - Solid mechanics
+    - Bending beam under shear load (2D)
+    - Lamé problem
+    - 3D torsion of a square prism
+  - Contact mechanics (single-step and incremental loading approaches)
+    - Single patch test (2D and 3D)
+    - 2D Hertzian contact problem 
+    - 2D Contact ring example (2D)
+    - 3D spherical contact problem
+    - 3D torus contact instability problem
 ---
 
 ## Installation of the DeepXDE package and required libraries
@@ -102,16 +129,29 @@ For cluster, we should use `conda` since we had issues in terms of package insta
 
 ---
 
-## Citing 'pinns_for_comp_mech'
+## Citing 'CompSim-PINN'
 
-Whenever you use or mention 'pinns_for_comp_mech' in some sort of scientific document/publication/presentation, please cite the following publication. It is publicly avaliable at [arXiv](https://arxiv.org/abs/2308.12716).
+Whenever you use or mention 'CompSim-PINN' in some sort of scientific document/publication/presentation, please cite the following publications. They are publicly avaliable at [AMSES](https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3) and [ArXiv](https://arxiv.org/abs/2412.09022).
 
 ```
-@article{sahin2023pinnforcontact,
-   title={Solving Forward and Inverse Problems of Contact Mechanics using Physics-Informed Neural Networks},
-   author={Sahin, Tarik and von Danwitz, Max and Popp, Alexander},
-   journal={arXiv preprint arXiv:2308.12716},
-   year={2023}
+@article{sahin2024,
+  title = {Solving Forward and Inverse Problems of Contact Mechanics Using Physics-Informed Neural Networks},
+  author = {Sahin, Tarik and Von Danwitz, Max and Popp, Alexander},
+  year = {2024},
+  journal = {Advanced Modeling and Simulation in Engineering Sciences},
+  volume = {11},
+  number = {1},
+  pages = {11},
+  issn = {2213-7467},
+  doi = {10.1186/s40323-024-00265-3},
+  date = {2024-05-08}
+}
+
+@article{Sahin2024b,
+  title={Physics-Informed Neural Networks for Solving Contact Problems in Three Dimensions},
+  author={Sahin, Tarik and Wolff, Daniel and Popp, Alexander},
+  journal={arXiv preprint arXiv:2412.09022},
+  year={2024}
 }
 ```
 
