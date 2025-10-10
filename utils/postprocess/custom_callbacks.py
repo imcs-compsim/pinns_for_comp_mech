@@ -176,7 +176,6 @@ class WeightsBiasPlateauStopping(Callback):
         self.norm_list.append(self.get_norm_value())
         if len(self.norm_list) > self.patience:
             self.norm_list.pop(0)
-        print(abs((max(self.norm_list) - min(self.norm_list)) * len(self.norm_list)/ sum(self.norm_list)))
         if abs((max(self.norm_list) - min(self.norm_list)) * len(self.norm_list)/ sum(self.norm_list)) < self.min_delta:
             self.wait += 1
             if self.wait >= self.patience:
