@@ -10,8 +10,31 @@ Welcome to the **CompSim-PINN** documentation !
 
 This framework implements the functionalities of :abbr:`PINNs (Physics-Informed Neural Networks)` using the `DeepXDE <https://deepxde.readthedocs.io/en/latest/>`_ package for solid and contact mechanics.
 
+Usage
+=====
+
+.. _installation:
+
+Installation
+------------
+
+To use CompSim-PINN, first clone it into your local repository:
+
+.. code-block:: console
+
+   $ git clone https://github.com/imcs-compsim/pinns_for_comp_mech.git
+
+After this you can directly set up a ``conda`` environment that uses ``torch`` as a backend in ``deepxde``:
+
+.. code-block:: console
+
+   $ conda env create -f env.yaml
+
+.. note::
+   This framework is under active development.
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   api/modules
