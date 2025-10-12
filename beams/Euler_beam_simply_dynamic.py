@@ -1,15 +1,22 @@
-"""Backend supported: tensorflow.compat.v1, tensorflow, pytorch"""
+"""Backend supported: tensorflow.compat.v1, tensorflow"""
 import deepxde as dde
 import numpy as np
-import tensorflow as tf
 import pandas as pd
 
 
-'''
+"""
 This script is used to create the PINN model of clamped Euler-Lagrange beam under arbitrary load (space-time)
 see the manuscript for the example, Section 4, a complex consideration, Fig. 4.5, Deep Learning in Computational Mechanics
-'''
+"""
+from deepxde.backend import get_preferred_backend
+# Check what backend is imported and check whether it works for this code
+backend_name = get_preferred_backend()
+if (backend_name == "tensorflow.compat.v1") or ((backend_name == "tensorflow")):
+    import tensorflow as bkd
+else:
+    raise NameError(f"The backend {backend_name} is not available. Please use ")
 
+# Helper functions for pde, 2. derivative of w w.r.t x
 def d_xx(x, y):
     return dde.grad.hessian(y, x)
 
@@ -17,56 +24,71 @@ def d_xx(x, y):
 def d_xxx(x, y):
     return dde.grad.jacobian(d_xx(x, y), x)
 
+
 def pde(x, y):
     dy_xx = d_xx(x, y)
     dy_xxxx = dde.grad.hessian(dy_xx, x)
-    d_tt = dde.grad.hessian(y, x, i=1, j=1)
+    d_tt = dde.grad.hessian(y, x, i=0, j=1)
 
     return dy_xxxx + d_tt + p(x)
 
+# Pressure in two vectors one for x the other for t
 def p(x):
+    pi = np.pi
+    x_t = x[:, 1:2]
+    x_s = x[:, 0:1]
+    return -(bkd.sin(np.pi * x_s) * bkd.exp(-x_t) * (np.pi**4 * (x_t + 1) + x_t - 1))
 
-    pi=np.pi
-    x_t = x[:,1:2]
-    x_s = x[:,0:1]
-    return -(tf.sin(np.pi*x_s)*tf.exp(-x_t)*(np.pi**4*(x_t+1)+x_t-1)) 
-
+# We define the start and endpoint of the spatial and the time
 l_spatial = 0
 r_spatial = 1
 l_time = 0
 r_time = 1.0
-
+# L --> Length of the beam
 L = 1
 
+# We define boundary function for the left side, which is x=0, x[0] --> means for this example x
 def boundary_l_space(x, on_boundary):
     return on_boundary and np.isclose(x[0], l_spatial)
 
-
+# We define boundary function for the right side, which is x=1, x[0] --> means for this example x
 def boundary_r_space(x, on_boundary):
     return on_boundary and np.isclose(x[0], r_spatial)
 
+# The analytical solution
 def sol(x):
     x, t = np.split(x, 2, axis=1)
-    #return np.sin(np.pi*x)*np.cos(np.pi**2*t)
-    return np.sin(np.pi*x)*(t+1)*np.exp(-t)
+    # return np.sin(np.pi*x)*np.cos(np.pi**2*t)
+    return np.sin(np.pi * x) * (t + 1) * np.exp(-t)
 
-
+# We generate 1D beam, start point l_spatial, end point r_spatial.
 geom = dde.geometry.Interval(l_spatial, r_spatial)
+# We generate a time frame with the start point l_time, end point r_time.
 timedomain = dde.geometry.TimeDomain(l_time, r_time)
+#We combine these the beam and timeframe
 geomtime = dde.geometry.GeometryXTime(geom, timedomain)
 
+# We define four spatial boundary conditions.
+# On the left side, w=0 and dw/dx=0
 bc1 = dde.DirichletBC(geomtime, lambda x: 0, boundary_l_space)
 bc2 = dde.OperatorBC(geomtime, lambda x, y, _: d_xx(x, y), boundary_l_space)
+# On the right side (end of the interval) x=r_spatial=1, w=0 and dw/dx=0
 bc3 = dde.DirichletBC(geomtime, lambda x: 0, boundary_r_space)
 bc4 = dde.OperatorBC(geomtime, lambda x, y, _: d_xx(x, y), boundary_r_space)
 
-ic1 = dde.IC(geomtime, lambda x: tf.sin(np.pi*x[:,0:1]), lambda _, on_initial: on_initial)
+# We define two initial conditions.
+# At any x and t=0 --> w=sin(pi*x)
+ic1 = dde.IC(
+    geomtime, lambda x: bkd.sin(np.pi * x[:, 0:1]), lambda _, on_initial: on_initial
+)
+# At any x and t=0 --> w/dt=0
 ic2 = dde.OperatorBC(
-        geomtime,
-        lambda x, y, _: dde.grad.jacobian(y, x, i=0, j=1),
-         lambda _, on_initial: on_initial
-    )
+    geomtime,
+    lambda x, y, _: dde.grad.jacobian(y, x, i=0, j=1),
+    lambda _, on_initial: on_initial,
+)
 
+# We generate 2500 points in domain, 50 on the boundary, we provide sol which is the solution, number of test points
 data = dde.data.TimePDE(
     geomtime,
     pde,
@@ -78,21 +100,28 @@ data = dde.data.TimePDE(
     num_test=1000,
 )
 
+# We set input dimension --> 2D (x;t) --> [2], number of layers --> 3, number of neurons each has 100, output is 1D
+# alternatively, you can define [2,100,100,100,1]
 layer_size = [2] + [100] * 3 + [1]
+# We choose activation function, such tanh
 activation = "tanh"
+# We define how to initialize networks weights 
 initializer = "Glorot uniform"
+# We generate our neural network
 net = dde.maps.FNN(layer_size, activation, initializer)
 
 model = dde.Model(data, net)
+# We define the optimizer, in this case "adam", lr --> learning rate
 model.compile("adam", lr=0.0001, metrics=["l2 relative error"])
-#model.train(epochs=1000, display_every=200)
-#model.compile("L-BFGS")
+# We train our model using 20000 iterations, we display results every 1000 iterations
+# model.train(epochs=1000, display_every=200)
+# model.compile("L-BFGS")
 losshistory, train_state = model.train(epochs=20000, display_every=1000)
 
 
 dde.saveplot(losshistory, train_state, issave=True, isplot=True)
 
-'''
+"""
 output_dir="/home/a11btasa/git_repos/deepxde_2/beam_results"
 fname="case_2_time_final"
 csv_file = output_dir + "/" + fname + ".csv"
@@ -112,5 +141,4 @@ test_fname = fname + "_" + "test.dat"
 dde.saveplot(losshistory, train_state, issave=True, isplot=True, plot_name=fname,
 loss_fname=loss_fname, train_fname=train_fname, test_fname=test_fname, 
 output_dir=output_dir)
-'''
-
+"""
