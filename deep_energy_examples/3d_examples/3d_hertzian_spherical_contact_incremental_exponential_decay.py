@@ -6,6 +6,7 @@ import numpy as np
 from deepxde import backend as bkd
 from pathlib import Path
 import pyvista as pv
+from utils.postprocess.custom_callbacks import LossPlateauStopping, WeightsBiasPlateauStopping
 
 dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 
@@ -60,7 +61,7 @@ domain_dimension = 3
 quad_rule = GaussQuadratureRule(rule_name="gauss_legendre", dimension=domain_dimension, ngp=4, element_type="simplex") # gauss_legendre gauss_labotto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
-boundary_dimension = 2
+boundary_dimension = domain_dimension - 1
 quad_rule_boundary_integral = GaussQuadratureRule(rule_name="gauss_legendre", dimension=boundary_dimension, ngp=4, element_type="simplex") # gauss_legendre gauss_labotto
 coord_quadrature_boundary, weight_quadrature_boundary = quad_rule_boundary_integral.generate()
 
@@ -178,16 +179,26 @@ lbfgs_iterations = 0
 rel_err_l2_disp = []
 rel_err_l2_stress = []
 l2_iteration = []
-relaxation_adam_iterations = 0
-relaxation = False
+relaxation_adam_iterations = 0 # just to not get any errors when not using it (undefined variable in naming)
+relaxation = True
+earlystopping = True
+earlystopping_choice = "weightsbiases" # "loss" or "weightsbiases"
 
 if relaxation:
     relaxation_epsilon = 1e0
-    relaxation_adam_iterations = adam_iterations
+    relaxation_adam_iterations = 5000
     print(f"\nRelaxation step using a factor of {relaxation_epsilon} of the step width with {relaxation_adam_iterations} iterations.\n")
     ext_traction = relaxation_epsilon * max_ext_traction / steps
     model.compile("adam", lr=learning_rate_adam)
     losshistory, train_state = model.train(iterations=relaxation_adam_iterations, display_every=100)
+
+if earlystopping:
+    if earlystopping_choice == "loss":
+        early = LossPlateauStopping(patience=500, min_delta=1e-5)
+    elif earlystopping_choice == "weightsbiases":
+        early = WeightsBiasPlateauStopping(patience=500, min_delta=1e-3, norm_choice="fro")
+    else:
+        raise ValueError("The specified stopping choice is not implemented or correct.")
 
 # Incremental loop
 for i in range(steps):
@@ -195,7 +206,12 @@ for i in range(steps):
     print(f"\nTraining for a traction of {ext_traction}.\n")
        
     model.compile("adam", lr=learning_rate_adam, decay=("exponential", exponential_decay))
-    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
+    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100, callbacks=[early for _ in [1] if earlystopping])
+
+    if lbfgs_iterations>0:
+        dde.optimizers.config.set_LBFGS_options(maxiter=lbfgs_iterations)
+        model.compile("L-BFGS")
+        losshistory, train_state = model.train(display_every=1000)
 
     # Save results
     points, _, cell_types, elements = geom.get_mesh()
