@@ -108,9 +108,9 @@ For cluster, we should use `conda` since we had issues in terms of package insta
     conda env create -f env.yaml
     ```
 
-3. Activate the generated venv (`pinns-for-comp-mech`) 
+3. Activate the generated venv (`CompSim-PINN`) 
     ```bash
-    conda activate pinns-for-comp-mech
+    conda activate CompSim-PINN
     ```
 4. To test cluster, submit a job on a compute node. This is achieved through `test_cluster.sh` (full path: pinnswithdxde/tests/integration_tests/cluster/test_cluster.sh).
 
@@ -121,7 +121,7 @@ For cluster, we should use `conda` since we had issues in terms of package insta
 
 > `NOTE`: Do not forget to adopt the inside of the `test_cluster.sh` to specify the slurm options e.g., `--mail-user`. But the default one should work without error. 
 
-> `NOTE`: Always be sure that you activated venv `pinns-for-comp-mech` (step 3) before `sbatch` any slurm script. This includes other scripts you will run as well. The reason behind is that activating venv in `test_cluster.sh` needs the full path for the conda env `pinns-for-comp-mech` and it gives some **init** error if the full path is used.  
+> `NOTE`: Always be sure that you activated venv `CompSim-PINN` (step 3) before `sbatch` any slurm script. This includes other scripts you will run as well. The reason behind is that activating venv in `test_cluster.sh` needs the full path for the conda env `CompSim-PINN` and it gives some **init** error if the full path is used.  
 
 > `NOTE`: For conda commands: A conda [cheatsheet](https://docs.conda.io/projects/conda/en/latest/_downloads/843d9e0198f2a193a3484886fa28163c/conda-cheatsheet.pdf) can be very useful. 
 
