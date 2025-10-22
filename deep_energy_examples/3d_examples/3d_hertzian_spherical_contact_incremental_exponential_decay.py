@@ -192,14 +192,16 @@ model_path = str(Path(__file__).parent)
 simulation_case = f"3d_hertzian_spherical_contact_incremental_exponential_decay"
 learning_rate_adam = 1E-3
 learning_rate_total_decay = 1E-3
-adam_iterations = 5000
-exponential_decay = learning_rate_total_decay ** (1 / adam_iterations)
+adam_iterations = 50000
+exponential_decay = learning_rate_total_decay ** (1 / 5000)
 lbfgs_iterations = 0
 rel_err_l2_disp = []
 rel_err_l2_stress = []
+rel_err_l2_int_disp = []
+rel_err_l2_int_stress = []
 l2_iteration = []
 relaxation_adam_iterations = 0 # just to not get any errors when not using it (undefined variable in naming)
-relaxation = True
+relaxation = False
 earlystopping = True
 earlystopping_choice = "weightsbiases" # "loss" or "weightsbiases"
 time_dict["setup"].append(time.time())
@@ -220,7 +222,7 @@ if earlystopping:
     if earlystopping_choice == "loss":
         early = LossPlateauStopping(patience=500, min_delta=1e-5)
     elif earlystopping_choice == "weightsbiases":
-        early = WeightsBiasPlateauStopping(patience=500, min_delta=1e-1, norm_choice="fro")
+        early = WeightsBiasPlateauStopping(patience=500, min_delta=1e-4, norm_choice="fro")
     else:
         raise ValueError("The specified stopping choice is not implemented or correct.")
 
@@ -276,9 +278,21 @@ for i in range(steps):
         # Compute L2-error
         l2_iteration.append(train_state.step)
         rel_err_l2_disp.append(np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem) / np.linalg.norm(displacement_fem))
-        print(f"Relative L2 error for displacement: {rel_err_l2_disp[-1]}")
+        print(f"Relative L2 error for displacement (discrete):   {rel_err_l2_disp[-1]}")
         rel_err_l2_stress.append(np.linalg.norm(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem) / np.linalg.norm(cauchy_stress_fem))
-        print(f"Relative L2 error for stress:       {rel_err_l2_stress[-1]}")
+        print(f"Relative L2 error for stress (discrete):         {rel_err_l2_stress[-1]}")
+
+        # Compute L2-error with integrals
+        volume_integral = fem_reference.copy()
+        volume_integral.point_data["squared_error_disp"] = np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem) ** 2
+        volume_integral.point_data["squared_disp"] = np.linalg.norm(displacement_fem) ** 2
+        volume_integral.point_data["squared_error_stress"] = np.linalg.norm(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem) ** 2
+        volume_integral.point_data["squared_stress"] = np.linalg.norm(cauchy_stress_fem) ** 2
+        volume_integral = volume_integral.integrate_data()
+        rel_err_l2_int_disp.append(np.sqrt(volume_integral.point_data["squared_error_disp"][0] / volume_integral.point_data["squared_disp"][0]))
+        print(f"Relative L2 error for displacement (continuous): {rel_err_l2_int_disp[-1]}")
+        rel_err_l2_int_stress.append(np.sqrt(volume_integral.point_data["squared_error_stress"][0] / volume_integral.point_data["squared_stress"][0]))
+        print(f"Relative L2 error for stress (continuous):       {rel_err_l2_int_stress[-1]}")
 
     file_path = os.path.join(model_path, f"{simulation_case}_{int(ext_traction * 10):02}")
     grid.save(f"{file_path}.vtu")
