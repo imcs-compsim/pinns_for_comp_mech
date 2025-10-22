@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import deepxde as dde
-import numpy as np
 from deepxde import backend as bkd
 from pathlib import Path
 import pyvista as pv
