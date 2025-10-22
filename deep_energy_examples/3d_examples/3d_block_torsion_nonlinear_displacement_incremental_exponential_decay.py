@@ -9,6 +9,8 @@ import torch
 from pathlib import Path
 
 import pyvista as pv
+import time
+from utils.postprocess.custom_callbacks import LossPlateauStopping, WeightsBiasPlateauStopping
 
 dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 seed = 17
@@ -38,6 +40,19 @@ from utils.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookea
 from utils.postprocess.save_normals_tangentials_to_vtk import export_normals_tangentials_to_vtk
 from deepxde.optimizers.config import LBFGS_options
 
+time_dict = {"meshing":[],
+             "element_information":[],
+             "setup":[],
+             "relaxation_compiling":[],
+             "relaxation_training":[],
+             "simulation_compiling_adam":[],
+             "simulation_training_adam":[],
+             "simulation_compiling_lbfgs":[],
+             "simulation_training_lbfgs":[],
+             "simulation_prediction":[],
+             "total":[]}
+time_dict["total"].append(time.time())
+time_dict["meshing"].append(time.time())
 
 length = 4
 height = 1
@@ -57,12 +72,14 @@ Block_3D_obj = Block_3D_hex(origin=origin,
                             divisions=[seed_l, seed_h, seed_w])
 
 gmsh_model = Block_3D_obj.generateGmshModel(visualize_mesh=False)
+time_dict["meshing"].append(time.time())
+time_dict["element_information"].append(time.time())
 
 domain_dimension = 3
 quad_rule = GaussQuadratureRule(rule_name="gauss_legendre", dimension=domain_dimension, ngp=2) # gauss_legendre gauss_labotto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
-boundary_dimension = 2
+boundary_dimension = domain_dimension - 1
 quad_rule_boundary_integral = GaussQuadratureRule(rule_name="gauss_legendre", dimension=boundary_dimension, ngp=2) # gauss_legendre gauss_labotto
 coord_quadrature_boundary, weight_quadrature_boundary = quad_rule_boundary_integral.generate()
 
@@ -80,7 +97,8 @@ geom = GmshGeometryElementDeepEnergy(
                            boundary_dim=boundary_dimension,
                            weight_quadrature_boundary=weight_quadrature_boundary,
                            boundary_selection_map=boundary_selection_map)
-
+time_dict["element_information"].append(time.time())
+time_dict["setup"].append(time.time())
 # export_normals_tangentials_to_vtk(geom, save_folder_path=str(Path(__file__).parent.parent.parent.parent), file_name="block_boundary_normals")# # change global variables in elasticity_utils
 # hyperelasticity_utils.e_modul = 1.33
 # hyperelasticity_utils.nu = 0.3
@@ -205,30 +223,57 @@ exponential_decay = learning_rate_total_decay ** (1 / adam_iterations)
 lbfgs_iterations = 0
 rel_err_l2_disp = []
 rel_err_l2_stress = []
+rel_err_l2_int_disp = []
+rel_err_l2_int_stress = []
 l2_iteration = []
-relaxation = True
+relaxation_adam_iterations = 0 # just to not get any errors when not using it (undefined variable in naming)
+relaxation = False
+earlystopping = True
+earlystopping_choice = "weightsbiases" # "loss" or "weightsbiases"
+time_dict["setup"].append(time.time())
 
 if relaxation:
+    time_dict["relaxation_compiling"].append(time.time())
     relaxation_epsilon = 1e0
-    relaxation_adam_iterations = adam_iterations
+    relaxation_adam_iterations = 5000
     print(f"\nRelaxation step using a factor of {relaxation_epsilon} of the step width with {relaxation_adam_iterations} iterations.\n")
     theta_deg = relaxation_epsilon * torsion_angle / steps
     model.compile("adam", lr=learning_rate_adam)
+    time_dict["relaxation_compiling"].append(time.time())
+    time_dict["relaxation_training"].append(time.time())
     losshistory, train_state = model.train(iterations=relaxation_adam_iterations, display_every=100)
+    time_dict["relaxation_training"].append(time.time())
+
+if earlystopping:
+    if earlystopping_choice == "loss":
+        early = LossPlateauStopping(patience=500, min_delta=1e-5)
+    elif earlystopping_choice == "weightsbiases":
+        early = WeightsBiasPlateauStopping(patience=500, min_delta=1e-3, norm_choice="fro")
+    else:
+        raise ValueError("The specified stopping choice is not implemented or correct.")
 
 # Incremental loop
 for i in range(steps):
     theta_deg = torsion_angle/steps*(i+1)
     print(f"\nTraining for an angle of {theta_deg}°.\n")
-       
+    time_dict["simulation_compiling_adam"].append(time.time())
     model.compile("adam", lr=learning_rate_adam, decay=("exponential", exponential_decay))
-    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)
+    time_dict["simulation_compiling_adam"].append(time.time())
+    time_dict["simulation_training_adam"].append(time.time())
+    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100, callbacks=[early for _ in [1] if earlystopping])
+    time_dict["simulation_training_adam"].append(time.time())
 
-    # dde.optimizers.config.set_LBFGS_options(maxiter=lbfgs_iterations)
-    # model.compile("L-BFGS")
-    # losshistory, train_state = model.train(display_every=1000)
-    
+    if lbfgs_iterations>0:
+        time_dict["simulation_compiling_lbfgs"].append(time.time())
+        dde.optimizers.config.set_LBFGS_options(maxiter=lbfgs_iterations)
+        model.compile("L-BFGS")
+        time_dict["simulation_compiling_lbfgs"].append(time.time())
+        time_dict["simulation_training_lbfgs"].append(time.time())
+        losshistory, train_state = model.train(display_every=1000)
+        time_dict["simulation_training_lbfgs"].append(time.time())
+
     # Save results
+    time_dict["simulation_prediction"].append(time.time())
     points, _, cell_types, elements = geom.get_mesh()
     n_nodes_per_cell = elements.shape[1]
     n_cells = elements.shape[0]
@@ -240,8 +285,8 @@ for i in range(steps):
     displacement_pred = np.column_stack((output[:,0:1], output[:,1:2], output[:,2:3]))
     sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yx, sigma_xz, sigma_zx, sigma_yz, sigma_zy = model.predict(points, operator=cauchy_stress_3D)
     cauchy_stress_pred = np.column_stack((sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz))
-    grid.point_data['pred_displacement'] = displacement_pred
-    grid.point_data['pred_cauchy_stress'] = cauchy_stress_pred
+    grid.point_data["pred_displacement"] = displacement_pred
+    grid.point_data["pred_cauchy_stress"] = cauchy_stress_pred
 
     ## Compare with FEM reference
     if (theta_deg % 15 == 0) & (theta_deg <= torsion_angle):
@@ -259,14 +304,25 @@ for i in range(steps):
         # Compute L2-error
         l2_iteration.append(train_state.step)
         rel_err_l2_disp.append(np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem) / np.linalg.norm(displacement_fem))
-        print(f"Relative L2 error for displacement: {rel_err_l2_disp[-1]}")
+        print(f"Relative L2 error for displacement (discrete):   {rel_err_l2_disp[-1]}")
         rel_err_l2_stress.append(np.linalg.norm(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem) / np.linalg.norm(cauchy_stress_fem))
-        print(f"Relative L2 error for stress:       {rel_err_l2_stress[-1]}")
+        print(f"Relative L2 error for stress (discrete):         {rel_err_l2_stress[-1]}")
+
+        # Compute L2-error with integrals
+        volume_integral = fem_reference.copy()
+        volume_integral.point_data["squared_error_disp"] = np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem) ** 2
+        volume_integral.point_data["squared_disp"] = np.linalg.norm(displacement_fem) ** 2
+        volume_integral.point_data["squared_error_stress"] = np.linalg.norm(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem) ** 2
+        volume_integral.point_data["squared_stress"] = np.linalg.norm(cauchy_stress_fem) ** 2
+        volume_integral = volume_integral.integrate_data()
+        rel_err_l2_int_disp.append(np.sqrt(volume_integral.point_data["squared_error_disp"][0] / volume_integral.point_data["squared_disp"][0]))
+        print(f"Relative L2 error for displacement (continuous): {rel_err_l2_int_disp[-1]}")
+        rel_err_l2_int_stress.append(np.sqrt(volume_integral.point_data["squared_error_stress"][0] / volume_integral.point_data["squared_stress"][0]))
+        print(f"Relative L2 error for stress (continuous):       {rel_err_l2_int_stress[-1]}")
 
     file_path = os.path.join(model_path, f"{simulation_case}_{int(theta_deg):03}")
     grid.save(f"{file_path}.vtu")
-
-    model.net.built = False
+    time_dict["simulation_prediction"].append(time.time())
 
 model.save(f"{model_path}/{simulation_case}")
 dde.saveplot(
@@ -299,3 +355,32 @@ if l2_iteration:
     ax2.grid()
     plt.tight_layout()
     fig2.savefig(f"{model_path}/{simulation_case}-{relaxation_adam_iterations+steps*(adam_iterations+lbfgs_iterations)}_l2_norm_over_iterations.png", dpi=300)
+time_dict["total"].append(time.time())
+
+# Print times to output file
+with open(f"{model_path}/{simulation_case}-{relaxation_adam_iterations+steps*(adam_iterations+lbfgs_iterations)}_times.txt", "w") as text_file:
+    print(f"Compilation and training times in       [s]", file=text_file)
+    print(f"==============================================", file=text_file)
+    print(f"Meshing:                              {(time_dict["meshing"][1] - time_dict["meshing"][0]):8.3f}", file=text_file)
+    print(f"Building element information:         {(time_dict["element_information"][1] - time_dict["element_information"][0]):8.3f}", file=text_file)
+    if relaxation:
+        print(f"Relaxation compilation:               {(time_dict["relaxation_compiling"][1] - time_dict["relaxation_compiling"][0]):8.3f}", file=text_file)
+        print(f"Relaxation training:                  {(time_dict["relaxation_training"][1] - time_dict["relaxation_training"][0]):8.3f}", file=text_file)
+    if steps > 1:
+        for i in range(steps):
+            print(f"----------------------------------------------", file=text_file)
+            print(f"   Load step {(i+1):2d} compilation (adam):   {(time_dict["simulation_compiling_adam"][(2*i)+1] - time_dict["simulation_compiling_adam"][2*i]):8.3f}", file=text_file)
+            print(f"   Load step {(i+1):2d} training (adam):      {(time_dict["simulation_training_adam"][(2*i)+1] - time_dict["simulation_training_adam"][2*i]):8.3f}", file=text_file)
+            if lbfgs_iterations > 0:
+                print(f"   Load step {(i+1):2d} compilation (L-BFGS): {(time_dict["simulation_compiling_lbfgs"][(2*i)+1] - time_dict["simulation_compiling_lbfgs"][2*i]):8.3f}", file=text_file)
+                print(f"   Load step {(i+1):2d} training (L-BFGS):    {(time_dict["simulation_training_lbfgs"][(2*i)+1] - time_dict["simulation_training_lbfgs"][2*i]):8.3f}", file=text_file)
+            print(f"   Load step {(i+1):2d} prediction:           {(time_dict["simulation_prediction"][(2*i)+1] - time_dict["simulation_prediction"][2*i]):8.3f}", file=text_file)
+        print(f"==============================================", file=text_file)
+    print(f"Total compilation (adam):         {(sum(time_dict["simulation_compiling_adam"][1::2]) - (sum(time_dict["simulation_compiling_adam"][::2]))):12.3f}", file=text_file)
+    print(f"Total training (adam):            {(sum(time_dict["simulation_training_adam"][1::2]) - (sum(time_dict["simulation_training_adam"][::2]))):12.3f}", file=text_file)
+    if lbfgs_iterations > 0:
+        print(f"Total compilation (L-BFGS):       {(sum(time_dict["simulation_compiling_lbfgs"][1::2]) - (sum(time_dict["simulation_compiling_lbfgs"][::2]))):12.3f}", file=text_file)
+        print(f"Total training (L-BFGS):          {(sum(time_dict["simulation_training_lbfgs"][1::2]) - (sum(time_dict["simulation_training_lbfgs"][::2]))):12.3f}", file=text_file)
+    print(f"Total prediction:                 {(sum(time_dict["simulation_prediction"][1::2]) - (sum(time_dict["simulation_prediction"][::2]))):12.3f}", file=text_file)
+    print(f"==============================================", file=text_file)
+    print(f"Total:                            {(time_dict["total"][1] - time_dict["total"][0]):12.3f}", file=text_file)
