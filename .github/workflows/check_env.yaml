@@ -1,0 +1,37 @@
+name: Check environment setup
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-example:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Miniforge
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: false
+          activate-environment: CompSim-PINN
+          environment-file: env.yaml
+          auto-update-conda: true
+
+      - name: Install dependencies
+        shell: bash -l {0}
+        run: |
+          conda env update --name CompSim-PINN --file env.yaml --prune
+
+      - name: Run example script
+        shell: bash -l {0}
+        env:
+          EXAMPLE_SCRIPT: "deep_energy_examples/3d_examples/3d_block_torsion_nonlinear.py"  # Change this to your script path
+        run: |
+          conda activate CompSim-PINN
+          python $EXAMPLE_SCRIPT
