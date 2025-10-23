@@ -327,9 +327,9 @@ for i in range(steps):
 model.save(f"{model_path}/{simulation_case}")
 dde.saveplot(
     losshistory, train_state, issave=True, isplot=False, output_dir=model_path, 
-    loss_fname=f"{simulation_case}-{relaxation_adam_iterations+steps*(adam_iterations+lbfgs_iterations)}_loss.dat", 
-    train_fname=f"{simulation_case}-{relaxation_adam_iterations+steps*(adam_iterations+lbfgs_iterations)}_train.dat", 
-    test_fname=f"{simulation_case}-{relaxation_adam_iterations+steps*(adam_iterations+lbfgs_iterations)}_test.dat"
+    loss_fname=f"{simulation_case}-{losshistory.steps[-1]}_loss.dat", 
+    train_fname=f"{simulation_case}-{losshistory.steps[-1]}_train.dat", 
+    test_fname=f"{simulation_case}-{losshistory.steps[-1]}_test.dat"
 )
 
 fig1, ax1 = plt.subplots(figsize=(10,8))
@@ -341,7 +341,7 @@ ax1.tick_params(axis="both", labelsize=15)
 ax1.legend(fontsize=17)
 ax1.grid()
 plt.tight_layout()
-fig1.savefig(f"{model_path}/{simulation_case}-{relaxation_adam_iterations+steps*(adam_iterations+lbfgs_iterations)}_loss_plot.png", dpi=300)
+fig1.savefig(f"{model_path}/{simulation_case}-{losshistory.steps[-1]}_loss_plot.png", dpi=300)
 
 if l2_iteration:
     fig2, ax2 = plt.subplots(figsize=(10,8))
@@ -354,11 +354,11 @@ if l2_iteration:
     ax2.legend(fontsize=17)
     ax2.grid()
     plt.tight_layout()
-    fig2.savefig(f"{model_path}/{simulation_case}-{relaxation_adam_iterations+steps*(adam_iterations+lbfgs_iterations)}_l2_norm_over_iterations.png", dpi=300)
+    fig2.savefig(f"{model_path}/{simulation_case}-{losshistory.steps[-1]}_l2_norm_over_iterations.png", dpi=300)
 time_dict["total"].append(time.time())
 
 # Print times to output file
-with open(f"{model_path}/{simulation_case}-{relaxation_adam_iterations+steps*(adam_iterations+lbfgs_iterations)}_times.txt", "w") as text_file:
+with open(f"{model_path}/{simulation_case}-{losshistory.steps[-1]}_times.txt", "w") as text_file:
     print(f"Compilation and training times in       [s]", file=text_file)
     print(f"==============================================", file=text_file)
     print(f"Meshing:                              {(time_dict["meshing"][1] - time_dict["meshing"][0]):8.3f}", file=text_file)
