@@ -8,7 +8,7 @@ on:
 env:
   ENV_NAME: "CompSim-PINN"
   ENV_FILE: "env.yaml"
-  EXAMPLE_SCRIPT: "deep_energy_examples/3d_examples/3d_block_torsion_nonlinear.py"
+  EXAMPLE_SCRIPT: "elasticity_2d/linear_elasticity/lame/Lame_problem_quarter.py"
 
 jobs:
   test-example:
