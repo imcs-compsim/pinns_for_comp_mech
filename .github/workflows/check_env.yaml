@@ -103,5 +103,5 @@ jobs:
       - name: Run example script
         shell: bash -l {0}
         run: |
-          # if this does not work, add conda to PATH again (as above)
-          conda run -n ${ENV_NAME} --no-capture-output python "$EXAMPLE_SCRIPT"
+          MINIFORGE_INSTALL_DIR="${HOME}/miniforge"
+          ${MINIFORGE_INSTALL_DIR}/bin/conda run -n ${ENV_NAME} --no-capture-output python "$EXAMPLE_SCRIPT"
