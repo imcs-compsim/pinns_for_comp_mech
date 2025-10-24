@@ -4,6 +4,14 @@ on:
   pull_request:
     branches: [ main ]
 
+# Global environment variables that might need adaption in the future
+env:
+  ENV_NAME: "CompSim-PINN"
+  ENV_FILE: "env.yaml"
+  EXAMPLE_SCRIPT: "deep_energy_examples/3d_examples/3d_block_torsion_nonlinear.py"
+  # do not necessarily touch the following unless you know what you are doing
+  CONDA_INSTALL_DIR: "$HOME/miniforge"
+
 jobs:
   test-example:
     runs-on: ${{ matrix.os }}
@@ -15,10 +23,6 @@ jobs:
 
       - name: Install Miniforge (no external action)
         shell: bash -l {0}
-        env:
-          # Adapt this if we rename our environment in the future
-          ENV_NAME: "CompSim-PINN"
-          ENV_FILE: "env.yaml"
         run: |
           set -euo pipefail
           echo "Installing Miniforge/Mambaforge (self-hosted installer)..."
@@ -59,11 +63,10 @@ jobs:
           chmod +x /tmp/miniforge.sh
 
           # Install Miniforge silently
-          INSTALL_DIR="$HOME/miniforge"
-          /tmp/miniforge.sh -b -p "${INSTALL_DIR}"
+          /tmp/miniforge.sh -b -p "${CONDA_INSTALL_DIR}"
 
           # Put conda on PATH
-          export PATH="${INSTALL_DIR}/bin:${PATH}"
+          export PATH="${CONDA_INSTALL_DIR}/bin:${PATH}"
           hash -r
 
           # Verify installation
@@ -99,9 +102,6 @@ jobs:
 
       - name: Run example script
         shell: bash -l {0}
-        env:
-          # Adapt this if we want to use a different file for testing in the future
-          EXAMPLE_SCRIPT: "deep_energy_examples/3d_examples/3d_block_torsion_nonlinear.py"
         run: |
-          conda activate CompSim-PINN
-          python $EXAMPLE_SCRIPT
+          # if this does not work, add conda to PATH again (as above)
+          conda run -n ${ENV_NAME} --no-capture-output python "$EXAMPLE_SCRIPT"
