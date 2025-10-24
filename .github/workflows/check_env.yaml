@@ -13,25 +13,95 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Miniforge
-        uses: conda-incubator/setup-miniconda@v3
-        with:
-          miniforge-version: latest
-          miniforge-variant: Mambaforge
-          use-mamba: false
-          activate-environment: CompSim-PINN
-          environment-file: env.yaml
-          auto-update-conda: true
-
-      - name: Install dependencies
+      - name: Install Miniforge (no external action)
         shell: bash -l {0}
+        env:
+          # Adapt this if we rename our environment in the future
+          ENV_NAME: "CompSim-PINN"
+          ENV_FILE: "env.yaml"
         run: |
-          conda env update --name CompSim-PINN --file env.yaml --prune
+          set -euo pipefail
+          echo "Installing Miniforge/Mambaforge (self-hosted installer)..."
+
+          # choose platform/arch to match available Miniforge builds
+          UNAME=$(uname | tr '[:upper:]' '[:lower:]')
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "x86_64" ]; then
+            ARCH_TAG="x86_64"
+          elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+            # mac runners report arm64, Linux aarch64
+            ARCH_TAG="aarch64"
+          else
+            ARCH_TAG="$ARCH"
+          fi
+
+          # Map to Miniforge naming for macOS / linux
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            PLATFORM_TAG="MacOSX"
+            if [[ "$ARCH_TAG" == "aarch64" ]]; then
+              FN="Miniforge3-MacOSX-arm64.sh"
+            else
+              FN="Miniforge3-MacOSX-x86_64.sh"
+            fi
+          else
+            PLATFORM_TAG="Linux"
+            if [[ "$ARCH_TAG" == "aarch64" ]]; then
+              FN="Miniforge3-Linux-aarch64.sh"
+            else
+              FN="Miniforge3-Linux-x86_64.sh"
+            fi
+          fi
+
+          # Download installer from latest releases (conda-forge/miniforge)
+          URL="https://github.com/conda-forge/miniforge/releases/latest/download/${FN}"
+          echo "Downloading $URL"
+          curl -fsSL -o /tmp/miniforge.sh "$URL"
+          chmod +x /tmp/miniforge.sh
+
+          # Install Miniforge silently
+          INSTALL_DIR="$HOME/miniforge"
+          /tmp/miniforge.sh -b -p "${INSTALL_DIR}"
+
+          # Put conda on PATH
+          export PATH="${INSTALL_DIR}/bin:${PATH}"
+          hash -r
+
+          # Verify installation
+          echo "conda version: $(conda --version)"
+          echo "python in base: $(python --version)"
+
+          # Configure conda defaults (optional)
+          conda config --set channel_priority strict
+          conda config --add channels conda-forge
+
+          # Install mamba into base for fast solving
+          conda install -y -n base mamba -c conda-forge
+
+          # Check whether the envionment file is available
+          if [ ! -f "$ENV_FILE" ]; then
+            echo "Environment file '$ENV_FILE' not found; failing."
+            exit 1
+          fi
+
+          # Update an existing or create a new environment
+          if conda env list | grep -q "^[[:space:]]*${ENV_NAME}[[:space:]]"; then
+            echo "Updating existing env '$ENV_NAME' from $ENV_FILE"
+            mamba env update -n "$ENV_NAME" -f "$ENV_FILE" --prune
+          else
+            echo "Creating env '$ENV_NAME' from $ENV_FILE"
+            mamba env create -n "$ENV_NAME" -f "$ENV_FILE"
+          fi
+
+          echo "--- conda info ---"
+          conda info
+          echo "--- conda list (env $ENV_NAME) ---"
+          conda list -n "$ENV_NAME"
 
       - name: Run example script
         shell: bash -l {0}
         env:
-          EXAMPLE_SCRIPT: "deep_energy_examples/3d_examples/3d_block_torsion_nonlinear.py"  # Change this to your script path
+          # Adapt this if we want to use a different file for testing in the future
+          EXAMPLE_SCRIPT: "deep_energy_examples/3d_examples/3d_block_torsion_nonlinear.py"
         run: |
           conda activate CompSim-PINN
           python $EXAMPLE_SCRIPT
