@@ -9,8 +9,9 @@ env:
   ENV_NAME: "CompSim-PINN"
   ENV_FILE: "env.yaml"
   EXAMPLE_SCRIPT: "deep_energy_examples/3d_examples/3d_block_torsion_nonlinear.py"
-  # do not necessarily touch the following unless you know what you are doing
-  CONDA_INSTALL_DIR: "$HOME/miniforge"
+  # DO NOT TOUCH the following unless you know what you are doing
+  # Install miniforge in the runner's home directory
+  MINIFORGE_INSTALL_DIR: "/home/runner/miniforge"
 
 jobs:
   test-example:
@@ -63,10 +64,10 @@ jobs:
           chmod +x /tmp/miniforge.sh
 
           # Install Miniforge silently
-          /tmp/miniforge.sh -b -p "${CONDA_INSTALL_DIR}"
+          /tmp/miniforge.sh -b -p "${MINIFORGE_INSTALL_DIR}"
 
           # Put conda on PATH
-          export PATH="${CONDA_INSTALL_DIR}/bin:${PATH}"
+          export PATH="${MINIFORGE_INSTALL_DIR}/bin:${PATH}"
           hash -r
 
           # Verify installation
