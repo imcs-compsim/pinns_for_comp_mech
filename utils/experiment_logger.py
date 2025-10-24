@@ -80,4 +80,4 @@ class ExperimentLogger:
 
     def save(self): 
         self._add_row()
-        self._data.to_hdf(self._path, key='experiment_logs', mode='a' if self._append else 'w')
+        self._data.to_csv(self._path, sep=';', mode='a' if self._append else 'w')
