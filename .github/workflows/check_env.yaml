@@ -59,15 +59,17 @@ jobs:
           chmod +x /tmp/miniforge.sh
 
           # Define installation directory and export as env variable for later steps
-          echo "MINIFORGE_INSTALL_DIR=${HOME}/miniforge" >> "$GITHUB_ENV"
-          echo $MINIFORGE_INSTALL_DIR
+          export MINIFORGE_INSTALL_DIR="${HOME}/miniforge"
+          echo "MINIFORGE_INSTALL_DIR=${MINIFORGE_INSTALL_DIR}" >> "$GITHUB_ENV"
+          echo "Set MINIFORGE_INSTALL_DIR=$MINIFORGE_INSTALL_DIR"
 
           # Install Miniforge silently
           /tmp/miniforge.sh -b -p "${MINIFORGE_INSTALL_DIR}"
 
           # Put miniforge on PATH
+          export PATH="${MINIFORGE_INSTALL_DIR}/bin:${PATH}"
           echo "${MINIFORGE_INSTALL_DIR}/bin" >> "$GITHUB_PATH"
-          echo "$GITHUB_PATH"
+          echo "Added MINIFORGE_INSTALL_DIR/bin to the PATH: ${PATH}"
           hash -r
 
           # Verify installation
