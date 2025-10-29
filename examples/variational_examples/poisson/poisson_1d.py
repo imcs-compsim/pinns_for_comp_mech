@@ -6,13 +6,13 @@ import matplotlib.pyplot as plt
 from deepxde import utils as deepxde_utils
 from deepxde import backend as bkd
 
-from utils.geometry.gmsh_models import Line_1D
-from utils.geometry.custom_geometry import GmshGeometryElement
+from compsim_pinns.geometry.gmsh_models import Line_1D
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElement
 
-from utils.vpinns.quad_rule import GaussQuadratureRule
-from utils.vpinns.quad_rule import get_test_function_properties
+from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
+from compsim_pinns.vpinns.quad_rule import get_test_function_properties
 
-from utils.vpinns.v_pde import VariationalPDE
+from compsim_pinns.vpinns.v_pde import VariationalPDE
 
 import tensorflow as tf
 import torch

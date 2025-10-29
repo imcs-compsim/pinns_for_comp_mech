@@ -13,23 +13,23 @@ formatter = ticker.ScalarFormatter(useMathText=True)
 formatter.set_scientific(True)
 formatter.set_powerlimits((-1,1))
 
-from utils.geometry.gmsh_models import QuarterCirclewithHole
-from utils.elasticity import elasticity_utils
+from compsim_pinns.geometry.gmsh_models import QuarterCirclewithHole
+from compsim_pinns.elasticity import elasticity_utils
 
-from utils.geometry.gmsh_models import QuarterCirclewithHole
-from utils.geometry.custom_geometry import GmshGeometryElement
+from compsim_pinns.geometry.gmsh_models import QuarterCirclewithHole
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElement
 
-from utils.vpinns.quad_rule import GaussQuadratureRule
-from utils.vpinns.quad_rule import get_test_function_properties
+from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
+from compsim_pinns.vpinns.quad_rule import get_test_function_properties
 
-from utils.vpinns.v_pde import VariationalPDE
+from compsim_pinns.vpinns.v_pde import VariationalPDE
 
-from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, lin_iso_elasticity_plane_strain
-from utils.elasticity.elasticity_utils import calculate_traction_mixed_formulation, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
-from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
-from utils.geometry.custom_geometry import GmshGeometry2D
-from utils.geometry.gmsh_models import QuarterCirclewithHole
-from utils.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, lin_iso_elasticity_plane_strain
+from compsim_pinns.elasticity.elasticity_utils import calculate_traction_mixed_formulation, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from compsim_pinns.geometry.custom_geometry import GmshGeometry2D
+from compsim_pinns.geometry.gmsh_models import QuarterCirclewithHole
+from compsim_pinns.elasticity import elasticity_utils
 
 from deepxde import backend as bkd
 

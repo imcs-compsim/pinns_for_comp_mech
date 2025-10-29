@@ -10,19 +10,19 @@ from pyevtk.hl import unstructuredGridToVTK
 path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
 sys.path.append(path_utils)
 
-from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, lin_iso_elasticity_plane_stress
-from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
-from utils.geometry.custom_geometry import GmshGeometryElement
-from utils.geometry.gmsh_models import Block_2D
-from utils.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, lin_iso_elasticity_plane_stress
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElement
+from compsim_pinns.geometry.gmsh_models import Block_2D
+from compsim_pinns.elasticity import elasticity_utils
 
 import gmsh
 from deepxde import backend as bkd
 
-from utils.vpinns.v_pde import VariationalPDE
+from compsim_pinns.vpinns.v_pde import VariationalPDE
 
-from utils.vpinns.quad_rule import GaussQuadratureRule
-from utils.vpinns.quad_rule import get_test_function_properties
+from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
+from compsim_pinns.vpinns.quad_rule import get_test_function_properties
 
 
 '''
