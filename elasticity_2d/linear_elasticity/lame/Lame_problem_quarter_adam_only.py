@@ -44,11 +44,8 @@ https://par.nsf.gov/servlets/purl/10100420
 """
 import deepxde as dde
 import numpy as np
-import matplotlib.pyplot as plt
-import os
 import matplotlib.tri as tri
 import deepxde.backend as bkd
-from pyevtk.hl import unstructuredGridToVTK
 
 from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, stress_to_traction_2d
 from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
@@ -126,7 +123,6 @@ data = dde.data.PDE(
     num_domain=1500,
     num_boundary=500,
     num_test=None,
-    train_distribution = "Sobol"
 )
 
 def output_transform_hard(x, y):
@@ -192,10 +188,7 @@ else:
 model = dde.Model(data, net)
 # train adam
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
-losshistory, train_state = model.train(iterations=4000, display_every=200)
-# train l-bfgs
-model.compile("L-BFGS", loss_weights=loss_weights)
-model.train()
+losshistory, train_state = model.train(iterations=1000, display_every=200)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
