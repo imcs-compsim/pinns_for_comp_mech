@@ -1,5 +1,5 @@
 import deepxde as dde
-from utils.geometry.geometry_utils import calculate_boundary_normals, calculate_boundary_normals_3D
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, calculate_boundary_normals_3D
 import deepxde.backend as bkd
 from deepxde import utils
 
