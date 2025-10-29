@@ -27,4 +27,4 @@ RUN conda env create -f env.yaml
 RUN conda run -n CompSim-PINN pip install -e .
 
 # Define the default command to run when the container starts.
-CMD ["conda", "run", "-n", "CompSim-PINN", "python", "elasticity_2d/linear_elasticity/lame/Lame_problem_full_gmsh.py"]
+CMD ["conda", "run", "-n", "CompSim-PINN", "python", "elasticity_3d/linear_elasticity/block_under_shear.py"]
