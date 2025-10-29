@@ -5,11 +5,11 @@ import os
 from pyevtk.hl import unstructuredGridToVTK
 from pathlib import Path
 
-from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, stress_to_traction_2d, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
-from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
-from utils.geometry.custom_geometry import GmshGeometryElement
-from utils.geometry.gmsh_models import QuarterCirclewithHole
-from utils.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, stress_to_traction_2d, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElement
+from compsim_pinns.geometry.gmsh_models import QuarterCirclewithHole
+from compsim_pinns.elasticity import elasticity_utils
 
 '''
 Solves a hollow quarter cylinder under internal pressure (Lame problem)

@@ -13,12 +13,12 @@ formatter.set_powerlimits((-1,1))
 import time
 from pathlib import Path
 
-from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain
-from utils.elasticity.elasticity_utils import calculate_traction_mixed_formulation, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
-from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
-from utils.geometry.custom_geometry import GmshGeometryElement
-from utils.geometry.gmsh_models import QuarterCirclewithHole
-from utils.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain
+from compsim_pinns.elasticity.elasticity_utils import calculate_traction_mixed_formulation, zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElement
+from compsim_pinns.geometry.gmsh_models import QuarterCirclewithHole
+from compsim_pinns.elasticity import elasticity_utils
 
 '''
 Solves a hollow quarter cylinder under internal pressure (Lame problem)

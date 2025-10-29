@@ -28,14 +28,14 @@ However, in dde.data.TimePDE, this would not be the case: we have set
 Basically, num_domain and num_boundary can't be the dummy parameter "1" anymore.
 '''
 
-from utils.elasticity import elasticity_utils
-from utils.elasticity.elasticity_utils import pde_mixed_plane_strain_time_dependent, get_tractions_mixed_2d_spacetime, problem_parameters
-from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtkSpaceTime
-from utils.postprocess.save_normals_tangentials_to_vtk import export_normals_tangentials_to_vtk
-from utils.geometry.geometry_utils import calculate_boundary_normals
+from compsim_pinns.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import pde_mixed_plane_strain_time_dependent, get_tractions_mixed_2d_spacetime, problem_parameters
+from compsim_pinns.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtkSpaceTime
+from compsim_pinns.postprocess.save_normals_tangentials_to_vtk import export_normals_tangentials_to_vtk
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals
 
-from utils.geometry.custom_geometry import GmshGeometryElement
-from utils.geometry.gmsh_models import Block_2D
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElement
+from compsim_pinns.geometry.gmsh_models import Block_2D
 
 length = 1
 height = 1

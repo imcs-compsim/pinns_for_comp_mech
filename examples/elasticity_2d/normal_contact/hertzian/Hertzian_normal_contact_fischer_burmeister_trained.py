@@ -10,11 +10,11 @@ import time
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from utils.geometry.custom_geometry import GmshGeometry2D
-from utils.geometry.gmsh_models import QuarterDisc
-from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, stress_to_traction_2d
-from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
-from utils.elasticity import elasticity_utils
+from compsim_pinns.geometry.custom_geometry import GmshGeometry2D
+from compsim_pinns.geometry.gmsh_models import QuarterDisc
+from compsim_pinns.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, stress_to_traction_2d
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from compsim_pinns.elasticity import elasticity_utils
 
 #dde.config.set_default_float("float64")
 

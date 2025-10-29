@@ -4,15 +4,15 @@ import os
 import deepxde.backend as bkd
 from pyevtk.hl import unstructuredGridToVTK
 
-from utils.geometry.gmsh_models import Block_2D
-from utils.geometry.custom_geometry import GmshGeometry2D
+from compsim_pinns.geometry.gmsh_models import Block_2D
+from compsim_pinns.geometry.custom_geometry import GmshGeometry2D
 
-from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_stress
-from utils.contact_mech.contact_utils import zero_tangential_traction, positive_normal_gap_sign, negative_normal_traction_sign, zero_complimentary
-from utils.contact_mech.contact_utils import positive_normal_gap_adopted_sigmoid, negative_normal_traction_adopted_sigmoid
-from utils.contact_mech.contact_utils import zero_complementarity_function_based_popp, zero_complementarity_function_based_fischer_burmeister
-from utils.elasticity import elasticity_utils
-from utils.contact_mech import contact_utils
+from compsim_pinns.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_stress
+from compsim_pinns.contact_mech.contact_utils import zero_tangential_traction, positive_normal_gap_sign, negative_normal_traction_sign, zero_complimentary
+from compsim_pinns.contact_mech.contact_utils import positive_normal_gap_adopted_sigmoid, negative_normal_traction_adopted_sigmoid
+from compsim_pinns.contact_mech.contact_utils import zero_complementarity_function_based_popp, zero_complementarity_function_based_fischer_burmeister
+from compsim_pinns.elasticity import elasticity_utils
+from compsim_pinns.contact_mech import contact_utils
 
 '''
 Single patch-test for testing contact conditions. It is a simple block under compression. Check problem_figures/Contact_patch.png for details.
