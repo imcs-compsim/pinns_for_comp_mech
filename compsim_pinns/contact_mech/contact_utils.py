@@ -1,6 +1,6 @@
 from deepxde.backend import tf, torch
-from utils.geometry.geometry_utils import calculate_boundary_normals, calculate_boundary_normals_3D
-from utils.elasticity.elasticity_utils import calculate_traction_mixed_formulation, get_tractions_mixed_3d
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, calculate_boundary_normals_3D
+from compsim_pinns.elasticity.elasticity_utils import calculate_traction_mixed_formulation, get_tractions_mixed_3d
 from deepxde import backend as bkd
 from deepxde.backend import backend_name
 # Global contact parameters

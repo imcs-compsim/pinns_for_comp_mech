@@ -7,7 +7,7 @@ import triangle as tr
 
 from pyevtk.hl import unstructuredGridToVTK
 
-from utils.geometry.geometry_utils import polar_transformation_2d, polar_transformation_3d_spherical, polar_transformation_3d_cylindrical
+from compsim_pinns.geometry.geometry_utils import polar_transformation_2d, polar_transformation_3d_spherical, polar_transformation_3d_cylindrical
 from deepxde.geometry.csg import CSGUnion, CSGDifference, CSGIntersection
 from deepxde import config
 
