@@ -866,7 +866,21 @@ class SphereEighthHertzian(object):
         gmsh.model.mesh.field.setNumber(2, "DistMin", 0.4 * self.radius)
         gmsh.model.mesh.field.setNumber(2, "DistMax", 0.9 * self.radius)
 
-        gmsh.model.mesh.field.setAsBackgroundMesh(2)
+        gmsh.model.mesh.field.add("Distance", 3)
+        gmsh.model.mesh.field.setNumbers(3, "CurvesList", [1])
+        gmsh.model.mesh.field.setNumber(3, "Sampling", 100)
+
+        gmsh.model.mesh.field.add("Threshold", 4)
+        gmsh.model.mesh.field.setNumber(4, "InField", 3)
+        gmsh.model.mesh.field.setNumber(4, "SizeMin", 0.05 * self.radius) 
+        gmsh.model.mesh.field.setNumber(4, "SizeMax", 0.1  * self.radius)
+        gmsh.model.mesh.field.setNumber(4, "DistMin", 0.2  * self.radius)
+        gmsh.model.mesh.field.setNumber(4, "DistMax", 0.6  * self.radius)
+
+        gmsh.model.mesh.field.add("Min", 5)
+        gmsh.model.mesh.field.setNumbers(5, "FieldsList", [2, 4])
+
+        gmsh.model.mesh.field.setAsBackgroundMesh(5)
 
         # Generate 3D mesh
         gmsh.model.mesh.generate(3)
