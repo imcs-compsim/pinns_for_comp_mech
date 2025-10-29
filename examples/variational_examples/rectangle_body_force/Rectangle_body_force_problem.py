@@ -7,23 +7,23 @@ import scipy.interpolate
 import os
 import deepxde.backend as bkd
 
-from utils.elasticity.elasticity_utils import stress_plane_strain, momentum_2d
-from utils.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import stress_plane_strain, momentum_2d
+from compsim_pinns.elasticity import elasticity_utils
 
 from pyevtk.hl import unstructuredGridToVTK
 import gmsh
 
-from utils.geometry.gmsh_models import Block_2D
-from utils.geometry.custom_geometry import GmshGeometryElement
+from compsim_pinns.geometry.gmsh_models import Block_2D
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElement
 
-from utils.elasticity.elasticity_utils import problem_parameters, lin_iso_elasticity_plane_strain
-from utils.elasticity.elasticity_utils import calculate_traction_mixed_formulation
-from utils.geometry.geometry_utils import calculate_boundary_normals
+from compsim_pinns.elasticity.elasticity_utils import problem_parameters, lin_iso_elasticity_plane_strain
+from compsim_pinns.elasticity.elasticity_utils import calculate_traction_mixed_formulation
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals
 
-from utils.vpinns.quad_rule import GaussQuadratureRule
-from utils.vpinns.quad_rule import get_test_function_properties
+from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
+from compsim_pinns.vpinns.quad_rule import get_test_function_properties
 
-from utils.vpinns.v_pde import VariationalPDE
+from compsim_pinns.vpinns.v_pde import VariationalPDE
 
 
 '''
