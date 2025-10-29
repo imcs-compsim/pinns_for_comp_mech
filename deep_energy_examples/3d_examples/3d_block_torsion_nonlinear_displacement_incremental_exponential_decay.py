@@ -60,6 +60,7 @@ width = 1
 seed_l = 40
 seed_h = 10
 seed_w = 10
+refinement = 1
 origin = [0, -0.5, -0.5]
 
 # The applied pressure 
@@ -69,7 +70,7 @@ Block_3D_obj = Block_3D_hex(origin=origin,
                             length=length,
                             height=height,
                             width=width,
-                            divisions=[seed_l, seed_h, seed_w])
+                            divisions=[seed_l*refinement, seed_h*refinement, seed_w*refinement])
 
 gmsh_model = Block_3D_obj.generateGmshModel(visualize_mesh=False)
 time_dict["meshing"].append(time.time())
@@ -202,8 +203,8 @@ def output_transform(x, y):
     return bkd.concat([u_out, v_out, w_out], axis=1)
 
 # 3 inputs, 3 outputs for 3D 
-layer_size = [3] + [50] * 5 + [3]
-activation = "tanh"
+layer_size = [3] + [50] * 5 + [3] # also try [3] + [50] * 10 + [3]
+activation = "tanh" # also try "gelu"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
@@ -218,8 +219,8 @@ model_path = str(Path(__file__).parent)
 simulation_case = f"3d_block_torsion_nonlinear_displacement_incremental_exponential_decay"
 learning_rate_adam = 1E-3
 learning_rate_total_decay = 1E-3
-adam_iterations = 5000
-exponential_decay = learning_rate_total_decay ** (1 / adam_iterations)
+adam_iterations = 50000
+exponential_decay = learning_rate_total_decay ** (1 / 5000)
 lbfgs_iterations = 0
 rel_err_l2_disp = []
 rel_err_l2_stress = []
@@ -248,7 +249,7 @@ if earlystopping:
     if earlystopping_choice == "loss":
         early = LossPlateauStopping(patience=500, min_delta=1e-5)
     elif earlystopping_choice == "weightsbiases":
-        early = WeightsBiasPlateauStopping(patience=500, min_delta=1e-3, norm_choice="fro")
+        early = WeightsBiasPlateauStopping(patience=500, min_delta=1e-4, norm_choice="fro")
     else:
         raise ValueError("The specified stopping choice is not implemented or correct.")
 
@@ -301,24 +302,38 @@ for i in range(steps):
         sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, _, sigma_xz_pred_on_fem_mesh, _, sigma_yz_pred_on_fem_mesh, _ = model.predict(points_fem, operator=cauchy_stress_3D)
         cauchy_stress_pred_on_fem_mesh = np.column_stack((sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, sigma_yz_pred_on_fem_mesh, sigma_xz_pred_on_fem_mesh))
 
-        # Compute L2-error
+        # Compute L2-error (discrete)
         l2_iteration.append(train_state.step)
-        rel_err_l2_disp.append(np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem) / np.linalg.norm(displacement_fem))
+        rel_err_l2_disp.append(np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem, axis=1).sum() / np.linalg.norm(displacement_fem, axis=1).sum())
         print(f"Relative L2 error for displacement (discrete):   {rel_err_l2_disp[-1]}")
-        rel_err_l2_stress.append(np.linalg.norm(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem) / np.linalg.norm(cauchy_stress_fem))
+        rel_err_l2_stress.append(np.linalg.norm(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem, axis=1).sum() / np.linalg.norm(cauchy_stress_fem, axis=1).sum())
         print(f"Relative L2 error for stress (discrete):         {rel_err_l2_stress[-1]}")
 
-        # Compute L2-error with integrals
+        # Compute L2-error with integrals (continuous)
         volume_integral = fem_reference.copy()
-        volume_integral.point_data["squared_error_disp"] = np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem) ** 2
-        volume_integral.point_data["squared_disp"] = np.linalg.norm(displacement_fem) ** 2
-        volume_integral.point_data["squared_error_stress"] = np.linalg.norm(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem) ** 2
-        volume_integral.point_data["squared_stress"] = np.linalg.norm(cauchy_stress_fem) ** 2
+        volume_integral.point_data["squared_error_disp"] = np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem, axis=1) ** 2
+        volume_integral.point_data["squared_disp"] = np.linalg.norm(displacement_fem, axis=1) ** 2
+        volume_integral.point_data["squared_error_stress"] = np.linalg.norm(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem, axis=1) ** 2
+        volume_integral.point_data["squared_stress"] = np.linalg.norm(cauchy_stress_fem, axis=1) ** 2
         volume_integral = volume_integral.integrate_data()
         rel_err_l2_int_disp.append(np.sqrt(volume_integral.point_data["squared_error_disp"][0] / volume_integral.point_data["squared_disp"][0]))
         print(f"Relative L2 error for displacement (continuous): {rel_err_l2_int_disp[-1]}")
         rel_err_l2_int_stress.append(np.sqrt(volume_integral.point_data["squared_error_stress"][0] / volume_integral.point_data["squared_stress"][0]))
         print(f"Relative L2 error for stress (continuous):       {rel_err_l2_int_stress[-1]}")
+
+        # Compute mean absolute error
+        print(f"Mean absolute error for displacement (discrete): {np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem)/len(displacement_fem)}")
+        print(f"Mean absolute error for stress (discrete):       {np.linalg.norm(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem)/len(cauchy_stress_fem)}")
+
+        # Create output with relative pointwise errors
+        fem_reference.point_data["displacement_prediction"] = displacement_pred_on_fem_mesh
+        fem_reference.point_data["cauchy_stresses_prediction"] = cauchy_stress_pred_on_fem_mesh
+        fem_reference.point_data["absolute_displacement_error"] = displacement_pred_on_fem_mesh - displacement_fem
+        fem_reference.point_data["absolute_cauchy_stress_error"] = cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem
+        fem_reference.point_data["relative_displacement_error"] = np.divide(np.abs(displacement_pred_on_fem_mesh - displacement_fem), np.abs(displacement_fem), out=np.zeros_like(displacement_fem, dtype=float), where=displacement_fem!=0)
+        fem_reference.point_data["relative_cauchy_stress_error"] = np.divide(np.abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem), np.abs(cauchy_stress_fem), out=np.zeros_like(cauchy_stress_fem, dtype=float), where=cauchy_stress_fem!=0)
+        file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_fem_compare_{int(theta_deg):03}")
+        fem_reference.save(f"{file_path_fem_compare}.vtu")
 
     file_path = os.path.join(model_path, f"{simulation_case}_{int(theta_deg):03}")
     grid.save(f"{file_path}.vtu")
