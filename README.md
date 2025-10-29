@@ -138,8 +138,15 @@ docker build -t imcs-pinn -f docker/Dockerfile .
 
 Then, run the docker container by typing the following command on the terminal 
 ```bash
-docker run -it imcs-pinn
+docker run imcs-pinn
 ```
+`NOTE`: The command above will automatically run the default commands defined in Dockerfile. 
+
+When you want to open an interactive shell inside the container or interact with the process manually, for instance for debugging, then run
+```bash
+docker run -it imcs-pinn bash
+```
+
 Run, a specific example
 ```bash
 docker run -it imcs-pinn conda run -n CompSim-PINN python elasticity_3d/linear_elasticity/block_under_shear.py
