@@ -129,6 +129,22 @@ For cluster, we should use `conda` since we had issues in terms of package insta
 
 ---
 
+## How to use docker?
+
+First, build the docker container using `Dockerfile` and type the following command on the terminal
+```bash
+docker build -t imcs-pinn .
+```
+
+Then, run the docker container by typing the following command on the terminal 
+```bash
+docker run -it imcs-pinn
+```
+Run, a specific example
+```bash
+docker run -it imcs-pinn conda run -n CompSim-PINN python elasticity_3d/linear_elasticity/block_under_shear.py
+```
+
 ## Citing 'CompSim-PINN'
 
 Whenever you use or mention 'CompSim-PINN' in some sort of scientific document/publication/presentation, please cite the following publications. They are publicly avaliable at [AMSES](https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3) and [ArXiv](https://arxiv.org/abs/2412.09022).
