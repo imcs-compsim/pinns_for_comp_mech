@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import scipy.interpolate
 import os
 
-from utils.elasticity.elasticity_utils import stress_plane_strain, problem_parameters, momentum_2d
-from utils.postprocess.elasticity_postprocessing import meshGeometry, postProcess
+from compsim_pinns.elasticity.elasticity_utils import stress_plane_strain, problem_parameters, momentum_2d
+from compsim_pinns.postprocess.elasticity_postprocessing import meshGeometry, postProcess
 
 '''
 This script is used to create the PINN model of 2D Elasticity example. The example is taken from

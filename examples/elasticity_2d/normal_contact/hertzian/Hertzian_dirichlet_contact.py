@@ -4,8 +4,8 @@ import numpy as np
 # Import tf if using backend tensorflow.compat.v1 or tensorflow
 from deepxde.backend import torch
 
-from utils.elasticity.elasticity_utils import stress_plane_strain, momentum_2d 
-from utils.postprocess.elasticity_postprocessing import meshGeometry, postProcess
+from compsim_pinns.elasticity.elasticity_utils import stress_plane_strain, momentum_2d 
+from compsim_pinns.postprocess.elasticity_postprocessing import meshGeometry, postProcess
 
 
 geom_rectangle = dde.geometry.Rectangle(xmin=[0, 0], xmax=[2, 1])

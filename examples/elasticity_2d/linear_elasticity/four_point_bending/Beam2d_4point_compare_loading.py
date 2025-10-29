@@ -9,11 +9,11 @@ from pyevtk.hl import unstructuredGridToVTK
 
 from scipy.interpolate import BSpline
 
-from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, elastic_strain_2d
-from utils.geometry.geometry_utils import calculate_boundary_normals
-from utils.geometry.custom_geometry import GmshGeometry2D
-from utils.geometry.gmsh_models import Rectangle_4PointBendingCentered
-from utils.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, elastic_strain_2d
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals
+from compsim_pinns.geometry.custom_geometry import GmshGeometry2D
+from compsim_pinns.geometry.gmsh_models import Rectangle_4PointBendingCentered
+from compsim_pinns.elasticity import elasticity_utils
 
 '''
 In this routine, 4 point bending test example is illustrated.

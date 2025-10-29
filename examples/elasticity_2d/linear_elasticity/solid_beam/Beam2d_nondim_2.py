@@ -4,11 +4,11 @@ import os
 from deepxde.backend import tf
 from pyevtk.hl import unstructuredGridToVTK
 
-from utils.elasticity.elasticity_utils import stress_plane_stress, problem_parameters
-from utils.geometry.geometry_utils import calculate_boundary_normals
-from utils.geometry.custom_geometry import GmshGeometry2D
-from utils.geometry.gmsh_models import Block_2D
-from utils.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import stress_plane_stress, problem_parameters
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals
+from compsim_pinns.geometry.custom_geometry import GmshGeometry2D
+from compsim_pinns.geometry.gmsh_models import Block_2D
+from compsim_pinns.elasticity import elasticity_utils
 
 
 '''

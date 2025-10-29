@@ -16,17 +16,17 @@ Therefore, z direction must be the time direction. The followings must be taken 
 - The boundary normals must be consistent through the z-direction. The reason is that in Neumann BCs, we only take nx and ny terms assuming that nz is zero.   
 '''
 
-from utils.geometry.custom_geometry import GmshGeometry3D
-from utils.geometry.gmsh_models import Block_3D_hex
-from utils.elasticity import elasticity_utils
-from utils.elasticity.elasticity_utils import pde_mixed_plane_strain_time_dependent, get_tractions_mixed_2d_time, problem_parameters
-from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtkSpaceTime
-from utils.postprocess.save_normals_tangentials_to_vtk import export_normals_tangentials_to_vtk
-from utils.geometry.geometry_utils import calculate_boundary_normals_3D
+from compsim_pinns.geometry.custom_geometry import GmshGeometry3D
+from compsim_pinns.geometry.gmsh_models import Block_3D_hex
+from compsim_pinns.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import pde_mixed_plane_strain_time_dependent, get_tractions_mixed_2d_time, problem_parameters
+from compsim_pinns.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtkSpaceTime
+from compsim_pinns.postprocess.save_normals_tangentials_to_vtk import export_normals_tangentials_to_vtk
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals_3D
 
 # This is for visualization
-from utils.geometry.custom_geometry import GmshGeometry2D
-from utils.geometry.gmsh_models import Block_2D
+from compsim_pinns.geometry.custom_geometry import GmshGeometry2D
+from compsim_pinns.geometry.gmsh_models import Block_2D
 
 length = 1
 height = 1

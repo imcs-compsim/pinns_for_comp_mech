@@ -50,9 +50,9 @@ import matplotlib.tri as tri
 import deepxde.backend as bkd
 from pyevtk.hl import unstructuredGridToVTK
 
-from utils.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, stress_to_traction_2d
-from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
-from utils.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, stress_to_traction_2d
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from compsim_pinns.elasticity import elasticity_utils
 
 # change global variables in elasticity_utils
 elasticity_utils.lame = 1153.846

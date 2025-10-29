@@ -2,8 +2,8 @@
 import deepxde as dde
 import numpy as np
 
-from utils.elasticity.elasticity_utils import momentum_2d 
-from utils.postprocess.elasticity_postprocessing import meshGeometry, postProcess
+from compsim_pinns.elasticity.elasticity_utils import momentum_2d 
+from compsim_pinns.postprocess.elasticity_postprocessing import meshGeometry, postProcess
 
 geom_rectangle = dde.geometry.Rectangle(xmin=[0, 0], xmax=[2, 1])
 geom_disk = dde.geometry.Disk([1, 1], 1)

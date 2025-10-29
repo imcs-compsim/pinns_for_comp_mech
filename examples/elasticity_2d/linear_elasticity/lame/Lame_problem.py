@@ -3,9 +3,9 @@ import deepxde as dde
 import numpy as np
 import matplotlib.pyplot as plt
 
-from utils.elasticity.elasticity_utils import stress_plane_strain, momentum_2d, stress_to_traction_2d
-from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
-from utils.postprocess.elasticity_postprocessing import meshGeometry, postProcess
+from compsim_pinns.elasticity.elasticity_utils import stress_plane_strain, momentum_2d, stress_to_traction_2d
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from compsim_pinns.postprocess.elasticity_postprocessing import meshGeometry, postProcess
 
 radius_inner = 1
 center_inner = [0,0]

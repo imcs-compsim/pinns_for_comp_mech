@@ -10,15 +10,15 @@ import seaborn as sns
 from pyevtk.hl import unstructuredGridToVTK
 import time
 
-from utils.geometry.custom_geometry import GmshGeometry2D
-from utils.geometry.gmsh_models import QuarterDisc
-from utils.geometry.geometry_utils import polar_transformation_2d, calculate_boundary_normals
+from compsim_pinns.geometry.custom_geometry import GmshGeometry2D
+from compsim_pinns.geometry.gmsh_models import QuarterDisc
+from compsim_pinns.geometry.geometry_utils import polar_transformation_2d, calculate_boundary_normals
 
-from utils.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, calculate_traction_mixed_formulation
-from utils.elasticity.elasticity_utils import zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
-from utils.contact_mech.contact_utils import zero_tangential_traction
-from utils.elasticity import elasticity_utils
-from utils.contact_mech import contact_utils
+from compsim_pinns.elasticity.elasticity_utils import problem_parameters, pde_mixed_plane_strain, calculate_traction_mixed_formulation
+from compsim_pinns.elasticity.elasticity_utils import zero_neumann_x_mixed_formulation, zero_neumann_y_mixed_formulation
+from compsim_pinns.contact_mech.contact_utils import zero_tangential_traction
+from compsim_pinns.elasticity import elasticity_utils
+from compsim_pinns.contact_mech import contact_utils
 
 dde.config.set_default_float("float64")
 
