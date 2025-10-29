@@ -133,7 +133,7 @@ For cluster, we should use `conda` since we had issues in terms of package insta
 
 First, build the docker container using `Dockerfile` and type the following command on the terminal
 ```bash
-docker build -t imcs-pinn .
+docker build -t imcs-pinn docker/Dockerfile .
 ```
 
 Then, run the docker container by typing the following command on the terminal 
