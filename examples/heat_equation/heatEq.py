@@ -83,7 +83,7 @@ def postProcess(model):
     from pathlib import Path
     path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
     sys.path.append(path_utils)
-    from utils.postprocess.export_vtk import meshGeometry, solutionFieldOnMeshToVtk
+    from compsim_pinns.postprocess.export_vtk import meshGeometry, solutionFieldOnMeshToVtk
 
     geom = model.data.geom
 
