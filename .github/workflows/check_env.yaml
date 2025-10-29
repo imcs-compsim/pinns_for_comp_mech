@@ -6,6 +6,7 @@ on:
 
 # Global environment variables that might need adaption in the future
 env:
+  BACKEND: pytorch
   ENV_NAME: CompSim-PINN
   ENV_FILE: env.yaml
   EXAMPLE_SCRIPT: elasticity_2d/linear_elasticity/lame/Lame_problem_quarter_adam_only.py
@@ -107,4 +108,4 @@ jobs:
         shell: bash -l {0}
         run: |
           set -euo pipefail
-          $PYTHON_PACKAGE_MANAGER run -n $ENV_NAME --no-capture-output python "$EXAMPLE_SCRIPT"
+          $PYTHON_PACKAGE_MANAGER run -n $ENV_NAME --no-capture-output DDE_BACKEND=$BACKEND python "$EXAMPLE_SCRIPT"

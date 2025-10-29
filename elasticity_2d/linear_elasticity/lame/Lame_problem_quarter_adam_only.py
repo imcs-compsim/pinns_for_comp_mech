@@ -193,8 +193,9 @@ model = dde.Model(data, net)
 # train adam
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
 losshistory, train_state = model.train(iterations=4000, display_every=200)
-
-vtu_and_plot_name = "Lame_quarter_e_2000_soft_scaled_weighted"
+# train l-bfgs
+model.compile("L-BFGS", loss_weights=loss_weights)
+model.train()
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
@@ -233,27 +234,9 @@ def compareModelPredictionAndAnalyticalSolution(model):
     rel_err_l2_stress = err_norm_stress/ex_norm_stress
     print("Relative L2 error for stress: ", rel_err_l2_stress)
 
-    fig, axs = plt.subplots(1,2,figsize=(12,5))
 
-    axs[0].plot(r/radius_inner, sigma_rr_analytical/radius_inner, label = r"Analytical $\sigma_{r}$")
-    axs[0].plot(r/radius_inner, sigma_rr/radius_inner, label = r"Predicted $\sigma_{r}$")
-    axs[0].plot(r/radius_inner, sigma_theta_analytical/radius_inner, label = r"Analytical $\sigma_{\theta}$")
-    axs[0].plot(r/radius_inner, sigma_theta/radius_inner, label = r"Predicted $\sigma_{\theta}$")
-    axs[0].set(ylabel="Normalized radial stress", xlabel = r"r/$R_i$")
-    axs[1].plot(r/radius_inner, u_rad_analytical/radius_inner, label = r"Analytical $u_r$")
-    axs[1].plot(r/radius_inner, u_rad_pred/radius_inner, label = r"Predicted $u_r$")
-    axs[1].set(ylabel="Normalized radial displacement", xlabel = r"r/$R_i$")
-    axs[0].legend()
-    axs[0].grid()
-    axs[1].legend()
-    axs[1].grid()
-    fig.tight_layout()
-
-    plt.savefig(vtu_and_plot_name)
-    plt.show()
-
-X = geom.random_points(600, random="Sobol")
-boun = geom.random_boundary_points(100, random="Sobol")
+X = geom.random_points(600)
+boun = geom.random_boundary_points(100)
 X = np.vstack((X,boun))
 X_corners = np.array([[radius_inner, 0],[radius_outer, 0],[0, radius_inner],[0, radius_outer]])
 X = np.vstack((X,X_corners))
@@ -278,10 +261,5 @@ condition = ~np.all(condition, axis=1)
 dol_triangles = triang.triangles[condition]
 offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1])
 cell_types = np.ones(dol_triangles.shape[0])*5
-
-file_path = os.path.join(os.getcwd(), vtu_and_plot_name)
-
-unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset, 
-                      cell_types, pointData = { "displacement" : combined_disp,"stress" : combined_stress, "stress_polar": combined_stress_polar})
 
 compareModelPredictionAndAnalyticalSolution(model)
