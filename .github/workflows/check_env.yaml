@@ -27,7 +27,6 @@ jobs:
           echo "Installing Miniforge/Mambaforge (self-hosted installer)..."
 
           # choose platform/arch to match available Miniforge builds
-          UNAME=$(uname | tr '[:upper:]' '[:lower:]')
           ARCH=$(uname -m)
           if [ "$ARCH" = "x86_64" ]; then
             ARCH_TAG="x86_64"
@@ -60,7 +59,7 @@ jobs:
           chmod +x /tmp/miniforge.sh
 
           # Define installation directory and export as env variable for later steps
-          echo "MINIFORGE_INSTALL_DIR="${HOME}/miniforge" >> "$GITHUB_ENV"
+          echo "MINIFORGE_INSTALL_DIR=${HOME}/miniforge" >> "$GITHUB_ENV"
           echo $MINIFORGE_INSTALL_DIR
 
           # Install Miniforge silently
