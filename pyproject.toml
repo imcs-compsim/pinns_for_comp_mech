@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 # General metadata for the project
 [project]
-name = "CompSim-PINN"
+name = "CompSim_PINNs"
 version = "2025.0.0"
 license = { text = "MIT" }
 authors = [
