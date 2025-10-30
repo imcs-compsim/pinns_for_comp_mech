@@ -152,7 +152,7 @@ loss_weights = [w_momentum_xx, w_momentum_yy, w_momentum_zz,
                 w_zero_traction_x, w_zero_traction_y, w_zero_traction_z,
                 w_zero_tangential_traction_component1, w_zero_tangential_traction_component2, w_zero_fischer_burmeister]
 
-model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/hertzian/hertzian_3d"
+model_path = str(Path(__file__).parent.parent.parent.parent)+f"/pretrained_models/elasticity_3d/hertzian/hertzian_3d"
 restore_model = False
 
 if not restore_model:

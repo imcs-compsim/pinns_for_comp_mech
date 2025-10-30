@@ -163,7 +163,7 @@ model = dde.Model(data, net)
 # if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
 
 restore_model = True
-model_path = str(Path(__file__).parent.parent)+f"/trained_models/beam/beam_nonlinear"
+model_path = str(Path(__file__).parent.parent.parent)+f"/pretrained_models/deep_energy_examples/beam/beam_nonlinear"
 
 if not restore_model:
     # model.compile("adam", lr=0.001)

@@ -167,7 +167,7 @@ model = dde.Model(data, net)
 
 restore_model = True
 # store the model
-model_path = str(Path(__file__).parent.parent.parent)+f"/trained_models/patch/{method_name}/{method_name}"
+model_path = str(Path(__file__).parent.parent.parent.parent)+f"/pretrained_models/elasticity_2d/patch/{method_name}/{method_name}"
 
 # number epochs required for restoring model
 n_epoch_dict = {"KKT_inequality_sign": 2265, "KKT_inequality_sigmoid": 2272, "fischer_burmeister": 2394}

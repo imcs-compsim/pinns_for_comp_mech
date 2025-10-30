@@ -95,7 +95,7 @@ activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 
-model_path = str(Path(__file__).parent.parent.parent)+"/trained_models/lame/lame"
+model_path = str(Path(__file__).parent.parent.parent.parent)+"/pretrained_models/elasticity_2d/lame/lame"
 n_epochs = 3106 # trained model has 3106 iterations
 model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
 

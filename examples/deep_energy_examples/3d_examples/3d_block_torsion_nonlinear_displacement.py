@@ -182,7 +182,7 @@ loss_weights=None
 model = dde.Model(data, net)
 
 restore_model = True
-model_path = str(Path(__file__).parent.parent)+f"/trained_models/3d_torsion/3d_torsion_nonlinear"
+model_path = str(Path(__file__).parent.parent.parent)+f"/pretrained_models/deep_energy_examples/3d_torsion/3d_torsion_nonlinear"
 
 if not restore_model:
     # model.compile("adam", lr=0.001)
