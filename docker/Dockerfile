@@ -24,7 +24,7 @@ COPY . /app
 
 # Create the Conda environment using the env.yaml file, activate it, and install the CompSim-PINN package.
 RUN conda env create -f env.yaml
-RUN conda run -n CompSim-PINN pip install -e .
+RUN conda run -n compsim_pinns pip install -e .
 
 # Define the default command to run when the container starts.
-CMD ["conda", "run", "-n", "CompSim-PINN", "python", "elasticity_3d/linear_elasticity/block_under_shear.py"]
+CMD ["conda", "run", "-n", "compsim_pinns", "python", "examples/elasticity_3d/linear_elasticity/block_under_shear.py"]
