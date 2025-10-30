@@ -6,9 +6,6 @@ import sys
 from pathlib import Path
 from deepxde.backend import tf
 from pyevtk.hl import unstructuredGridToVTK
-# add utils folder to the system path
-path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
-sys.path.append(path_utils)
 
 from compsim_pinns.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, lin_iso_elasticity_plane_stress
 from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
