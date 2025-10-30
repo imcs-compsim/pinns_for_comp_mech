@@ -12,22 +12,22 @@ import pyvista as pv
 Simple compression test for a 3D block, results seem identical to 2D.
 '''
 
-from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-from utils.geometry.gmsh_models import SphereEighthHertzian
-from utils.geometry.geometry_utils import polar_transformation_3d_spherical
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
+from compsim_pinns.geometry.gmsh_models import SphereEighthHertzian
+from compsim_pinns.geometry.geometry_utils import polar_transformation_3d_spherical
 
-from utils.elasticity import elasticity_utils
-from utils.elasticity.elasticity_utils import get_stress_tensor, get_elastic_strain_3d, problem_parameters
-from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
+from compsim_pinns.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import get_stress_tensor, get_elastic_strain_3d, problem_parameters
+from compsim_pinns.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
 
-from utils.deep_energy.deep_pde import DeepEnergyPDE
-from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-from utils.vpinns.quad_rule import GaussQuadratureRule
+from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
+from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
-from utils.hyperelasticity import hyperelasticity_utils
-from utils.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_3d, compute_elastic_properties, first_piola_stress_tensor_3D, cauchy_stress_3D, green_lagrange_strain_3D
-from utils.contact_mech.contact_utils import calculate_gap_in_normal_direction_deep_energy
-from utils.contact_mech import contact_utils
+from compsim_pinns.hyperelasticity import hyperelasticity_utils
+from compsim_pinns.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_3d, compute_elastic_properties, first_piola_stress_tensor_3D, cauchy_stress_3D, green_lagrange_strain_3D
+from compsim_pinns.contact_mech.contact_utils import calculate_gap_in_normal_direction_deep_energy
+from compsim_pinns.contact_mech import contact_utils
 
 from deepxde.optimizers.config import LBFGS_options
 

@@ -8,22 +8,22 @@ import matplotlib.tri as tri
 import pandas as pd
 from deepxde.backend import tf
 
-from utils.geometry.geometry_utils import polar_transformation_2d
-from utils.elasticity import elasticity_utils
+from compsim_pinns.geometry.geometry_utils import polar_transformation_2d
+from compsim_pinns.elasticity import elasticity_utils
 
-from utils.elasticity.elasticity_utils import problem_parameters, elastic_strain_2d, stress_plane_strain, problem_parameters
-from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
+from compsim_pinns.elasticity.elasticity_utils import problem_parameters, elastic_strain_2d, stress_plane_strain, problem_parameters
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
 
-from utils.contact_mech.contact_utils import calculate_gap_in_normal_direction_deep_energy
-from utils.contact_mech import contact_utils
+from compsim_pinns.contact_mech.contact_utils import calculate_gap_in_normal_direction_deep_energy
+from compsim_pinns.contact_mech import contact_utils
 
-from utils.geometry.gmsh_models import QuarterDisc
+from compsim_pinns.geometry.gmsh_models import QuarterDisc
 
 from deepxde import backend as bkd
 
-from utils.deep_energy.deep_pde import DeepEnergyPDE
+from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
 
-from utils.vpinns.quad_rule import GaussQuadratureRule
+from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
 
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 11}

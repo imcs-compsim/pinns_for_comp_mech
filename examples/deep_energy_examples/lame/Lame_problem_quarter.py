@@ -5,21 +5,21 @@ import os
 from pyevtk.hl import unstructuredGridToVTK
 from pathlib import Path
 
-from utils.elasticity.elasticity_utils import stress_plane_stress, problem_parameters
-from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
-from utils.geometry.custom_geometry import GmshGeometryElement
-from utils.geometry.gmsh_models import QuarterCirclewithHole
-from utils.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import stress_plane_stress, problem_parameters
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElement
+from compsim_pinns.geometry.gmsh_models import QuarterCirclewithHole
+from compsim_pinns.elasticity import elasticity_utils
 
-from utils.elasticity.elasticity_utils import problem_parameters, elastic_strain_2d, stress_plane_strain
-from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-from utils.geometry.gmsh_models import Block_2D
+from compsim_pinns.elasticity.elasticity_utils import problem_parameters, elastic_strain_2d, stress_plane_strain
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
+from compsim_pinns.geometry.gmsh_models import Block_2D
 
 from deepxde import backend as bkd
 
-from utils.deep_energy.deep_pde import DeepEnergyPDE
+from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
 
-from utils.vpinns.quad_rule import GaussQuadratureRule
+from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
 '''
 Solves a hollow quarter cylinder under internal pressure (Lame problem)

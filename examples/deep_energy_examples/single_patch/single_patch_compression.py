@@ -8,15 +8,15 @@ from pyevtk.hl import unstructuredGridToVTK
 path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
 sys.path.append(path_utils)
 
-from utils.elasticity.elasticity_utils import problem_parameters, elastic_strain_2d, stress_plane_strain
-from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-from utils.geometry.gmsh_models import Block_2D
+from compsim_pinns.elasticity.elasticity_utils import problem_parameters, elastic_strain_2d, stress_plane_strain
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
+from compsim_pinns.geometry.gmsh_models import Block_2D
 
 from deepxde import backend as bkd
 
-from utils.deep_energy.deep_pde import DeepEnergyPDE
+from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
 
-from utils.vpinns.quad_rule import GaussQuadratureRule
+from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
 
 '''

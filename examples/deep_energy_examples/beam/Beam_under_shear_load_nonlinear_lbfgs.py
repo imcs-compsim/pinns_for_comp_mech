@@ -5,25 +5,25 @@ import os
 from pyevtk.hl import unstructuredGridToVTK
 from pathlib import Path
 
-from utils.elasticity.elasticity_utils import stress_plane_strain, stress_plane_stress
-from utils.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
-from utils.geometry.custom_geometry import GmshGeometryElement
-from utils.geometry.gmsh_models import QuarterCirclewithHole
+from compsim_pinns.elasticity.elasticity_utils import stress_plane_strain, stress_plane_stress
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElement
+from compsim_pinns.geometry.gmsh_models import QuarterCirclewithHole
 
-from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-from utils.geometry.gmsh_models import Block_2D
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
+from compsim_pinns.geometry.gmsh_models import Block_2D
 
-from utils.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_2d, compute_elastic_properties, cauchy_stress_2D
-from utils.hyperelasticity import hyperelasticity_utils
-from utils.elasticity import elasticity_utils
+from compsim_pinns.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_2d, compute_elastic_properties, cauchy_stress_2D
+from compsim_pinns.hyperelasticity import hyperelasticity_utils
+from compsim_pinns.elasticity import elasticity_utils
 from deepxde import backend as bkd
 
-from utils.deep_energy.deep_pde import DeepEnergyPDE
+from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
 
-from utils.vpinns.quad_rule import GaussQuadratureRule
+from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 from deepxde.optimizers.config import LBFGS_options
 
-from utils.postprocess.custom_callbacks import SaveModelVTU
+from compsim_pinns.postprocess.custom_callbacks import SaveModelVTU
 
 '''
 Solves a hollow quarter cylinder under internal pressure (Lame problem)
