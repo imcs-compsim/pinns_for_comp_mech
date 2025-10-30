@@ -7,7 +7,7 @@ on:
 # Global environment variables that might need adaption in the future
 env:
   BACKEND: pytorch
-  ENV_NAME: CompSim_PINNs
+  ENV_NAME: compsim_pinns
   ENV_FILE: env.yaml
   EXAMPLE_SCRIPT: examples/elasticity_2d/linear_elasticity/lame/Lame_problem_quarter_adam_only.py
   PYTHON_PACKAGE_MANAGER: conda
