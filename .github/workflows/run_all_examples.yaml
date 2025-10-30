@@ -1,0 +1,113 @@
+name: Check environment setup
+
+on:
+  pull_request:
+    branches: [ main ]
+
+# Global environment variables that might need adaption in the future
+env:
+  BACKEND: pytorch
+  ENV_NAME: compsim_pinns
+  ENV_FILE: env.yaml
+  PYTHON_PACKAGE_MANAGER: conda
+
+jobs:
+  test-example:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Miniforge (no external action)
+        shell: bash -l {0}
+        run: |
+          set -euo pipefail
+          echo "Installing Miniforge/Mambaforge (self-hosted installer)..."
+
+          # choose platform/arch to match available Miniforge builds
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "x86_64" ]; then
+            ARCH_TAG="x86_64"
+          elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+            # mac runners report arm64, Linux aarch64
+            ARCH_TAG="aarch64"
+          else
+            ARCH_TAG="$ARCH"
+          fi
+
+          # Map to Miniforge naming for macOS / linux
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            if [[ "$ARCH_TAG" == "aarch64" ]]; then
+              FN="Miniforge3-MacOSX-arm64.sh"
+            else
+              FN="Miniforge3-MacOSX-x86_64.sh"
+            fi
+          else
+            if [[ "$ARCH_TAG" == "aarch64" ]]; then
+              FN="Miniforge3-Linux-aarch64.sh"
+            else
+              FN="Miniforge3-Linux-x86_64.sh"
+            fi
+          fi
+
+          # Download installer from latest releases (conda-forge/miniforge)
+          URL="https://github.com/conda-forge/miniforge/releases/latest/download/${FN}"
+          echo "Downloading $URL"
+          curl -fsSL -o /tmp/miniforge.sh "$URL"
+          chmod +x /tmp/miniforge.sh
+
+          # Define installation directory and export as env variable for later steps
+          export MINIFORGE_INSTALL_DIR="${HOME}/miniforge"
+          echo "MINIFORGE_INSTALL_DIR=${MINIFORGE_INSTALL_DIR}" >> "$GITHUB_ENV"
+          echo "Set MINIFORGE_INSTALL_DIR=$MINIFORGE_INSTALL_DIR"
+
+          # Install Miniforge silently
+          /tmp/miniforge.sh -b -p "${MINIFORGE_INSTALL_DIR}"
+
+          # Put miniforge on PATH
+          export PATH="${MINIFORGE_INSTALL_DIR}/bin:${PATH}"
+          echo "${MINIFORGE_INSTALL_DIR}/bin" >> "$GITHUB_PATH"
+          echo "Added MINIFORGE_INSTALL_DIR/bin to the PATH: ${PATH}"
+          hash -r
+
+          # Verify installation
+          echo "package manager version: $($PYTHON_PACKAGE_MANAGER --version)"
+          echo "python in base: $(python --version)"
+
+          # Configure conda defaults (optional)
+          $PYTHON_PACKAGE_MANAGER config --set channel_priority strict
+          $PYTHON_PACKAGE_MANAGER config --add channels conda-forge
+
+          # Install mamba into base for fast solving
+          $PYTHON_PACKAGE_MANAGER install -y -n base mamba -c conda-forge
+
+          # Check whether the envionment file is available
+          if [ ! -f "$ENV_FILE" ]; then
+            echo "Environment file '$ENV_FILE' not found; failing."
+            exit 1
+          fi
+
+          # Update an existing or create a new environment
+          if $PYTHON_PACKAGE_MANAGER env list | grep -q "^[[:space:]]*${ENV_NAME}[[:space:]]"; then
+            echo "Updating existing env '$ENV_NAME' from $ENV_FILE"
+            mamba env update -n "$ENV_NAME" -f "$ENV_FILE" --prune
+          else
+            echo "Creating env '$ENV_NAME' from $ENV_FILE"
+            mamba env create -n "$ENV_NAME" -f "$ENV_FILE"
+          fi
+
+          echo "--- package manager info ---"
+          $PYTHON_PACKAGE_MANAGER info
+          echo "--- conda list (env $ENV_NAME) ---"
+          $PYTHON_PACKAGE_MANAGER list -n "$ENV_NAME"
+
+      - name: Run example script
+        shell: bash -l {0}
+        run: |
+          set -euo pipefail
+          find examples -type f -name "*.py" | while read -r f; do
+            echo "Running $f"
+            $PYTHON_PACKAGE_MANAGER run -n $ENV_NAME --no-capture-output DDE_BACKEND=$BACKEND python "$f"
+          done
