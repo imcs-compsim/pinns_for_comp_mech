@@ -17,20 +17,20 @@ from deepxde import backend as bkd
 Simple compression test for a 3D block, results seem identical to 2D.
 '''
 
-from utils.geometry.custom_geometry import GmshGeometry3D
-from utils.geometry.gmsh_models import Block_3D_hex
-from utils.elasticity import elasticity_utils
-from utils.elasticity.elasticity_utils import get_stress_tensor, get_elastic_strain_3d, problem_parameters
-from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
+from compsim_pinns.geometry.custom_geometry import GmshGeometry3D
+from compsim_pinns.geometry.gmsh_models import Block_3D_hex
+from compsim_pinns.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import get_stress_tensor, get_elastic_strain_3d, problem_parameters
+from compsim_pinns.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
 
-from utils.deep_energy.deep_pde import DeepEnergyPDE
-from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-from utils.vpinns.quad_rule import GaussQuadratureRule
+from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
+from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
-from utils.hyperelasticity import hyperelasticity_utils
-from utils.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_3d, compute_elastic_properties, first_piola_stress_tensor_3D, cauchy_stress_3D
+from compsim_pinns.hyperelasticity import hyperelasticity_utils
+from compsim_pinns.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_3d, compute_elastic_properties, first_piola_stress_tensor_3D, cauchy_stress_3D
 
-from utils.postprocess.save_normals_tangentials_to_vtk import export_normals_tangentials_to_vtk
+from compsim_pinns.postprocess.save_normals_tangentials_to_vtk import export_normals_tangentials_to_vtk
 
 length = 4
 height = 1

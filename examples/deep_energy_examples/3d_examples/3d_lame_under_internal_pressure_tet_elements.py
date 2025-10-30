@@ -18,17 +18,17 @@ from deepxde import backend as bkd
 import deepxde as dde
 
 # import computational mechanics libraries
-from utils.geometry.custom_geometry import GmshGeometry3D
-from utils.geometry.gmsh_models import Geom_step_to_gmsh
-from utils.elasticity import elasticity_utils
-from utils.elasticity.elasticity_utils import pde_mixed_3d, get_tractions_mixed_3d, problem_parameters
-from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
-from utils.geometry.geometry_utils import polar_transformation_3d_spherical
-from utils.elasticity.elasticity_utils import get_stress_tensor, get_elastic_strain_3d, problem_parameters
+from compsim_pinns.geometry.custom_geometry import GmshGeometry3D
+from compsim_pinns.geometry.gmsh_models import Geom_step_to_gmsh
+from compsim_pinns.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import pde_mixed_3d, get_tractions_mixed_3d, problem_parameters
+from compsim_pinns.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
+from compsim_pinns.geometry.geometry_utils import polar_transformation_3d_spherical
+from compsim_pinns.elasticity.elasticity_utils import get_stress_tensor, get_elastic_strain_3d, problem_parameters
 
-from utils.deep_energy.deep_pde import DeepEnergyPDE
-from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-from utils.vpinns.quad_rule import GaussQuadratureRule
+from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
+from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
 from pyevtk.hl import unstructuredGridToVTK
 

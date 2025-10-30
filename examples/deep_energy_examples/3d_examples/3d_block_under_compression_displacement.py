@@ -17,18 +17,18 @@ from deepxde import backend as bkd
 Simple compression test for a 3D block, results seem identical to 2D.
 '''
 
-from utils.geometry.custom_geometry import GmshGeometry3D
-from utils.geometry.gmsh_models import Block_3D_hex
-from utils.elasticity import elasticity_utils
-from utils.elasticity.elasticity_utils import get_stress_tensor, get_elastic_strain_3d, problem_parameters
-from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
+from compsim_pinns.geometry.custom_geometry import GmshGeometry3D
+from compsim_pinns.geometry.gmsh_models import Block_3D_hex
+from compsim_pinns.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import get_stress_tensor, get_elastic_strain_3d, problem_parameters
+from compsim_pinns.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
 
-from utils.deep_energy.deep_pde import DeepEnergyPDE
-from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-from utils.vpinns.quad_rule import GaussQuadratureRule
+from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
+from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
-from utils.hyperelasticity.hyperelasticity_utils import compute_elastic_properties
-from utils.hyperelasticity import hyperelasticity_utils
+from compsim_pinns.hyperelasticity.hyperelasticity_utils import compute_elastic_properties
+from compsim_pinns.hyperelasticity import hyperelasticity_utils
 
 length = 1
 height = 1
