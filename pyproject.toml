@@ -60,14 +60,7 @@ Issues = "https://github.com/imcs-compsim/pinns_for_comp_mech/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = [
-  "utils",
-  "utils.contact_mech",
-  "utils.deep_energy",
-  "utils.elasticity",
-  "utils.geometry",
-  "utils.hyperelasticity",
-  "utils.postprocess",
-  "utils.vpinns",
+  "compsim_pinns",
 ]
 
 # Unit test related settings
