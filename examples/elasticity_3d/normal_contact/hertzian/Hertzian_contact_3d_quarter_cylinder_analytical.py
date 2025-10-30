@@ -10,16 +10,16 @@ Enhanced by results from analytical solution
 @clean, test: svoelkl
 '''
 
-from utils.geometry.custom_geometry import GmshGeometry3D
-from utils.geometry.gmsh_models import Geom_step_to_gmsh
+from compsim_pinns.geometry.custom_geometry import GmshGeometry3D
+from compsim_pinns.geometry.gmsh_models import Geom_step_to_gmsh
 
-from utils.elasticity import elasticity_utils
-from utils.elasticity.elasticity_utils import pde_mixed_3d, problem_parameters
-from utils.elasticity.elasticity_utils import apply_zero_neumann_x_mixed_formulation, apply_zero_neumann_y_mixed_formulation, apply_zero_neumann_z_mixed_formulation
-from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
+from compsim_pinns.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import pde_mixed_3d, problem_parameters
+from compsim_pinns.elasticity.elasticity_utils import apply_zero_neumann_x_mixed_formulation, apply_zero_neumann_y_mixed_formulation, apply_zero_neumann_z_mixed_formulation
+from compsim_pinns.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
 
-from utils.contact_mech import contact_utils
-from utils.contact_mech.contact_utils import zero_tangential_traction_component1_3d, zero_tangential_traction_component2_3d, zero_complementarity_function_based_fischer_burmeister_3d
+from compsim_pinns.contact_mech import contact_utils
+from compsim_pinns.contact_mech.contact_utils import zero_tangential_traction_component1_3d, zero_tangential_traction_component2_3d, zero_complementarity_function_based_fischer_burmeister_3d
 
 path_to_step_file = str(Path(__file__).parent.parent.parent)+f"/step_files/hertzian_quarter_cylinder.stp"
 

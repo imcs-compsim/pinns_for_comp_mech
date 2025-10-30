@@ -16,15 +16,15 @@ from deepxde import backend as bkd
 Simple compression test for a 3D block, results seem identical to 2D.
 '''
 
-from utils.geometry.custom_geometry import GmshGeometry3D
-from utils.geometry.gmsh_models import Block_3D_hex
-from utils.elasticity import elasticity_utils
-from utils.elasticity.elasticity_utils import pde_mixed_3d
-from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
-from utils.geometry.geometry_utils import calculate_boundary_normals_3D
+from compsim_pinns.geometry.custom_geometry import GmshGeometry3D
+from compsim_pinns.geometry.gmsh_models import Block_3D_hex
+from compsim_pinns.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import pde_mixed_3d
+from compsim_pinns.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals_3D
 
-from utils.contact_mech import contact_utils
-from utils.contact_mech.contact_utils import zero_tangential_traction_component1_3d, zero_tangential_traction_component2_3d, zero_complementarity_function_based_fischer_burmeister_3d
+from compsim_pinns.contact_mech import contact_utils
+from compsim_pinns.contact_mech.contact_utils import zero_tangential_traction_component1_3d, zero_tangential_traction_component2_3d, zero_complementarity_function_based_fischer_burmeister_3d
 
 length = 1
 height = 1
