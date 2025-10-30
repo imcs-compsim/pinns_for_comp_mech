@@ -17,12 +17,12 @@ from deepxde import backend as bkd
 Simple compression test for a 3D block, results seem identical to 2D.
 '''
 
-from utils.geometry.custom_geometry import GmshGeometry3D
-from utils.geometry.gmsh_models import Block_3D_hex
-from utils.elasticity import elasticity_utils
-from utils.elasticity.elasticity_utils import pde_mixed_3d, get_tractions_mixed_3d
-from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
-from utils.geometry.geometry_utils import calculate_boundary_normals_3D
+from compsim_pinns.geometry.custom_geometry import GmshGeometry3D
+from compsim_pinns.geometry.gmsh_models import Block_3D_hex
+from compsim_pinns.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import pde_mixed_3d, get_tractions_mixed_3d
+from compsim_pinns.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtk3D
+from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals_3D
 
 length = 1
 height = 1

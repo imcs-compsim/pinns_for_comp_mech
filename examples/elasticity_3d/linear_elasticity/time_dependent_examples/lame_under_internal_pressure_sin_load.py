@@ -20,14 +20,14 @@ from deepxde import config
 
 
 # import computational mechanics libraries
-from utils.geometry.custom_geometry import GmshGeometry3D
-from utils.geometry.gmsh_models import Geom_step_to_gmsh
-from utils.elasticity import elasticity_utils
-from utils.elasticity.elasticity_utils import pde_mixed_3d_time, get_tractions_mixed_3d_spacetime, problem_parameters
-from utils.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtkSpaceTime
-from utils.postprocess.save_normals_tangentials_to_vtk import export_normals_tangentials_to_vtk
-from utils.geometry.geometry_utils import polar_transformation_3d_spherical, calculate_boundary_normals_3D
-from utils.geometry.geometry_time import ModifiedGeometryXTime
+from compsim_pinns.geometry.custom_geometry import GmshGeometry3D
+from compsim_pinns.geometry.gmsh_models import Geom_step_to_gmsh
+from compsim_pinns.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import pde_mixed_3d_time, get_tractions_mixed_3d_spacetime, problem_parameters
+from compsim_pinns.postprocess.elasticity_postprocessing import solutionFieldOnMeshToVtkSpaceTime
+from compsim_pinns.postprocess.save_normals_tangentials_to_vtk import export_normals_tangentials_to_vtk
+from compsim_pinns.geometry.geometry_utils import polar_transformation_3d_spherical, calculate_boundary_normals_3D
+from compsim_pinns.geometry.geometry_time import ModifiedGeometryXTime
 
 '''
 @author: tsahin
