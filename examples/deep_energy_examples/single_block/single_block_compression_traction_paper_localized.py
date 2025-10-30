@@ -4,9 +4,6 @@ import os
 import sys
 from pathlib import Path
 from pyevtk.hl import unstructuredGridToVTK
-# add utils folder to the system path
-path_utils = str(Path(__file__).parent.parent.absolute()) + "/utils"
-sys.path.append(path_utils)
 
 from compsim_pinns.elasticity.elasticity_utils import problem_parameters, elastic_strain_2d, stress_plane_strain
 from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
