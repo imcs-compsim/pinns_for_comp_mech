@@ -160,7 +160,7 @@ net.apply_output_transform(output_transform)
 model = dde.Model(data, net)
 
 restore_model = False
-model_path = str(Path(__file__).parent.parent)+f"/trained_models/lame/lame_3d"
+model_path = str(Path(__file__).parent.parent.parent)+f"/pretrained_models/elasticity_3d/lame/lame_3d"
 
 if not restore_model:
     model.compile("adam", lr=0.001)

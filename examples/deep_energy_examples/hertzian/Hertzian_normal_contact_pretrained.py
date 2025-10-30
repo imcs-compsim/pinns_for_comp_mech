@@ -156,7 +156,7 @@ initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
 
-model_path = str(Path(__file__).parent.parent)+f"/trained_models/hertzian/lame"
+model_path = str(Path(__file__).parent.parent.parent)+f"/pretrained_models/deep_energy_examples/hertzian/lame"
 model_restore_path = model_path + "-"+ str(1000) + ".ckpt"
 
 model = dde.Model(data, net)

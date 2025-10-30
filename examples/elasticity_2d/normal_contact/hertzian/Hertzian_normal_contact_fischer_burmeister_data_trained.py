@@ -240,7 +240,7 @@ if add_external_data:
     loss_weights.extend(loss_weights_data)
 
 # restore the model
-model_path = str(Path(__file__).parent.parent.parent)+"/trained_models/hertzian/data_enhancement/hertzian"
+model_path = str(Path(__file__).parent.parent.parent.parent)+"/pretrained_models/elasticity_2d/hertzian/data_enhancement/hertzian"
 n_epochs = 24876 
 model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
 

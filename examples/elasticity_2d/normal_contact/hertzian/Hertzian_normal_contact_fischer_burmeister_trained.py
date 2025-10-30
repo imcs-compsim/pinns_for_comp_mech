@@ -205,7 +205,7 @@ w_zero_fischer_burmeister = 1e3
 loss_weights = [w_pde_1,w_pde_2,w_pde_3,w_pde_4,w_pde_5,w_zero_traction_x,w_zero_traction_y,w_zero_tangential_traction,w_zero_fischer_burmeister]
 
 # store the model
-model_path = str(Path(__file__).parent.parent.parent)+"/trained_models/hertzian/pure/hertzian"
+model_path = str(Path(__file__).parent.parent.parent.parent)+"/pretrained_models/elasticity_2d/hertzian/pure/hertzian"
 n_epochs = 15528 # trained model has 3106 iterations
 model_restore_path = model_path + "-"+ str(n_epochs) + ".ckpt"
 
