@@ -163,7 +163,7 @@ jobs:
             LOGFILE="$(mktemp -t runlog.XXXXXX)"
 
             DDE_BACKEND="$CURRENT_BACKEND" timeout --foreground --kill-after=1s "${TIME_LIMIT_SECONDS}s" \
-              $PYTHON_PACKAGE_MANAGER run -n "$ENV_NAME" --no-capture-output python "$f"
+              $PYTHON_PACKAGE_MANAGER run -n "$ENV_NAME" --no-capture-output python "$f" >"$LOGFILE" 2>&1
             rc=$?
             set -e
 
