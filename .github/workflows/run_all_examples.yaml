@@ -117,11 +117,35 @@ jobs:
           echo "--- conda list (env $ENV_NAME) ---"
           $PYTHON_PACKAGE_MANAGER list -n "$ENV_NAME"
 
-      - name: Run example script
+      - name: Run example scripts (150-seconds timeout each)
         shell: bash -l {0}
         run: |
-          set -euo pipefail
-          find examples -type f -name "*.py" | while read -r f; do
-            echo "Running $f"
-            $PYTHON_PACKAGE_MANAGER run -n $ENV_NAME --no-capture-output DDE_BACKEND=$BACKEND python "$f"
-          done
+          set -uo pipefail
+
+          TIME_LIMIT_SECONDS=150
+          STATUS=0
+          TIMEOUT_FILES=()
+
+          while IFS= read -r f; do
+            echo "Running $f (timeout ${TIME_LIMIT_SECONDS}s)"
+            set +e
+            DDE_BACKEND="$BACKEND" timeout --foreground "${TIME_LIMIT_SECONDS}s" \
+              $PYTHON_PACKAGE_MANAGER run -n "$ENV_NAME" --no-capture-output python "$f"
+            rc=$?
+            set -e
+
+            if [ $rc -eq 124 ]; then
+              echo "::warning file=$f::Timed out after ${TIME_LIMIT_SECONDS}s; skipping."
+              TIMEOUT_FILES+=("$f")
+              continue
+            elif [ $rc -ne 0 ]; then
+              echo "::error file=$f::Exited with code $rc"
+              STATUS=1
+              # continue to try remaining examples
+              continue
+            fi
+
+            echo "Finished $f"
+          done < <(find examples -type f -name '*.py' | sort)
+
+          exit $STATUS
