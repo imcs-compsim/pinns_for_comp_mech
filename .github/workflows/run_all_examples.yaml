@@ -157,7 +157,7 @@ jobs:
 
             set +e
             DDE_BACKEND="$CURRENT_BACKEND" timeout --foreground "${TIME_LIMIT_SECONDS}s" \
-              $PYTHON_PACKAGE_MANAGER run -n "$ENV_NAME" --no-capture-output python "$f"
+              bash -c "exec $PYTHON_PACKAGE_MANAGER run -n '$ENV_NAME' --no-capture-output python '$f'"
             rc=$?
             set -e
 
