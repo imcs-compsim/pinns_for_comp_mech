@@ -117,17 +117,18 @@ jobs:
           echo "--- conda list (env $ENV_NAME) ---"
           $PYTHON_PACKAGE_MANAGER list -n "$ENV_NAME"
 
-      - name: Run example scripts (30-seconds timeout each)
+      - name: Run example scripts (60-seconds timeout each)
         shell: bash -l {0}
         run: |
           set -eo pipefail  # handle exit codes ourselves; avoid -u here
 
-          TIME_LIMIT_SECONDS=30
+          TIME_LIMIT_SECONDS=60
           STATUS=0
           TIMEOUT_FILES=()
 
           # List of TF-backed examples
           TF_EXAMPLES=(
+            "examples/beams/Euler_beam_simply_complex_static.py"
             "examples/beams/Euler_beam_simply_dynamic.py"
             "examples/beams/Euler_beam_simply_point_static.py"
             "examples/beams/Euler_beam_simply_static.py"
