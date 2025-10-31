@@ -151,7 +151,6 @@ jobs:
             echo
             echo "-----------------------------------------------------------------"
             echo -e "${GREEN}Running $f (timeout ${TIME_LIMIT_SECONDS}s)${NC}"
-            echo "-----------------------------------------------------------------"
 
             # Select backend dynamically
             if in_list "$f"; then
