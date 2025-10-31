@@ -1,4 +1,4 @@
-name: Check environment setup
+name: Run all examples
 
 on:
   pull_request:
