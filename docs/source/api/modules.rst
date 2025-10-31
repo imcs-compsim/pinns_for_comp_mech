@@ -1,7 +1,7 @@
-utils
-=====
+compsim_pinns
+=============
 
 .. toctree::
    :maxdepth: 4
 
-   utils
+   compsim_pinns

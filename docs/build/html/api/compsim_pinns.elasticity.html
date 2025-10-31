@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>compsim_pinns.elasticity package &#8212; CompSim-PINN 2025.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=14229d9d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="compsim_pinns.elasticity.elasticity_utils module" href="compsim_pinns.elasticity.elasticity_utils.html" />
+    <link rel="prev" title="compsim_pinns.contact_mech.contact_utils module" href="compsim_pinns.contact_mech.contact_utils.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-compsim_pinns.elasticity">
+<span id="compsim-pinns-elasticity-package"></span><h1>compsim_pinns.elasticity package<a class="headerlink" href="#module-compsim_pinns.elasticity" title="Link to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html">compsim_pinns.elasticity.elasticity_utils module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.apply_zero_neumann_x_mixed_formulation"><code class="docutils literal notranslate"><span class="pre">apply_zero_neumann_x_mixed_formulation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.apply_zero_neumann_y_mixed_formulation"><code class="docutils literal notranslate"><span class="pre">apply_zero_neumann_y_mixed_formulation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.apply_zero_neumann_z_mixed_formulation"><code class="docutils literal notranslate"><span class="pre">apply_zero_neumann_z_mixed_formulation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.calculate_traction_mixed_formulation"><code class="docutils literal notranslate"><span class="pre">calculate_traction_mixed_formulation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.elastic_strain_2d"><code class="docutils literal notranslate"><span class="pre">elastic_strain_2d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.elastic_strain_rate_3d"><code class="docutils literal notranslate"><span class="pre">elastic_strain_rate_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.get_elastic_strain_3d"><code class="docutils literal notranslate"><span class="pre">get_elastic_strain_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.get_plane_strain_stress_rate_coupling"><code class="docutils literal notranslate"><span class="pre">get_plane_strain_stress_rate_coupling()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.get_stress_coupling"><code class="docutils literal notranslate"><span class="pre">get_stress_coupling()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.get_stress_rate_coupling_3d"><code class="docutils literal notranslate"><span class="pre">get_stress_rate_coupling_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.get_stress_tensor"><code class="docutils literal notranslate"><span class="pre">get_stress_tensor()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.get_tractions_mixed_2d_spacetime"><code class="docutils literal notranslate"><span class="pre">get_tractions_mixed_2d_spacetime()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.get_tractions_mixed_2d_time"><code class="docutils literal notranslate"><span class="pre">get_tractions_mixed_2d_time()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.get_tractions_mixed_3d"><code class="docutils literal notranslate"><span class="pre">get_tractions_mixed_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.get_tractions_mixed_3d_spacetime"><code class="docutils literal notranslate"><span class="pre">get_tractions_mixed_3d_spacetime()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.get_velocity_coupling_2d"><code class="docutils literal notranslate"><span class="pre">get_velocity_coupling_2d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.get_velocity_coupling_3d"><code class="docutils literal notranslate"><span class="pre">get_velocity_coupling_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.lin_iso_elasticity_plane_strain"><code class="docutils literal notranslate"><span class="pre">lin_iso_elasticity_plane_strain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.lin_iso_elasticity_plane_stress"><code class="docutils literal notranslate"><span class="pre">lin_iso_elasticity_plane_stress()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.momentum_2d"><code class="docutils literal notranslate"><span class="pre">momentum_2d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.momentum_2d_plane_stress"><code class="docutils literal notranslate"><span class="pre">momentum_2d_plane_stress()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.pde_mixed_3d"><code class="docutils literal notranslate"><span class="pre">pde_mixed_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.pde_mixed_3d_time"><code class="docutils literal notranslate"><span class="pre">pde_mixed_3d_time()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.pde_mixed_plane_strain"><code class="docutils literal notranslate"><span class="pre">pde_mixed_plane_strain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.pde_mixed_plane_strain_time_dependent"><code class="docutils literal notranslate"><span class="pre">pde_mixed_plane_strain_time_dependent()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.pde_mixed_plane_stress"><code class="docutils literal notranslate"><span class="pre">pde_mixed_plane_stress()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.pde_mixed_plane_stress_time_dependent"><code class="docutils literal notranslate"><span class="pre">pde_mixed_plane_stress_time_dependent()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.pde_mixed_velocity_3d_time"><code class="docutils literal notranslate"><span class="pre">pde_mixed_velocity_3d_time()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.pde_mixed_velocity_plane_strain_time_dependent"><code class="docutils literal notranslate"><span class="pre">pde_mixed_velocity_plane_strain_time_dependent()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.problem_parameters"><code class="docutils literal notranslate"><span class="pre">problem_parameters()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.strain_rate_2d"><code class="docutils literal notranslate"><span class="pre">strain_rate_2d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.stress_plane_strain"><code class="docutils literal notranslate"><span class="pre">stress_plane_strain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.stress_plane_stress"><code class="docutils literal notranslate"><span class="pre">stress_plane_stress()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.stress_rate_plane_strain"><code class="docutils literal notranslate"><span class="pre">stress_rate_plane_strain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.stress_rate_tensor_3d"><code class="docutils literal notranslate"><span class="pre">stress_rate_tensor_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.stress_to_traction_2d"><code class="docutils literal notranslate"><span class="pre">stress_to_traction_2d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.stress_to_traction_3d"><code class="docutils literal notranslate"><span class="pre">stress_to_traction_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.zero_neumann_x_mixed_formulation"><code class="docutils literal notranslate"><span class="pre">zero_neumann_x_mixed_formulation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.zero_neumann_y_mixed_formulation"><code class="docutils literal notranslate"><span class="pre">zero_neumann_y_mixed_formulation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.zero_neumman_plane_strain_x"><code class="docutils literal notranslate"><span class="pre">zero_neumman_plane_strain_x()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.zero_neumman_plane_strain_y"><code class="docutils literal notranslate"><span class="pre">zero_neumman_plane_strain_y()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.zero_neumman_plane_stress_x"><code class="docutils literal notranslate"><span class="pre">zero_neumman_plane_stress_x()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="compsim_pinns.elasticity.elasticity_utils.html#compsim_pinns.elasticity.elasticity_utils.zero_neumman_plane_stress_y"><code class="docutils literal notranslate"><span class="pre">zero_neumman_plane_stress_y()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">CompSim-PINN</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=imcs-compsim&repo=pinns_for_comp_mech&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">compsim_pinns</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="compsim_pinns.html">compsim_pinns package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">compsim_pinns</a><ul>
+  <li><a href="compsim_pinns.html">compsim_pinns package</a><ul>
+      <li>Previous: <a href="compsim_pinns.contact_mech.contact_utils.html" title="previous chapter">compsim_pinns.contact_mech.contact_utils module</a></li>
+      <li>Next: <a href="compsim_pinns.elasticity.elasticity_utils.html" title="next chapter">compsim_pinns.elasticity.elasticity_utils module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Institute for Mathematics and Computer-Based Simulation (IMCS).
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/compsim_pinns.elasticity.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/imcs-compsim/pinns_for_comp_mech" class="github">
+        <img src="../_static/github-banner.svg" alt="Fork me on GitHub" class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
