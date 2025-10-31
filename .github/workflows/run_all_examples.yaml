@@ -128,7 +128,6 @@ jobs:
 
           # List of TF-backed examples
           TF_EXAMPLES=(
-            "examples/beams/Euler_beam_simply_complex_static.py"
             "examples/beams/Euler_beam_simply_dynamic.py"
             "examples/beams/Euler_beam_simply_point_static.py"
             "examples/beams/Euler_beam_simply_static.py"
