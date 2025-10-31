@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 # General metadata for the project
 [project]
-name = "CompSim-PINN"
+name = "CompSim_PINNs"
 version = "2025.0.0"
 license = { text = "MIT" }
 authors = [
@@ -60,14 +60,7 @@ Issues = "https://github.com/imcs-compsim/pinns_for_comp_mech/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = [
-  "utils",
-  "utils.contact_mech",
-  "utils.deep_energy",
-  "utils.elasticity",
-  "utils.geometry",
-  "utils.hyperelasticity",
-  "utils.postprocess",
-  "utils.vpinns",
+  "compsim_pinns",
 ]
 
 # Unit test related settings

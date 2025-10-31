@@ -1,15 +1,16 @@
-# Physics-Informed Neural Networks for Computational Mechanics (CompSim-PINN)                                                                                            
+# Physics-Informed Neural Networks for Computational Mechanics (compsim_pinns)                                                                                            
 ```
- ██████  ██████  ███    ███ ██████  ███████ ██ ███    ███       ██████  ██ ███    ██ ███    ██
-██      ██    ██ ████  ████ ██   ██ ██      ██ ████  ████       ██   ██ ██ ████   ██ ████   ██
-██      ██    ██ ██ ████ ██ ██████  ███████ ██ ██ ████ ██ █████ ██████  ██ ██ ██  ██ ██ ██  ██
-██      ██    ██ ██  ██  ██ ██           ██ ██ ██  ██  ██       ██      ██ ██  ██ ██ ██  ██ ██
- ██████  ██████  ██      ██ ██      ███████ ██ ██      ██       ██      ██ ██   ████ ██   ████                        
+ ██████╗ ██████╗ ███╗   ███╗██████╗ ███████╗██╗███╗   ███╗        ██████╗ ██╗███╗   ██╗███╗   ██╗███████╗
+██╔════╝██╔═══██╗████╗ ████║██╔══██╗██╔════╝██║████╗ ████║        ██╔══██╗██║████╗  ██║████╗  ██║██╔════╝
+██║     ██║   ██║██╔████╔██║██████╔╝███████╗██║██╔████╔██║        ██████╔╝██║██╔██╗ ██║██╔██╗ ██║███████╗
+██║     ██║   ██║██║╚██╔╝██║██╔═══╝ ╚════██║██║██║╚██╔╝██║        ██╔═══╝ ██║██║╚██╗██║██║╚██╗██║╚════██║
+╚██████╗╚██████╔╝██║ ╚═╝ ██║██║     ███████║██║██║ ╚═╝ ██║███████╗██║     ██║██║ ╚████║██║ ╚████║███████║
+ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚══════╝╚═╝╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝                                   
 ```
---------------------------------------------------------------------------------------
-                             A Multipurpose Python Framework for Computational Mechanics
-                              based on Physics-Informed Neural Networks (PINNs)
---------------------------------------------------------------------------------------                                  
+--------------------------------------------------------------
+  A Multipurpose Python Framework for Computational Mechanics
+  based on Physics-Informed Neural Networks (PINNs)
+--------------------------------------------------------------
 ### Included examples
 ---
 - Euler-Bernoulli beams
@@ -108,9 +109,9 @@ For cluster, we should use `conda` since we had issues in terms of package insta
     conda env create -f env.yaml
     ```
 
-3. Activate the generated venv (`CompSim-PINN`) 
+3. Activate the generated venv (`compsim_pinns`) 
     ```bash
-    conda activate CompSim-PINN
+    conda activate compsim_pinns
     ```
 4. To test cluster, submit a job on a compute node. This is achieved through `test_cluster.sh` (full path: pinnswithdxde/tests/integration_tests/cluster/test_cluster.sh).
 
@@ -121,7 +122,7 @@ For cluster, we should use `conda` since we had issues in terms of package insta
 
 > `NOTE`: Do not forget to adopt the inside of the `test_cluster.sh` to specify the slurm options e.g., `--mail-user`. But the default one should work without error. 
 
-> `NOTE`: Always be sure that you activated venv `CompSim-PINN` (step 3) before `sbatch` any slurm script. This includes other scripts you will run as well. The reason behind is that activating venv in `test_cluster.sh` needs the full path for the conda env `CompSim-PINN` and it gives some **init** error if the full path is used.  
+> `NOTE`: Always be sure that you activated venv `compsim_pinns` (step 3) before `sbatch` any slurm script. This includes other scripts you will run as well. The reason behind is that activating venv in `test_cluster.sh` needs the full path for the conda env `compsim_pinns` and it gives some **init** error if the full path is used.  
 
 > `NOTE`: For conda commands: A conda [cheatsheet](https://docs.conda.io/projects/conda/en/latest/_downloads/843d9e0198f2a193a3484886fa28163c/conda-cheatsheet.pdf) can be very useful. 
 
@@ -149,12 +150,12 @@ docker run -it imcs-pinn bash
 
 Run, a specific example
 ```bash
-docker run -it imcs-pinn conda run -n CompSim-PINN python elasticity_3d/linear_elasticity/block_under_shear.py
+docker run -it imcs-pinn conda run -n compsim_pinns python examples/elasticity_3d/linear_elasticity/block_under_shear.py
 ```
 
-## Citing 'CompSim-PINN'
+## Citing 'compsim_pinns'
 
-Whenever you use or mention 'CompSim-PINN' in some sort of scientific document/publication/presentation, please cite the following publications. They are publicly avaliable at [AMSES](https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3) and [ArXiv](https://arxiv.org/abs/2412.09022).
+Whenever you use or mention 'compsim_pinns' in some sort of scientific document/publication/presentation, please cite the following publications. They are publicly avaliable at [AMSES](https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3) and [ArXiv](https://arxiv.org/abs/2412.09022).
 
 ```
 @article{sahin2024,
