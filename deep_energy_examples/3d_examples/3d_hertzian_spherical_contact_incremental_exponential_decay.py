@@ -196,8 +196,6 @@ exponential_decay = learning_rate_total_decay ** (1 / 5000)
 lbfgs_iterations = 0
 rel_err_l2_disp = []
 rel_err_l2_stress = []
-rel_err_l2_int_disp = []
-rel_err_l2_int_stress = []
 l2_iteration = []
 relaxation_adam_iterations = 0 # just to not get any errors when not using it (undefined variable in naming)
 relaxation = False
@@ -273,25 +271,38 @@ for i in range(steps):
         displacement_pred_on_fem_mesh = model.predict(points_fem)
         sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, _, sigma_xz_pred_on_fem_mesh, _, sigma_yz_pred_on_fem_mesh, _ = model.predict(points_fem, operator=cauchy_stress_3D)
         cauchy_stress_pred_on_fem_mesh = np.column_stack((sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, sigma_yz_pred_on_fem_mesh, sigma_xz_pred_on_fem_mesh))
+        tensor_cauchy_stress_pred_on_fem_mesh = np.transpose(np.array([[sigma_xx_pred_on_fem_mesh.flatten(), sigma_xy_pred_on_fem_mesh.flatten(), sigma_xz_pred_on_fem_mesh.flatten()],
+                                                                       [sigma_xy_pred_on_fem_mesh.flatten(), sigma_yy_pred_on_fem_mesh.flatten(), sigma_yz_pred_on_fem_mesh.flatten()],
+                                                                       [sigma_xz_pred_on_fem_mesh.flatten(), sigma_yz_pred_on_fem_mesh.flatten(), sigma_zz_pred_on_fem_mesh.flatten()]]),(2,0,1))
+        tensor_cauchy_stress_fem = np.array([[cauchy_stress_fem[:,0], cauchy_stress_fem[:,3], cauchy_stress_fem[:,5],
+                                              cauchy_stress_fem[:,3], cauchy_stress_fem[:,1], cauchy_stress_fem[:,4],
+                                              cauchy_stress_fem[:,5], cauchy_stress_fem[:,4], cauchy_stress_fem[:,2]]]).T.reshape(-1,3,3)
 
         # Compute L2-error
-        l2_iteration.append(train_state.step)
-        rel_err_l2_disp.append(np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem) / np.linalg.norm(displacement_fem))
-        print(f"Relative L2 error for displacement (discrete):   {rel_err_l2_disp[-1]}")
-        rel_err_l2_stress.append(np.linalg.norm(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem) / np.linalg.norm(cauchy_stress_fem))
-        print(f"Relative L2 error for stress (discrete):         {rel_err_l2_stress[-1]}")
-
-        # Compute L2-error with integrals
         volume_integral = fem_reference.copy()
-        volume_integral.point_data["squared_error_disp"] = np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem) ** 2
-        volume_integral.point_data["squared_disp"] = np.linalg.norm(displacement_fem) ** 2
-        volume_integral.point_data["squared_error_stress"] = np.linalg.norm(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem) ** 2
-        volume_integral.point_data["squared_stress"] = np.linalg.norm(cauchy_stress_fem) ** 2
+        volume_integral.point_data["squared_error_disp"] = np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem, axis=1) ** 2
+        volume_integral.point_data["squared_disp"] = np.linalg.norm(displacement_fem, axis=1) ** 2
+        volume_integral.point_data["squared_error_stress"] = np.linalg.norm(tensor_cauchy_stress_pred_on_fem_mesh - tensor_cauchy_stress_fem, axis=(1,2), ord="fro") ** 2
+        volume_integral.point_data["squared_stress"] = np.linalg.norm(tensor_cauchy_stress_fem, axis=(1,2), ord="fro") ** 2
         volume_integral = volume_integral.integrate_data()
-        rel_err_l2_int_disp.append(np.sqrt(volume_integral.point_data["squared_error_disp"][0] / volume_integral.point_data["squared_disp"][0]))
-        print(f"Relative L2 error for displacement (continuous): {rel_err_l2_int_disp[-1]}")
-        rel_err_l2_int_stress.append(np.sqrt(volume_integral.point_data["squared_error_stress"][0] / volume_integral.point_data["squared_stress"][0]))
-        print(f"Relative L2 error for stress (continuous):       {rel_err_l2_int_stress[-1]}")
+        rel_err_l2_disp.append(np.sqrt(volume_integral.point_data["squared_error_disp"][0] / volume_integral.point_data["squared_disp"][0]))
+        print(f"Relative L2 error for displacement:   {rel_err_l2_disp[-1]}")
+        rel_err_l2_stress.append(np.sqrt(volume_integral.point_data["squared_error_stress"][0] / volume_integral.point_data["squared_stress"][0]))
+        print(f"Relative L2 error for stress:         {rel_err_l2_stress[-1]}")
+
+        # Compute mean absolute error
+        print(f"Mean absolute error for displacement: {np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem)/len(displacement_fem)}")
+        print(f"Mean absolute error for stress:       {np.mean(np.linalg.norm(tensor_cauchy_stress_pred_on_fem_mesh - tensor_cauchy_stress_fem, axis=(1,2), ord="fro"))}")
+
+        # Create output with relative pointwise errors
+        fem_reference.point_data["displacement_prediction"] = displacement_pred_on_fem_mesh
+        fem_reference.point_data["cauchy_stresses_prediction"] = cauchy_stress_pred_on_fem_mesh
+        fem_reference.point_data["absolute_displacement_error"] = displacement_pred_on_fem_mesh - displacement_fem
+        fem_reference.point_data["absolute_cauchy_stress_error"] = cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem
+        fem_reference.point_data["relative_displacement_error"] = np.divide(np.abs(displacement_pred_on_fem_mesh - displacement_fem), np.abs(displacement_fem), out=np.zeros_like(displacement_fem, dtype=float), where=displacement_fem!=0)
+        fem_reference.point_data["relative_cauchy_stress_error"] = np.divide(np.abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem), np.abs(cauchy_stress_fem), out=np.zeros_like(cauchy_stress_fem, dtype=float), where=cauchy_stress_fem!=0)
+        file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_fem_compare_{int(ext_traction * 10):02}")
+        fem_reference.save(f"{file_path_fem_compare}.vtu")
 
     file_path = os.path.join(model_path, f"{simulation_case}_{int(ext_traction * 10):02}")
     grid.save(f"{file_path}.vtu")
