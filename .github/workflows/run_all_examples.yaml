@@ -117,12 +117,12 @@ jobs:
           echo "--- conda list (env $ENV_NAME) ---"
           $PYTHON_PACKAGE_MANAGER list -n "$ENV_NAME"
 
-      - name: Run example scripts (150-seconds timeout each)
+      - name: Run example scripts (30-seconds timeout each)
         shell: bash -l {0}
         run: |
           set -eo pipefail  # handle exit codes ourselves; avoid -u here
 
-          TIME_LIMIT_SECONDS=60
+          TIME_LIMIT_SECONDS=30
           STATUS=0
           TIMEOUT_FILES=()
 
@@ -144,9 +144,15 @@ jobs:
             return 1
           }
 
+          GREEN='\033[0;32m'
+          NC='\033[0m' # No Color / reset
+
           # NUL-safe find + sort; no process substitution
           find examples -type f -name '*.py' -print0 | sort -z | while IFS= read -r -d '' f; do
-            echo "Running $f (timeout ${TIME_LIMIT_SECONDS}s)"
+            echo
+            echo "-----------------------------------------------------------------"
+            echo -e "${GREEN}Running $f (timeout ${TIME_LIMIT_SECONDS}s)${NC}"
+            echo "-----------------------------------------------------------------""
 
             # Select backend dynamically
             if in_list "$f"; then
