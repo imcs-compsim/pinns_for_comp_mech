@@ -24,7 +24,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libgl1-mesa-glx \
+            libgl1 \
             libglu1-mesa \
             libsm6 \
             libxext6 \
