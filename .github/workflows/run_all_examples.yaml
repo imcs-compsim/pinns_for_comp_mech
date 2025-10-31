@@ -156,9 +156,21 @@ jobs:
             fi
 
             set +e
-            DDE_BACKEND="$CURRENT_BACKEND" timeout --foreground --kill-after=1s "${TIME_LIMIT_SECONDS}s" \
-              $PYTHON_PACKAGE_MANAGER run -n "$ENV_NAME" --no-capture-output python "$f"
-            rc=$?
+            # Run each script in its own process group and enforce timeout
+            setsid bash -lc "DDE_BACKEND='$CURRENT_BACKEND' \
+              $PYTHON_PACKAGE_MANAGER run -n '$ENV_NAME' --no-capture-output python '$f'" &
+            runner_pid=$!
+
+            if ! timeout --foreground "${TIME_LIMIT_SECONDS}s" wait $runner_pid; then
+              echo "::warning file=$f::Timed out after ${TIME_LIMIT_SECONDS}s; killing process group."
+              kill -TERM -$runner_pid 2>/dev/null || true
+              sleep 1
+              kill -KILL -$runner_pid 2>/dev/null || true
+              rc=124
+            else
+              wait $runner_pid
+              rc=$?
+            fi
             set -e
 
             if [ "$rc" -eq 124 ]; then
