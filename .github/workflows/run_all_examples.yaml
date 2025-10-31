@@ -120,29 +120,29 @@ jobs:
       - name: Run example scripts (150-seconds timeout each)
         shell: bash -l {0}
         run: |
-          set -uo pipefail
+          set -eo pipefail  # handle exit codes ourselves; avoid -u here
 
           TIME_LIMIT_SECONDS=150
           STATUS=0
           TIMEOUT_FILES=()
 
+          # List of TF-backed examples
           TF_EXAMPLES=(
-                      "examples/beams/Euler_beam_fixed_static.py"
-                      "examples/beams/Euler_beam_simply_complex_static.py
-                    )
+            "examples/beams/Euler_beam_fixed_static.py"
+            "examples/beams/Euler_beam_simply_complex_static.py"
+          )
 
           # Helper: check if file is in TF_EXAMPLES
-          function in_list() {
+          in_list() {
             local val="$1"
             for item in "${TF_EXAMPLES[@]}"; do
-              if [[ "$item" == "$val" ]]; then
-                return 0
-              fi
+              [[ "$item" == "$val" ]] && return 0
             done
             return 1
           }
 
-          while IFS= read -r f; do
+          # NUL-safe find + sort; no process substitution
+          find examples -type f -name '*.py' -print0 | sort -z | while IFS= read -r -d '' f; do
             echo "Running $f (timeout ${TIME_LIMIT_SECONDS}s)"
 
             # Select backend dynamically
@@ -158,18 +158,26 @@ jobs:
             rc=$?
             set -e
 
-            if [ $rc -eq 124 ]; then
+            if [ "$rc" -eq 124 ]; then
               echo "::warning file=$f::Timed out after ${TIME_LIMIT_SECONDS}s; skipping."
               TIMEOUT_FILES+=("$f")
-              continue
-            elif [ $rc -ne 0 ]; then
+            elif [ "$rc" -ne 0 ]; then
               echo "::error file=$f::Exited with code $rc"
-              STATUS=1
-              # continue to try remaining examples
-              continue
+              STATUS=1  # remember failure but continue
+            else
+              echo "Finished $f"
             fi
+          done
 
-            echo "Finished $f"
-          done < <(find examples -type f -name '*.py' | sort)
+          # Optional summary of timeouts
+          if [ "${#TIMEOUT_FILES[@]}" -gt 0 ]; then
+            {
+              echo "### Timed-out examples (${TIME_LIMIT_SECONDS}s)"
+              for x in "${TIMEOUT_FILES[@]}"; do
+                echo "- $x"
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
           exit $STATUS
+
