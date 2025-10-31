@@ -19,6 +19,20 @@ jobs:
         os: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Install system dependencies for GMSH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgl1-mesa-glx \
+            libglu1-mesa \
+            libsm6 \
+            libxext6 \
+            libxrender1 \
+            libxcursor1 \
+            libxft2 \
+            libxinerama1
+          sudo rm -rf /var/lib/apt/lists/*
 
       - name: Install Miniforge (no external action)
         shell: bash -l {0}
