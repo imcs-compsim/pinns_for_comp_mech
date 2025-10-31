@@ -126,10 +126,34 @@ jobs:
           STATUS=0
           TIMEOUT_FILES=()
 
+          TF_EXAMPLES=(
+                      "examples/beams/Euler_beam_fixed_static.py"
+                      "examples/beams/Euler_beam_simply_complex_static.py
+                    )
+
+          # Helper: check if file is in TF_EXAMPLES
+          function in_list() {
+            local val="$1"
+            for item in "${TF_EXAMPLES[@]}"; do
+              if [[ "$item" == "$val" ]]; then
+                return 0
+              fi
+            done
+            return 1
+          }
+
           while IFS= read -r f; do
             echo "Running $f (timeout ${TIME_LIMIT_SECONDS}s)"
+
+            # Select backend dynamically
+            if in_list "$f"; then
+              CURRENT_BACKEND="tensorflow.compat.v1"
+            else
+              CURRENT_BACKEND="$BACKEND"
+            fi
+
             set +e
-            DDE_BACKEND="$BACKEND" timeout --foreground "${TIME_LIMIT_SECONDS}s" \
+            DDE_BACKEND="$CURRENT_BACKEND" timeout --foreground "${TIME_LIMIT_SECONDS}s" \
               $PYTHON_PACKAGE_MANAGER run -n "$ENV_NAME" --no-capture-output python "$f"
             rc=$?
             set -e
