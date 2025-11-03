@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>compsim_pinns.contact_mech package &#8212; CompSim-PINN 2025.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=14229d9d"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="compsim_pinns.elasticity package" href="compsim_pinns.elasticity.html" />
+    <link rel="prev" title="compsim_pinns package" href="compsim_pinns.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="compsim-pinns-contact-mech-package">
+<h1>compsim_pinns.contact_mech package<a class="headerlink" href="#compsim-pinns-contact-mech-package" title="Link to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+</section>
+<section id="module-compsim_pinns.contact_mech.contact_utils">
+<span id="compsim-pinns-contact-mech-contact-utils-module"></span><h2>compsim_pinns.contact_mech.contact_utils module<a class="headerlink" href="#module-compsim_pinns.contact_mech.contact_utils" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.adopted_sigmoid">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">adopted_sigmoid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#adopted_sigmoid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.adopted_sigmoid" title="Link to this definition">¶</a></dt>
+<dd><p>Adopted sigmoid function ref: <a class="reference external" href="https://arxiv.org/abs/2203.09789">https://arxiv.org/abs/2203.09789</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – the input arguments (coordinates x and y)</p></li>
+<li><p><strong>delta</strong> (<em>float</em>) – a scalar whihch scales</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>gap_n</strong> – gap in normal direction</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.calculate_gap_in_normal_direction">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">calculate_gap_in_normal_direction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#calculate_gap_in_normal_direction"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.calculate_gap_in_normal_direction" title="Link to this definition">¶</a></dt>
+<dd><p>Calculates the gap in normal direction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – the input arguments (coordinates x and y)</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – the network output (predicted displacement in x and y direction)</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – the input arguments as an array (coordinates x and y)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>gap_n</strong> – gap in normal direction</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.calculate_gap_in_normal_direction_3d">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">calculate_gap_in_normal_direction_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#calculate_gap_in_normal_direction_3d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.calculate_gap_in_normal_direction_3d" title="Link to this definition">¶</a></dt>
+<dd><p>Calculates the gap in normal direction in 3D.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – The input arguments (coordinates x, y, and z).</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – The network output (predicted displacement in x, y, and z directions).</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – The input arguments as an array (coordinates x, y, and z).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>gap_n</strong> – Gap in normal direction in 3D.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.calculate_gap_in_normal_direction_deep_energy">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">calculate_gap_in_normal_direction_deep_energy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mapped_normal_boundary_t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cond</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#calculate_gap_in_normal_direction_deep_energy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.calculate_gap_in_normal_direction_deep_energy" title="Link to this definition">¶</a></dt>
+<dd><p>Calculates the gap in normal direction in 3D.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – The input arguments (coordinates x, y, and z).</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – The network output (predicted displacement in x, y, and z directions).</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – The input arguments as an array (coordinates x, y, and z).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>gap_n</strong> – Gap in normal direction in 3D.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.negative_normal_traction_adopted_sigmoid">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">negative_normal_traction_adopted_sigmoid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#negative_normal_traction_adopted_sigmoid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.negative_normal_traction_adopted_sigmoid" title="Link to this definition">¶</a></dt>
+<dd><p>Enforces normal part of contact traction (Pn) to be negative using an adopted sigmoid function based on <a class="reference external" href="https://arxiv.org/abs/2203.09789">https://arxiv.org/abs/2203.09789</a>.
+KKT condition: Pn&lt;=0</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – the input arguments (coordinates x and y)</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – the network output (predicted displacement in x and y direction)</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – the input arguments as an array (coordinates x and y)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>adopted_sigmoid(delta_pressure,Pn)*Pn</strong> – non-zero tensor if Pn is positive, otherwise returns zero-tensor</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.negative_normal_traction_sign">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">negative_normal_traction_sign</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#negative_normal_traction_sign"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.negative_normal_traction_sign" title="Link to this definition">¶</a></dt>
+<dd><p>Enforces normal part of contact traction (Pn) to be negative using the sign function.
+KKT condition: Pn&lt;=0</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – the input arguments (coordinates x and y)</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – the network output (predicted displacement in x and y direction)</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – the input arguments as an array (coordinates x and y)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>(1.0+tf.math.sign(Pn))*Pn</strong> – non-zero tensor if Pn is positive, otherwise returns zero-tensor</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.positive_normal_gap_adopted_sigmoid">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">positive_normal_gap_adopted_sigmoid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#positive_normal_gap_adopted_sigmoid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.positive_normal_gap_adopted_sigmoid" title="Link to this definition">¶</a></dt>
+<dd><p>Enforces normal gap (gn) to be positive using an adopted sigmoid function based on <a class="reference external" href="https://arxiv.org/abs/2203.09789">https://arxiv.org/abs/2203.09789</a>.
+KKT condition: gn&gt;=0</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – the input arguments (coordinates x and y)</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – the network output (predicted displacement in x and y direction)</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – the input arguments as an array (coordinates x and y)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>adopted_sigmoid(delta_gap,-gn)*gn</strong> – non-zero tensor if gn is negative, otherwise returns zero-tensor (not a sharp function)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.positive_normal_gap_sign">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">positive_normal_gap_sign</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#positive_normal_gap_sign"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.positive_normal_gap_sign" title="Link to this definition">¶</a></dt>
+<dd><p>Enforces normal gap (gn) to be positive using the sign function.
+KKT condition: gn&gt;=0</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – the input arguments (coordinates x and y)</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – the network output (predicted displacement in x and y direction)</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – the input arguments as an array (coordinates x and y)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>(1.0-tf.math.sign(gn))*gn</strong> – non-zero tensor if gn is negative, otherwise returns zero-tensor</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.zero_complementarity_function_based_fischer_burmeister">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">zero_complementarity_function_based_fischer_burmeister</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#zero_complementarity_function_based_fischer_burmeister"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.zero_complementarity_function_based_fischer_burmeister" title="Link to this definition">¶</a></dt>
+<dd><p>Enforces KKT conditions using a complementarity function called Fischer-Burmeister based on ref <a class="reference external" href="https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf">https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf</a>.
+This function is mathematically equal to combination of the following functions:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>positive_normal_gap_sign</p></li>
+<li><p>negative_normal_traction_sign</p></li>
+<li><p>zero_complimentary</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – the input arguments (coordinates x and y)</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – the network output (predicted displacement in x and y direction)</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – the input arguments as an array (coordinates x and y)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p><strong>Pn-tf.math.maximum(tf.constant(0, dtype=tf.float32), Pn-c_complementarity*gn)</strong> –</p>
+<ul class="simple">
+<li></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.zero_complementarity_function_based_fischer_burmeister_3d">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">zero_complementarity_function_based_fischer_burmeister_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#zero_complementarity_function_based_fischer_burmeister_3d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.zero_complementarity_function_based_fischer_burmeister_3d" title="Link to this definition">¶</a></dt>
+<dd><p>Enforces KKT conditions using a complementarity function called Fischer-Burmeister based on ref <a class="reference external" href="https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf">https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf</a>.
+This function is mathematically equal to combination of the following functions:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>positive_normal_gap_sign</p></li>
+<li><p>negative_normal_traction_sign</p></li>
+<li><p>zero_complimentary</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – the input arguments (coordinates x and y)</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – the network output (predicted displacement in x and y direction)</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – the input arguments as an array (coordinates x and y)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p><strong>Pn-tf.math.maximum(tf.constant(0, dtype=tf.float32), Pn-c_complementarity*gn)</strong> –</p>
+<ul class="simple">
+<li></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.zero_complementarity_function_based_popp">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">zero_complementarity_function_based_popp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#zero_complementarity_function_based_popp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.zero_complementarity_function_based_popp" title="Link to this definition">¶</a></dt>
+<dd><p>Enforces KKT conditions using a complementarity function based on <a class="reference external" href="https://onlinelibrary.wiley.com/doi/abs/10.1002/nme.2614">https://onlinelibrary.wiley.com/doi/abs/10.1002/nme.2614</a>.
+This function is mathematically equal to combination of the following functions:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>positive_normal_gap_sign</p></li>
+<li><p>negative_normal_traction_sign</p></li>
+<li><p>zero_complimentary</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – the input arguments (coordinates x and y)</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – the network output (predicted displacement in x and y direction)</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – the input arguments as an array (coordinates x and y)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p><strong>Pn-tf.math.maximum(tf.constant(0, dtype=tf.float32), Pn-c_complementarity*gn)</strong> –</p>
+<ul class="simple">
+<li></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.zero_complimentary">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">zero_complimentary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#zero_complimentary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.zero_complimentary" title="Link to this definition">¶</a></dt>
+<dd><p>Enforces complimentary term to be zero.
+KKT condition: gn*Pn=0</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – the input arguments (coordinates x and y)</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – the network output (predicted displacement in x and y direction)</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – the input arguments as an array (coordinates x and y)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>gn*Pn</strong> – matrix multiplication between normal gap (gn) and normal pressure (Pn)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.zero_tangential_traction">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">zero_tangential_traction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#zero_tangential_traction"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.zero_tangential_traction" title="Link to this definition">¶</a></dt>
+<dd><p>Enforces tangential component of contact traction (Tt) to be zero.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – the input arguments (coordinates x and y)</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – the network output (predicted displacement in x and y direction)</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – the input arguments as an array (coordinates x and y)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>Tt</strong> – tangential component of contact traction (Tt)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.zero_tangential_traction_component1_3d">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">zero_tangential_traction_component1_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#zero_tangential_traction_component1_3d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.zero_tangential_traction_component1_3d" title="Link to this definition">¶</a></dt>
+<dd><p>Enforces 1. tangential component of contact traction (Tt) to be zero in 3D.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – the input arguments (coordinates x and y)</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – the network output (predicted displacement in x and y direction)</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – the input arguments as an array (coordinates x and y)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>Tt</strong> – tangential component of contact traction (Tt)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="compsim_pinns.contact_mech.contact_utils.zero_tangential_traction_component2_3d">
+<span class="sig-prename descclassname"><span class="pre">compsim_pinns.contact_mech.contact_utils.</span></span><span class="sig-name descname"><span class="pre">zero_tangential_traction_component2_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/contact_mech/contact_utils.html#zero_tangential_traction_component2_3d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.contact_mech.contact_utils.zero_tangential_traction_component2_3d" title="Link to this definition">¶</a></dt>
+<dd><p>Enforces 1. tangential component of contact traction (Tt) to be zero in 3D.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – the input arguments (coordinates x and y)</p></li>
+<li><p><strong>y</strong> (<em>tensor</em>) – the network output (predicted displacement in x and y direction)</p></li>
+<li><p><strong>X</strong> (<em>np.array</em>) – the input arguments as an array (coordinates x and y)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>Tt</strong> – tangential component of contact traction (Tt)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-compsim_pinns.contact_mech">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-compsim_pinns.contact_mech" title="Link to this heading">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">CompSim-PINN</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=imcs-compsim&repo=pinns_for_comp_mech&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">compsim_pinns</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="compsim_pinns.html">compsim_pinns package</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../tests/modules.html">tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/modules.html">examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">compsim_pinns</a><ul>
+  <li><a href="compsim_pinns.html">compsim_pinns package</a><ul>
+      <li>Previous: <a href="compsim_pinns.html" title="previous chapter">compsim_pinns package</a></li>
+      <li>Next: <a href="compsim_pinns.elasticity.html" title="next chapter">compsim_pinns.elasticity package</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Institute for Mathematics and Computer-Based Simulation (IMCS).
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/api/compsim_pinns/compsim_pinns.contact_mech.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/imcs-compsim/pinns_for_comp_mech" class="github">
+        <img src="../../_static/github-banner.svg" alt="Fork me on GitHub" class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

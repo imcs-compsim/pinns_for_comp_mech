@@ -37,4 +37,6 @@ After this you can directly set up a ``conda`` environment that uses ``torch`` a
    :maxdepth: 2
    :caption: Contents:
 
-   api/modules
+   api/compsim_pinns/modules
+   api/tests/modules
+   api/examples/modules
