@@ -42,7 +42,7 @@
 <span id="compsim-pinns-postprocess-custom-callbacks-module"></span><h2>compsim_pinns.postprocess.custom_callbacks module<a class="headerlink" href="#module-compsim_pinns.postprocess.custom_callbacks" title="Link to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="compsim_pinns.postprocess.custom_callbacks.EpochTracker">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">compsim_pinns.postprocess.custom_callbacks.</span></span><span class="sig-name descname"><span class="pre">EpochTracker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">period</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/postprocess/custom_callbacks.html#EpochTracker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.postprocess.custom_callbacks.EpochTracker" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">compsim_pinns.postprocess.custom_callbacks.</span></span><span class="sig-name descname"><span class="pre">EpochTracker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/postprocess/custom_callbacks.html#EpochTracker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.postprocess.custom_callbacks.EpochTracker" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Callback</span></code></p>
 <p>Tracks and provides access to the current epoch number during training.</p>
 <dl class="py method">
@@ -53,20 +53,18 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="compsim_pinns.postprocess.custom_callbacks.EpochTracker.on_epoch_begin">
 <span class="sig-name descname"><span class="pre">on_epoch_begin</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/postprocess/custom_callbacks.html#EpochTracker.on_epoch_begin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.postprocess.custom_callbacks.EpochTracker.on_epoch_begin" title="Link to this definition">¶</a></dt>
-<dd><p>Called at the beginning of every epoch.</p>
-</dd></dl>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="compsim_pinns.postprocess.custom_callbacks.EpochTracker.on_train_end">
 <span class="sig-name descname"><span class="pre">on_train_end</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/postprocess/custom_callbacks.html#EpochTracker.on_train_end"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.postprocess.custom_callbacks.EpochTracker.on_train_end" title="Link to this definition">¶</a></dt>
-<dd><p>Called at the end of model training.</p>
-</dd></dl>
+<dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="compsim_pinns.postprocess.custom_callbacks.SaveModelVTU">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">compsim_pinns.postprocess.custom_callbacks.</span></span><span class="sig-name descname"><span class="pre">SaveModelVTU</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">op</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">period</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stabilization_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/postprocess/custom_callbacks.html#SaveModelVTU"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.postprocess.custom_callbacks.SaveModelVTU" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">compsim_pinns.postprocess.custom_callbacks.</span></span><span class="sig-name descname"><span class="pre">SaveModelVTU</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/postprocess/custom_callbacks.html#SaveModelVTU"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.postprocess.custom_callbacks.SaveModelVTU" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Callback</span></code></p>
 <p>Generates operator values for the input samples.</p>
 <dl class="field-list simple">
@@ -85,8 +83,7 @@ If <code class="docutils literal notranslate"><span class="pre">None</span></cod
 <dl class="py method">
 <dt class="sig sig-object py" id="compsim_pinns.postprocess.custom_callbacks.SaveModelVTU.on_epoch_end">
 <span class="sig-name descname"><span class="pre">on_epoch_end</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/postprocess/custom_callbacks.html#SaveModelVTU.on_epoch_end"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.postprocess.custom_callbacks.SaveModelVTU.on_epoch_end" title="Link to this definition">¶</a></dt>
-<dd><p>Called at the end of every epoch.</p>
-</dd></dl>
+<dd></dd></dl>
 
 </dd></dl>
 

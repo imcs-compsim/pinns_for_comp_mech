@@ -24,6 +24,7 @@ extensions = [
     "sphinx.ext.napoleon",        # Google/NumPy style docstrings
     "sphinx.ext.autosummary",     # summary tables + stubs
     "sphinx.ext.viewcode",        # link to highlighted source
+    "myst_parser",                # Markdown parser
 ]
 
 autosummary_generate = True       # auto-generate stub pages

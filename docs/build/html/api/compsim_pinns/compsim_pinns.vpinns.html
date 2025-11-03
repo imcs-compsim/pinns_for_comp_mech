@@ -138,7 +138,7 @@
 <span id="compsim-pinns-vpinns-v-pde-module"></span><h2>compsim_pinns.vpinns.v_pde module<a class="headerlink" href="#module-compsim_pinns.vpinns.v_pde" title="Link to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="compsim_pinns.vpinns.v_pde.VariationalPDE">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">compsim_pinns.vpinns.v_pde.</span></span><span class="sig-name descname"><span class="pre">VariationalPDE</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geometry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weak_form</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bcs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">additional_domain_eq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_domain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_distribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Hammersley'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">anchors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclusions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">solution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auxiliary_var_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/vpinns/v_pde.html#VariationalPDE"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.vpinns.v_pde.VariationalPDE" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">compsim_pinns.vpinns.v_pde.</span></span><span class="sig-name descname"><span class="pre">VariationalPDE</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/vpinns/v_pde.html#VariationalPDE"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.vpinns.v_pde.VariationalPDE" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Data</span></code></p>
 <p>Variational PDE solver based on weak formulation.</p>
 <dl class="field-list simple">
@@ -249,14 +249,13 @@ from BCs to PDE. The BC points are exactly the same points in <cite>train_x_bc</
 
 <dl class="py method">
 <dt class="sig sig-object py" id="compsim_pinns.vpinns.v_pde.VariationalPDE.bc_points">
-<span class="sig-name descname"><span class="pre">bc_points</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/vpinns/v_pde.html#VariationalPDE.bc_points"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.vpinns.v_pde.VariationalPDE.bc_points" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">bc_points</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#compsim_pinns.vpinns.v_pde.VariationalPDE.bc_points" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="compsim_pinns.vpinns.v_pde.VariationalPDE.losses">
 <span class="sig-name descname"><span class="pre">losses</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">targets</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loss_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aux</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/vpinns/v_pde.html#VariationalPDE.losses"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.vpinns.v_pde.VariationalPDE.losses" title="Link to this definition">¶</a></dt>
-<dd><p>Return a list of losses, i.e., constraints.</p>
-</dd></dl>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="compsim_pinns.vpinns.v_pde.VariationalPDE.replace_with_anchors">
@@ -266,9 +265,8 @@ from BCs to PDE. The BC points are exactly the same points in <cite>train_x_bc</
 
 <dl class="py method">
 <dt class="sig sig-object py" id="compsim_pinns.vpinns.v_pde.VariationalPDE.test">
-<span class="sig-name descname"><span class="pre">test</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/vpinns/v_pde.html#VariationalPDE.test"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.vpinns.v_pde.VariationalPDE.test" title="Link to this definition">¶</a></dt>
-<dd><p>Return a test dataset.</p>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">test</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#compsim_pinns.vpinns.v_pde.VariationalPDE.test" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="compsim_pinns.vpinns.v_pde.VariationalPDE.test_points">
@@ -277,9 +275,8 @@ from BCs to PDE. The BC points are exactly the same points in <cite>train_x_bc</
 
 <dl class="py method">
 <dt class="sig sig-object py" id="compsim_pinns.vpinns.v_pde.VariationalPDE.train_next_batch">
-<span class="sig-name descname"><span class="pre">train_next_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/vpinns/v_pde.html#VariationalPDE.train_next_batch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.vpinns.v_pde.VariationalPDE.train_next_batch" title="Link to this definition">¶</a></dt>
-<dd><p>Return a training dataset of the size <cite>batch_size</cite>.</p>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">train_next_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#compsim_pinns.vpinns.v_pde.VariationalPDE.train_next_batch" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
