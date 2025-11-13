@@ -285,6 +285,7 @@ for i in range(steps):
         volume_integral.point_data["squared_error_stress"] = np.linalg.norm(tensor_cauchy_stress_pred_on_fem_mesh - tensor_cauchy_stress_fem, axis=(1,2), ord="fro") ** 2
         volume_integral.point_data["squared_stress"] = np.linalg.norm(tensor_cauchy_stress_fem, axis=(1,2), ord="fro") ** 2
         volume_integral = volume_integral.integrate_data()
+        l2_iteration.append(train_state.step)
         rel_err_l2_disp.append(np.sqrt(volume_integral.point_data["squared_error_disp"][0] / volume_integral.point_data["squared_disp"][0]))
         print(f"Relative L2 error for displacement:   {rel_err_l2_disp[-1]}")
         rel_err_l2_stress.append(np.sqrt(volume_integral.point_data["squared_error_stress"][0] / volume_integral.point_data["squared_stress"][0]))
@@ -297,8 +298,8 @@ for i in range(steps):
         # Create output with relative pointwise errors
         fem_reference.point_data["displacement_prediction"] = displacement_pred_on_fem_mesh
         fem_reference.point_data["cauchy_stresses_prediction"] = cauchy_stress_pred_on_fem_mesh
-        fem_reference.point_data["absolute_displacement_error"] = displacement_pred_on_fem_mesh - displacement_fem
-        fem_reference.point_data["absolute_cauchy_stress_error"] = cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem
+        fem_reference.point_data["absolute_displacement_error"] = abs(displacement_pred_on_fem_mesh - displacement_fem)
+        fem_reference.point_data["absolute_cauchy_stress_error"] = abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem)
         fem_reference.point_data["relative_displacement_error"] = np.divide(np.abs(displacement_pred_on_fem_mesh - displacement_fem), np.abs(displacement_fem), out=np.zeros_like(displacement_fem, dtype=float), where=displacement_fem!=0)
         fem_reference.point_data["relative_cauchy_stress_error"] = np.divide(np.abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem), np.abs(cauchy_stress_fem), out=np.zeros_like(cauchy_stress_fem, dtype=float), where=cauchy_stress_fem!=0)
         file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_fem_compare_{int(ext_traction * 10):02}")
@@ -311,9 +312,9 @@ for i in range(steps):
 model.save(f"{model_path}/{simulation_case}")
 dde.saveplot(
     losshistory, train_state, issave=True, isplot=False, output_dir=model_path, 
-    loss_fname=f"{simulation_case}-{losshistory.steps[-1]}_loss.dat", 
-    train_fname=f"{simulation_case}-{losshistory.steps[-1]}_train.dat", 
-    test_fname=f"{simulation_case}-{losshistory.steps[-1]}_test.dat"
+    loss_fname=f"{simulation_case}-{train_state.step}_loss.dat", 
+    train_fname=f"{simulation_case}-{train_state.step}_train.dat", 
+    test_fname=f"{simulation_case}-{train_state.step}_test.dat"
 )
 
 fig1, ax1 = plt.subplots(1,2,figsize=(20,8))
@@ -338,7 +339,7 @@ ax1[1].tick_params(axis="both", labelsize=15)
 ax1[1].legend(fontsize=17)
 ax1[1].grid()
 plt.tight_layout()
-fig1.savefig(f"{model_path}/{simulation_case}-{losshistory.steps[-1]}_loss_plot.png", dpi=300)
+fig1.savefig(f"{model_path}/{simulation_case}-{train_state.step}_loss_plot.png", dpi=300)
 
 if l2_iteration:
     fig2, ax2 = plt.subplots(figsize=(10,8))
@@ -351,11 +352,11 @@ if l2_iteration:
     ax2.legend(fontsize=17)
     ax2.grid()
     plt.tight_layout()
-    fig2.savefig(f"{model_path}/{simulation_case}-{losshistory.steps[-1]}_l2_norm_over_iterations.png", dpi=300)
+    fig2.savefig(f"{model_path}/{simulation_case}-{train_state.step}_l2_norm_over_iterations.png", dpi=300)
 time_dict["total"].append(time.time())
 
 # Print times to output file
-with open(f"{model_path}/{simulation_case}-{losshistory.steps[-1]}_times.txt", "w") as text_file:
+with open(f"{model_path}/{simulation_case}-{train_state.step}_times.txt", "w") as text_file:
     print(f"Compilation and training times in       [s]", file=text_file)
     print(f"==============================================", file=text_file)
     print(f"Meshing:                              {(time_dict["meshing"][1] - time_dict["meshing"][0]):8.3f}", file=text_file)
