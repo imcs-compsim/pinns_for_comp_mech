@@ -42,7 +42,7 @@ time_dict["meshing"].append(time.time())
 
 coords_lower_left_corner = [0,-1]
 coords_upper_right_corner = [20,1]
-mesh_size = 0.2 # default 0.2
+mesh_size = 0.25 # default 0.25
 
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 11}
 block_2d = Block_2D(coord_left_corner=coords_lower_left_corner, coord_right_corner=coords_upper_right_corner, mesh_size=mesh_size, gmsh_options=gmsh_options)
@@ -161,8 +161,8 @@ earlystopping = True
 earlystopping_choice = "weightsbiases" # "loss" or "weightsbiases"
 time_dict["setup"].append(time.time())
 # plot the different shapes over load steps
-shape_points_x = 100
-shape_points_y = int(shape_points_x/10)
+shape_points_x = int((coords_upper_right_corner[0]-coords_lower_left_corner[0]) / mesh_size)
+shape_points_y = int((coords_upper_right_corner[1]-coords_lower_left_corner[1]) / mesh_size)
 edge_space_x = np.linspace(coords_lower_left_corner[0], coords_upper_right_corner[0], shape_points_x+1)
 edge_space_y = np.linspace(coords_lower_left_corner[1], coords_upper_right_corner[1], shape_points_y+1)
 coords_edge_points = np.unique(np.vstack([np.stack(np.meshgrid(edge_space_x, [coords_lower_left_corner[1]]), -1).reshape(-1, 2),
@@ -243,7 +243,6 @@ dde.saveplot(
     test_fname=f"{simulation_case}-{train_state.step}_test.dat"
 )
 
-
 ## Plot energy
 fig1, ax1 = plt.subplots(1,2,figsize=(20,8))
 ax1[0].plot(losshistory.steps, [loss[0] for loss in losshistory.loss_train], label="Internal energy", marker="x")
@@ -291,6 +290,9 @@ ax2[1].grid()
 ax2[1].legend()
 plt.tight_layout()
 fig2.savefig(f"{model_path}/{simulation_case}-{train_state.step}_edge_trajectory.png", dpi=300)
+
+# Output trajectory points
+np.savez(f"{model_path}/{simulation_case}_meshsize_{2/mesh_size:03.0f}.npz", x=trajectory_edge_points_sorted, y=trajectory_corners)
 
 time_dict["total"].append(time.time())
 # Print times to output file
