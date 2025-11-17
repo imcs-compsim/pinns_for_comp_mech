@@ -21,7 +21,7 @@ if torch.cuda.is_available():
 Incremental bending beam test for EBE-PINNs vs. FEM convergence study.
 '''
 from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-from utils.geometry.gmsh_models import Block_2D
+from utils.geometry.gmsh_models import Block_2D_square
 from utils.hyperelasticity import hyperelasticity_utils
 from utils.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_2d, compute_elastic_properties, cauchy_stress_2D
 from utils.deep_energy.deep_pde import DeepEnergyPDE
@@ -45,7 +45,7 @@ coords_upper_right_corner = [20,1]
 mesh_size = 0.25 # default 0.25
 
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 11}
-block_2d = Block_2D(coord_left_corner=coords_lower_left_corner, coord_right_corner=coords_upper_right_corner, mesh_size=mesh_size, gmsh_options=gmsh_options)
+block_2d = Block_2D_square(coord_left_corner=coords_lower_left_corner, coord_right_corner=coords_upper_right_corner, mesh_size=mesh_size, gmsh_options=gmsh_options)
 gmsh_model = block_2d.generateGmshModel(visualize_mesh=False)
 time_dict["meshing"].append(time.time())
 time_dict["element_information"].append(time.time())
