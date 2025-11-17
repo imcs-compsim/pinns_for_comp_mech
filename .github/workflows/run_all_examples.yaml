@@ -191,15 +191,15 @@ jobs:
             fi
           done
 
-          # Optional summary of timeouts
-          if [ "${#TIMEOUT_FILES[@]}" -gt 0 ]; then
-            {
-              echo "### Timed-out examples (${TIME_LIMIT_SECONDS}s)"
-              for x in "${TIMEOUT_FILES[@]}"; do
-                echo "- $x"
-              done
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+          # # Optional summary of timeouts
+          # if [ "${#TIMEOUT_FILES[@]}" -gt 0 ]; then
+          #   {
+          #     echo "### Timed-out examples (${TIME_LIMIT_SECONDS}s)"
+          #     for x in "${TIMEOUT_FILES[@]}"; do
+          #       echo "- $x"
+          #     done
+          #   } >> "$GITHUB_STEP_SUMMARY"
+          # fi
 
           exit $STATUS
 
