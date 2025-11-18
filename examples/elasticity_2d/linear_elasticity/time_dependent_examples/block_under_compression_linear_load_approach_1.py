@@ -46,7 +46,7 @@ Block_3D_obj = Block_3D_hex(origin=origin,
                             width=width,
                             divisions=[seed_l, seed_h, seed_w])
 
-gmsh_model = Block_3D_obj.generateGmshModel(visualize_mesh=True)
+gmsh_model = Block_3D_obj.generateGmshModel(visualize_mesh=False)
 geom = GmshGeometry3D(gmsh_model, target_surface_ids=[4])
 
 # This allows for visualization of boundary normals in Paraview

@@ -35,7 +35,7 @@ region_size_dict={"r1":{"start":0.25, "increment":0.1}, "r2":{"start":2.65, "inc
 # generate the block, gmsh model and geometry for further calculations
 block_2d = Rectangle_4PointBending(l_beam=3, h_beam=0.3, region_size_dict=region_size_dict, mesh_size=0.08, refine_factor=None, gmsh_options=gmsh_options)
 #block_2d = Block_2D(coord_left_corner=[0,0], coord_right_corner=[3,0.3], mesh_size=0.3, gmsh_options=gmsh_options)
-gmsh_model = block_2d.generateGmshModel(visualize_mesh=True)
+gmsh_model = block_2d.generateGmshModel(visualize_mesh=False)
 geom = GmshGeometry2D(gmsh_model)
 
 # get the length and height of the beam

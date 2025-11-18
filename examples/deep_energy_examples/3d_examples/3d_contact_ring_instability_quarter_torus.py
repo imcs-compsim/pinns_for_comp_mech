@@ -33,7 +33,7 @@ center = [0,0,0]
 
 quarter_circle_with_hole = QuarterTorus3D(center=center, major_radius=major_radius, tube_radius=tube_radius, mesh_size=0.015)
 
-gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=True)
+gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=False)
 
 def on_contact(x):
     return np.isclose((np.sqrt(x[0]**2+x[1]**2) - major_radius)**2 + x[2]**2, tube_radius**2)

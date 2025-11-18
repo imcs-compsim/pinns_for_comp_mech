@@ -183,7 +183,7 @@ curve_info = {"7":20, "9":20,
               "4":40, "12":40,
               "1":15, "5":15, "13":15, "15":15}
 geom_obj = Geom_step_to_gmsh(path=path_to_step_file, curve_info=curve_info)
-gmsh_model = geom_obj.generateGmshModel(visualize_mesh=True)
+gmsh_model = geom_obj.generateGmshModel(visualize_mesh=False)
 
 geom = GmshGeometry3D(gmsh_model)
 

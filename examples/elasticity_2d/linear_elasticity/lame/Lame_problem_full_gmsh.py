@@ -24,7 +24,7 @@ from compsim_pinns.elasticity import elasticity_utils
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 quarter_circle_with_hole = CirclewithHole(center=[0,0,0], inner_radius=1, outer_radius=2, mesh_size=0.1, gmsh_options=gmsh_options)
 
-gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=True)
+gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=False)
 
 revert_curve_list = []
 revert_normal_dir_list = [1,1]

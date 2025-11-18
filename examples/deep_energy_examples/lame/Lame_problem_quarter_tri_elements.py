@@ -42,7 +42,7 @@ coord_quadrature, weight_quadrature = quad_rule.generate()
 quad_rule_boundary_integral = GaussQuadratureRule(rule_name="gauss_legendre", dimension=1, ngp=4) # gauss_legendre gauss_labotto
 coord_quadrature_boundary, weight_quadrature_boundary = quad_rule_boundary_integral.generate()
 
-gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=True)
+gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=False)
 
 radius_inner = quarter_circle_with_hole.inner_radius
 center_inner = [quarter_circle_with_hole.center[0],quarter_circle_with_hole.center[1]]
