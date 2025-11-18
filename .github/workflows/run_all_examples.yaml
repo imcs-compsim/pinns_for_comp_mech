@@ -141,6 +141,10 @@ jobs:
             "examples/deep_energy_examples/hertzian/Hertzian_normal_contact_repulsive.py"
             "examples/deep_energy_examples/hertzian/Hertzian_normal_contact_repulsive_precise.py"
             "examples/deep_energy_examples/lame/Lame_problem_quarter.py"
+            "examples/deep_energy_examples/hertzian/Hertzian_normal_contact_data.py"
+            "examples/elasticity_2d/linear_elasticity/four_point_bending/Beam2d_4point.py"
+            "examples/elasticity_2d/linear_elasticity/four_point_bending/Beam2d_4point_step.py"
+            "examples/elasticity_2d/linear_elasticity/four_point_bending/Beam2d_4point_compare_loading.py"
           )
 
           # Helper: check if file is in TF_EXAMPLES
