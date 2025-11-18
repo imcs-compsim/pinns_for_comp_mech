@@ -145,6 +145,23 @@ jobs:
             "examples/elasticity_2d/linear_elasticity/four_point_bending/Beam2d_4point.py"
             "examples/elasticity_2d/linear_elasticity/four_point_bending/Beam2d_4point_step.py"
             "examples/elasticity_2d/linear_elasticity/four_point_bending/Beam2d_4point_compare_loading.py"
+            "examples/elasticity_2d/linear_elasticity/inverse_lame/Lame_quarter_inverse_displacement.py"
+            "examples/elasticity_2d/linear_elasticity/inverse_lame/Lame_quarter_inverse_mixed_variable.py"
+            "examples/elasticity_2d/linear_elasticity/lame/Lame_problem.py"
+            "examples/elasticity_2d/linear_elasticity/lame/Lame_problem_quarter_gmsh.py"
+            "examples/elasticity_2d/linear_elasticity/lame/Lame_problem_quarter_gmsh_mixed_scale_structured.py"
+            "examples/elasticity_2d/linear_elasticity/solid_beam/Beam2d.py"
+            "examples/elasticity_2d/linear_elasticity/solid_beam/Beam2d_force_input.py"
+            "examples/elasticity_2d/linear_elasticity/solid_beam/Beam2d_nondim_2.py"
+            "examples/elasticity_2d/linear_elasticity/solid_rectangle/Rectangle_body_force_problem.py"
+            "examples/elasticity_2d/normal_contact/hertzian/Hertzian_normal_contact_fischer_burmeister_data_trained.py"
+            "examples/elasticity_2d/normal_contact/hertzian/Hertzian_normal_contact_fischer_burmeister_trained.py"
+            "examples/elasticity_2d/normal_contact/hertzian/Hertzian_pressure.py"
+            "examples/elasticity_2d/normal_contact/single_patch/Contact_single_patch.py"
+            "examples/elasticity_2d/normal_contact/single_patch/Contact_single_patch_structured_planestrain.py"
+            "examples/elasticity_3d/linear_elasticity/time_dependent_examples/lame_under_internal_pressure_sin_load.py"
+            "examples/heat_equation/heatEq1DPlusDiffusion.py"
+            "examples/heat_equation/heatEq2D.py"
           )
 
           # Helper: check if file is in TF_EXAMPLES
