@@ -174,7 +174,7 @@ losshistory, train_state = model.train(epochs=epochs, callbacks=[epoch_tracker],
 
 model.compile("L-BFGS")
 # model.train_step.optimizer_kwargs["options"]['maxiter']=2000
-model.train()
+model.train(callbacks=[epoch_tracker], display_every=100)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
