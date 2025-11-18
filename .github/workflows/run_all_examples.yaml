@@ -132,6 +132,15 @@ jobs:
             "examples/beams/Euler_beam_simply_dynamic.py"
             "examples/beams/Euler_beam_simply_point_static.py"
             "examples/beams/Euler_beam_simply_static.py"
+            "examples/deep_energy_examples/3d_examples/3d_block_torsion_nonlinear_displacement.py"
+            "examples/deep_energy_examples/beam/Beam_under_shear_load_nonlinear.py"
+            "examples/deep_energy_examples/hertzian/Hertzian_normal_contact_repulsive.py"
+            "examples/deep_energy_examples/hertzian/Hertzian_normal_contact_repulsive_precise.py"
+            "examples/deep_energy_examples/hertzian/Hertzian_normal_contact_precise.py"
+            "examples/deep_energy_examples/hertzian/Hertzian_normal_contact_pretrained.py"
+            "examples/deep_energy_examples/hertzian/Hertzian_normal_contact_repulsive.py"
+            "examples/deep_energy_examples/hertzian/Hertzian_normal_contact_repulsive_precise.py"
+            "examples/deep_energy_examples/lame/Lame_problem_quarter.py"
           )
 
           # Helper: check if file is in TF_EXAMPLES
