@@ -145,35 +145,36 @@ dde.saveplot(losshistory, train_state, issave=True, isplot=True)
 
 # postProcess(model)
 
+# Comment it since it will cause problems in GitHub actions due to missing display
 
-# Define some query points on our compuational domain.
-# Number of points in each dimension:
-x_dim, t_dim = (21, 26)
+# # Define some query points on our compuational domain.
+# # Number of points in each dimension:
+# x_dim, t_dim = (21, 26)
 
-# Bounds of 'x' and 't':
-x_min, t_min = (xmin, tmin)
-x_max, t_max = (xmax, tmax)
+# # Bounds of 'x' and 't':
+# x_min, t_min = (xmin, tmin)
+# x_max, t_max = (xmax, tmax)
 
-# Create tensors:
-t = np.linspace(t_min, t_max, num=t_dim).reshape(t_dim, 1)
-x = np.linspace(x_min, x_max, num=x_dim).reshape(x_dim, 1)
+# # Create tensors:
+# t = np.linspace(t_min, t_max, num=t_dim).reshape(t_dim, 1)
+# x = np.linspace(x_min, x_max, num=x_dim).reshape(x_dim, 1)
 
-xx, tt = np.meshgrid(x, t)
-X = np.vstack((np.ravel(xx), np.ravel(tt))).T
+# xx, tt = np.meshgrid(x, t)
+# X = np.vstack((np.ravel(xx), np.ravel(tt))).T
 
-# Compute and plot the exact solution for these query points
-k = 0.1
-usol = analytical_solution(xx, tt, k)
-plt.scatter(xx,tt,c=usol)
-plt.show()
+# # Compute and plot the exact solution for these query points
+# k = 0.1
+# usol = analytical_solution(xx, tt, k)
+# plt.scatter(xx,tt,c=usol)
+# plt.show()
 
-# Plot model prediction.
-y_pred = model.predict(X).reshape(t_dim, x_dim)
-plt.scatter(xx,tt,c=y_pred)
-plt.xlabel('x')
-plt.ylabel('t')
-ax = plt.gca()
-ax.set_aspect('equal','box')
-#plt.colorbar(cax=ax)
-plt.savefig('heatEqPred.pdf')
-plt.show()
+# # Plot model prediction.
+# y_pred = model.predict(X).reshape(t_dim, x_dim)
+# plt.scatter(xx,tt,c=y_pred)
+# plt.xlabel('x')
+# plt.ylabel('t')
+# ax = plt.gca()
+# ax.set_aspect('equal','box')
+# #plt.colorbar(cax=ax)
+# plt.savefig('heatEqPred.pdf')
+# plt.show()
