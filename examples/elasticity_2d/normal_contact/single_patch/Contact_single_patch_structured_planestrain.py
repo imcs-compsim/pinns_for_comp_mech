@@ -165,7 +165,7 @@ net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
 
-restore_model = True
+restore_model = False
 # store the model
 model_path = str(Path(__file__).parent.parent.parent.parent)+f"/pretrained_models/elasticity_2d/patch/{method_name}/{method_name}"
 
