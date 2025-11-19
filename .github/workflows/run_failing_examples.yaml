@@ -221,29 +221,29 @@ jobs:
                 $PYTHON_PACKAGE_MANAGER run -n "$ENV_NAME" --no-capture-output python "$f" >"$LOGFILE" 2>&1
               rc=$?
               set -e
-            fi
 
-            if [ "$rc" -eq 124 ]; then
-              echo "::warning file=$f::Timed out after ${TIME_LIMIT_SECONDS}s; killing lingering python for this file."
+              if [ "$rc" -eq 124 ]; then
+                echo "::warning file=$f::Timed out after ${TIME_LIMIT_SECONDS}s; killing lingering python for this file."
 
-              # Kill any python that is running THIS script (TERM then KILL as fallback).
-              # Works even if the wrapper double-forked.
-              pkill -TERM -f -- "python[[:space:]][^ ]*${f}$" 2>/dev/null || true
-              pkill -TERM -f -- "python3[[:space:]][^ ]*${f}$" 2>/dev/null || true
-              sleep 1
-              pkill -KILL -f -- "python[[:space:]][^ ]*${f}$" 2>/dev/null || true
-              pkill -KILL -f -- "python3[[:space:]][^ ]*${f}$" 2>/dev/null || true
+                # Kill any python that is running THIS script (TERM then KILL as fallback).
+                # Works even if the wrapper double-forked.
+                pkill -TERM -f -- "python[[:space:]][^ ]*${f}$" 2>/dev/null || true
+                pkill -TERM -f -- "python3[[:space:]][^ ]*${f}$" 2>/dev/null || true
+                sleep 1
+                pkill -KILL -f -- "python[[:space:]][^ ]*${f}$" 2>/dev/null || true
+                pkill -KILL -f -- "python3[[:space:]][^ ]*${f}$" 2>/dev/null || true
 
-              TIMEOUT_FILES+=("$f")
-            elif [ "$rc" -ne 0 ]; then
-              echo "::error file=$f::Exited with code $rc"
-              STATUS=1
-              # Show output ONLY on error (not on timeout, not on success)
-              echo "::group::Output from $f"
-              cat "$LOGFILE"
-              echo "::endgroup::"
-            else
-              echo "Finished $f"
+                TIMEOUT_FILES+=("$f")
+              elif [ "$rc" -ne 0 ]; then
+                echo "::error file=$f::Exited with code $rc"
+                STATUS=1
+                # Show output ONLY on error (not on timeout, not on success)
+                echo "::group::Output from $f"
+                cat "$LOGFILE"
+                echo "::endgroup::"
+              else
+                echo "Finished $f"
+              fi
             fi
           done
 
