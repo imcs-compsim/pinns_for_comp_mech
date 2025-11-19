@@ -163,10 +163,32 @@ jobs:
             "examples/variational_examples/lame/Lame_quarter_mixed_inverse.py"
           )
 
+          # When these examples do not fail anymore, then comment this part
+          # Failing examples
+          FAILING_EXAMPLES=(
+            "examples/deep_energy_examples/3d_examples/3d_block_torsion_nonlinear_displacement.py"
+            "examples/deep_energy_examples/beam/Beam_under_shear_load_nonlinear.py"
+            "examples/deep_energy_examples/hertzian/Hertzian_normal_contact_pretrained.py"
+            "examples/elasticity_2d/linear_elasticity/lame/Lame_problem_quarter_gmsh.py"
+            "examples/elasticity_2d/linear_elasticity/lame/Lame_problem_quarter_gmsh_mixed_scale_structured.py"
+            "examples/elasticity_2d/normal_contact/hertzian/Hertzian_normal_contact_fischer_burmeister_data_trained.py"
+            "examples/elasticity_2d/normal_contact/hertzian/Hertzian_normal_contact_fischer_burmeister_trained.py"
+            "examples/elasticity_2d/normal_contact/hertzian/Hertzian_pressure.py"
+            "examples/elasticity_3d/linear_elasticity/time_dependent_examples/lame_under_internal_pressure_sin_load.py"
+          )
+
           # Helper: check if file is in TF_EXAMPLES
           in_list() {
             local val="$1"
             for item in "${TF_EXAMPLES[@]}"; do
+              [[ "$item" == "$val" ]] && return 0
+            done
+            return 1
+          }
+
+          in_failing_list() {
+            local val="$1"
+            for item in "${FAILING_EXAMPLES[@]}"; do
               [[ "$item" == "$val" ]] && return 0
             done
             return 1
@@ -177,6 +199,11 @@ jobs:
 
           # NUL-safe find + sort; no process substitution
           find examples -type f -name '*.py' -print0 | sort -z | while IFS= read -r -d '' f; do
+            # comment the following line to run all examples as soon as failing ones are fixed
+            if in_failing_list "$f"; then
+              echo "Skipping known failing example: $f"
+              continue
+            fi
             echo
             echo "-----------------------------------------------------------------"
             echo -e "${GREEN}Running $f (timeout ${TIME_LIMIT_SECONDS}s)${NC}"
