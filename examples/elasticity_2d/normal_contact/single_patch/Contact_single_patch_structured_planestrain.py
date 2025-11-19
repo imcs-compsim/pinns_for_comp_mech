@@ -114,7 +114,7 @@ data = dde.data.PDE(
     bcs_,
     num_domain=n_dummy,
     num_boundary=n_dummy,
-    num_test=n_dummy,
+    num_test=None,
     train_distribution = "Sobol"
 )
 
