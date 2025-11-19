@@ -12,7 +12,7 @@ env:
   PYTHON_PACKAGE_MANAGER: conda
 
 jobs:
-  test-example:
+  failing-examples:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -164,10 +164,34 @@ jobs:
             examples/variational_examples/lame/Lame_quarter_mixed_inverse.py
           )
 
+          # Failing examples
+          FAILING_EXAMPLES=(
+            "examples/deep_energy_examples/3d_examples/3d_block_torsion_nonlinear_displacement.py"
+            "examples/deep_energy_examples/beam/Beam_under_shear_load_nonlinear.py"
+            "examples/deep_energy_examples/hertzian/Hertzian_normal_contact_pretrained.py"
+            "examples/elasticity_2d/linear_elasticity/lame/Lame_problem_quarter_gmsh.py"
+            "examples/elasticity_2d/linear_elasticity/lame/Lame_problem_quarter_gmsh_mixed_scale_structured.py"
+            "examples/elasticity_2d/normal_contact/hertzian/Hertzian_normal_contact_fischer_burmeister_data_trained.py"
+            "examples/elasticity_2d/normal_contact/hertzian/Hertzian_normal_contact_fischer_burmeister_trained.py"
+            "examples/elasticity_2d/normal_contact/hertzian/Hertzian_pressure.p"
+            "examples/elasticity_2d/normal_contact/single_patch/Contact_single_patch.py"
+            "examples/elasticity_2d/normal_contact/single_patch/Contact_single_patch_structured_planestrain.py"
+            "examples/elasticity_3d/linear_elasticity/time_dependent_examples/lame_under_internal_pressure_sin_load.py "
+            "examples/heat_equation/heatEq.py"
+          )
+
           # Helper: check if file is in TF_EXAMPLES
           in_list() {
             local val="$1"
             for item in "${TF_EXAMPLES[@]}"; do
+              [[ "$item" == "$val" ]] && return 0
+            done
+            return 1
+          }
+
+          in_failing_list() {
+            local val="$1"
+            for item in "${FAILING_EXAMPLES[@]}"; do
               [[ "$item" == "$val" ]] && return 0
             done
             return 1
@@ -189,13 +213,15 @@ jobs:
               CURRENT_BACKEND="$BACKEND"
             fi
 
-            set +e
-            LOGFILE="$(mktemp -t runlog.XXXXXX)"
+            if in_failing_list "$f"; then
+              set +e
+              LOGFILE="$(mktemp -t runlog.XXXXXX)"
 
-            DDE_BACKEND="$CURRENT_BACKEND" timeout --foreground --kill-after=1s "${TIME_LIMIT_SECONDS}s" \
-              $PYTHON_PACKAGE_MANAGER run -n "$ENV_NAME" --no-capture-output python "$f" >"$LOGFILE" 2>&1
-            rc=$?
-            set -e
+              DDE_BACKEND="$CURRENT_BACKEND" timeout --foreground --kill-after=1s "${TIME_LIMIT_SECONDS}s" \
+                $PYTHON_PACKAGE_MANAGER run -n "$ENV_NAME" --no-capture-output python "$f" >"$LOGFILE" 2>&1
+              rc=$?
+              set -e
+            fi
 
             if [ "$rc" -eq 124 ]; then
               echo "::warning file=$f::Timed out after ${TIME_LIMIT_SECONDS}s; killing lingering python for this file."
