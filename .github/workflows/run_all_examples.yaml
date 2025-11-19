@@ -158,10 +158,10 @@ jobs:
             "examples/elasticity_2d/normal_contact/hertzian/Hertzian_normal_contact_fischer_burmeister_trained.py"
             "examples/elasticity_2d/normal_contact/hertzian/Hertzian_pressure.py"
             "examples/elasticity_2d/normal_contact/single_patch/Contact_single_patch.py"
-            "examples/elasticity_2d/normal_contact/single_patch/Contact_single_patch_structured_planestrain.py"
             "examples/elasticity_3d/linear_elasticity/time_dependent_examples/lame_under_internal_pressure_sin_load.py"
             "examples/heat_equation/heatEq1DPlusDiffusion.py"
             "examples/heat_equation/heatEq2D.py"
+            examples/variational_examples/lame/Lame_quarter_mixed_inverse.py
           )
 
           # Helper: check if file is in TF_EXAMPLES
