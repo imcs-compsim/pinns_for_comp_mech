@@ -12,7 +12,7 @@ env:
   PYTHON_PACKAGE_MANAGER: conda
 
 jobs:
-  test-example:
+  run-all-examples:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
