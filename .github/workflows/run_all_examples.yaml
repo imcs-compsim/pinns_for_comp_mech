@@ -256,5 +256,7 @@ jobs:
           #     done
           #   } >> "$GITHUB_STEP_SUMMARY"
           # fi
-          exit "$STATUS"
+          # If any errors, fail the step
+          if [ "$STATUS" -eq 1 ]; then
+            exit 1
 
