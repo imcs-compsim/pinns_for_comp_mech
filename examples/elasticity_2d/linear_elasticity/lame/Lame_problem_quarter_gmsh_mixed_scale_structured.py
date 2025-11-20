@@ -148,7 +148,7 @@ net.apply_output_transform(output_transform)
 model = dde.Model(data, net)
 
 restore_model = True
-model_path = str(Path(__file__).parent.parent.parent.parent)+f"/pretrained_models/elasticity/lame_structured/lame"
+model_path = str(Path(__file__).parent.parent.parent.parent)+f"/pretrained_models/elasticity_2d/lame_structured/lame"
 
 if not restore_model:
     model.compile("adam", lr=0.001)

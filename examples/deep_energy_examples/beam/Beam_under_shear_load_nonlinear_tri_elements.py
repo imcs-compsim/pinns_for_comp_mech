@@ -35,7 +35,7 @@ https://onlinelibrary.wiley.com/doi/epdf/10.1002/nme.6132
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 6}
 block_2d = Block_2D(coord_left_corner=[0,-1], coord_right_corner=[20,1], mesh_size=0.2, gmsh_options=gmsh_options)
 
-gmsh_model = block_2d.generateGmshModel(visualize_mesh=True)
+gmsh_model = block_2d.generateGmshModel(visualize_mesh=False)
 
 domain_dimension = 2
 quad_rule = GaussQuadratureRule(rule_name="gauss_legendre", element_type="simplex", dimension=domain_dimension, ngp=4) # gauss_legendre gauss_labotto

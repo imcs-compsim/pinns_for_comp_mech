@@ -28,7 +28,7 @@ center = [0,0]
 
 Quarter_Disc = QuarterDisc(radius=radius, center=center, mesh_size=0.03, angle=270-4.358642, refine_times=1, gmsh_options=gmsh_options)
 
-gmsh_model, x_loc_partition, y_loc_partition = Quarter_Disc.generateGmshModel(visualize_mesh=True)
+gmsh_model, x_loc_partition, y_loc_partition = Quarter_Disc.generateGmshModel(visualize_mesh=False)
 
 revert_curve_list = []
 revert_normal_dir_list = [1,2,2,1]

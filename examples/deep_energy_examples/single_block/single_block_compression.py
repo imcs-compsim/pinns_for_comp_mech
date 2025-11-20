@@ -43,7 +43,7 @@ block_2d = Block_2D(coord_left_corner=coord_left_corner, coord_right_corner=coor
 quad_rule = GaussQuadratureRule(rule_name="gauss_legendre", dimension=2, ngp=5) # gauss_legendre gauss_labotto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
-gmsh_model = block_2d.generateGmshModel(visualize_mesh=True)
+gmsh_model = block_2d.generateGmshModel(visualize_mesh=False)
 
 revert_curve_list = []
 revert_normal_dir_list = [1,1,1,1]

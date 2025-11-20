@@ -34,7 +34,7 @@ center = [0,0,0]
 gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 11}
 quarter_circle_with_hole = RingQuarter3D(center=center, inner_radius=inner_radius, outer_radius=outer_radius, mesh_size=0.025, num_elements=5)
 
-gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=True)
+gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=False)
 
 def on_boundary_circle_contact(x):
     return np.isclose(np.linalg.norm(x[:2] - center[:2], axis=-1), outer_radius)

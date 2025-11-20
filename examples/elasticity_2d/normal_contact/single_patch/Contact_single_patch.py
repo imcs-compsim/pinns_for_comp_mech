@@ -14,6 +14,8 @@ from compsim_pinns.contact_mech.contact_utils import zero_complementarity_functi
 from compsim_pinns.elasticity import elasticity_utils
 from compsim_pinns.contact_mech import contact_utils
 
+dde.config.set_default_float("float64")
+
 '''
 Single patch-test for testing contact conditions. It is a simple block under compression. Check problem_figures/Contact_patch.png for details.
 
@@ -110,7 +112,7 @@ data = dde.data.PDE(
     bcs_,
     num_domain=n_dummy,
     num_boundary=n_dummy,
-    num_test=n_dummy,
+    num_test=None,
     train_distribution = "Sobol"
 )
 

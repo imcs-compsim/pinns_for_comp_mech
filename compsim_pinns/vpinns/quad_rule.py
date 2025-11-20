@@ -3,6 +3,8 @@ from scipy.special import gamma
 from scipy.special import jacobi
 from scipy.special import roots_jacobi
 
+import math
+
 from deepxde import config
 
 from numpy.polynomial.legendre import leggauss
@@ -299,8 +301,8 @@ def modified_legendre_2(n, x):
         sum_p = 0
         M = n//2
         for m in range(0, M+1):
-            numerator = np.math.factorial(2*n-2*m)
-            denominator = 2**n * np.math.factorial(m) * np.math.factorial(n-m) * np.math.factorial(n-2*m)
+            numerator = math.factorial(2*n-2*m)
+            denominator = 2**n * math.factorial(m) * math.factorial(n-m) * math.factorial(n-2*m)
             sum_p = sum_p + (-1)**m * numerator / denominator * x**(n-2*m)
         
         return sum_p
@@ -315,8 +317,8 @@ def modified_legendre_derivative_2(n, x):
         M = n//2
         contribution = 0
         for m in range(0, M+1):
-            numerator = np.math.factorial(2*n-2*m)
-            denominator = 2**n * np.math.factorial(m) * np.math.factorial(n-m) * np.math.factorial(n-2*m)
+            numerator = math.factorial(2*n-2*m)
+            denominator = 2**n * math.factorial(m) * math.factorial(n-m) * math.factorial(n-2*m)
             if (n-2*m) != 0:
                 contribution = (-1)**m * numerator / denominator * (n-2*m)*x**(n-2*m-1)
                 sum_p = sum_p + contribution

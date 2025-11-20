@@ -22,6 +22,8 @@ from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
 
 from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
+from compsim_pinns.postprocess.custom_callbacks import EpochTracker
+
 '''
 Solves a hollow quarter cylinder under internal pressure (Lame problem)
 
@@ -163,7 +165,7 @@ initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
 
-epoch_tracker = dde.callbacks.EpochTracker(period=10)
+epoch_tracker = EpochTracker(period=10)
 
 model = dde.Model(data, net)
 # if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
@@ -172,7 +174,7 @@ losshistory, train_state = model.train(epochs=epochs, callbacks=[epoch_tracker],
 
 model.compile("L-BFGS")
 # model.train_step.optimizer_kwargs["options"]['maxiter']=2000
-model.train()
+model.train(callbacks=[epoch_tracker], display_every=100)
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
