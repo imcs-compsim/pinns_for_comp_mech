@@ -256,6 +256,5 @@ jobs:
           #     done
           #   } >> "$GITHUB_STEP_SUMMARY"
           # fi
-          echo $STATUS
-          exit $STATUS
+          exit "$STATUS"
 
