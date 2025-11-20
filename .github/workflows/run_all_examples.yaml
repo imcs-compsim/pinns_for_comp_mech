@@ -198,7 +198,7 @@ jobs:
           NC='\033[0m' # No Color / reset
 
           # NUL-safe find + sort; no process substitution
-          find examples/deep_energy_examples/single_patch -type f -name '*.py' -print0 | sort -z | while IFS= read -r -d '' f; do
+          find examples -type f -name '*.py' -print0 | sort -z | while IFS= read -r -d '' f; do
             # comment the following line to run all examples as soon as failing ones are fixed
             if in_failing_list "$f"; then
               echo
