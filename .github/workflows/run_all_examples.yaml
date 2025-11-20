@@ -156,7 +156,6 @@ jobs:
             "examples/elasticity_2d/linear_elasticity/solid_rectangle/Rectangle_body_force_problem.py"
             "examples/elasticity_2d/normal_contact/hertzian/Hertzian_normal_contact_fischer_burmeister_data_trained.py"
             "examples/elasticity_2d/normal_contact/hertzian/Hertzian_normal_contact_fischer_burmeister_trained.py"
-            "examples/elasticity_2d/normal_contact/hertzian/Hertzian_pressure.py"
             "examples/elasticity_3d/linear_elasticity/time_dependent_examples/lame_under_internal_pressure_sin_load.py"
             "examples/heat_equation/heatEq1DPlusDiffusion.py"
             "examples/heat_equation/heatEq2D.py"
@@ -173,7 +172,6 @@ jobs:
             "examples/elasticity_2d/linear_elasticity/lame/Lame_problem_quarter_gmsh_mixed_scale_structured.py"
             "examples/elasticity_2d/normal_contact/hertzian/Hertzian_normal_contact_fischer_burmeister_data_trained.py"
             "examples/elasticity_2d/normal_contact/hertzian/Hertzian_normal_contact_fischer_burmeister_trained.py"
-            "examples/elasticity_2d/normal_contact/hertzian/Hertzian_pressure.py"
             "examples/elasticity_3d/linear_elasticity/time_dependent_examples/lame_under_internal_pressure_sin_load.py"
           )
 
