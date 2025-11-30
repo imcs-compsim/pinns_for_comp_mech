@@ -1,4 +1,8 @@
 """Backend supported: tensorflow.compat.v1, tensorflow, pytorch"""
+# Set the backend as tensorflow.compat.v1 before importing DeepXDE
+import os
+os.environ["DDE_BACKEND"] = "tensorflow.compat.v1"
+
 import deepxde as dde
 import numpy as np
 import tensorflow as tf

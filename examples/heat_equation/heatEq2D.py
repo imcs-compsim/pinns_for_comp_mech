@@ -8,6 +8,8 @@ Created on Wed Nov 17 13:27:23 2021
 
 @author: maxvondanwitz
 """
+import os
+os.environ["DDE_BACKEND"] = "tensorflow.compat.v1"
 import numpy as np
 
 import deepxde as dde
