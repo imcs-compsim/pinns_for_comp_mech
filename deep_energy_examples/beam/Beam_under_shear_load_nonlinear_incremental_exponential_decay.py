@@ -225,7 +225,49 @@ for i in range(steps):
     grid.point_data["pred_cauchy_stress"] = np.column_stack((cauchy_stress_pred[:, 0], cauchy_stress_pred[:, 1], np.zeros((n_points, 1)), cauchy_stress_pred[:, 2], np.zeros((n_points, 1)), np.zeros((n_points, 1))))
 
     ## Compare with FEM reference
-    
+    if int(round(shear_load * 1000)) in set(range(1, 11)):
+        fem_path = str(Path(__file__).parent.parent)
+        fem_reference = pv.read(fem_path+f"/fem_reference/fem_reference_2d_bending_beam_{int(i+1):02}.vtu")
+        points_fem = fem_reference.points
+        displacement_fem = fem_reference.point_data["displacement"]
+        cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
+
+        # Compute values on FEM nodes
+        displacement_pred_on_fem_mesh = model.predict(points_fem[:,0:2])
+        sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, _ = model.predict(points_fem[:,0:2], operator=cauchy_stress_2D)
+        cauchy_stress_pred_on_fem_mesh = np.column_stack((sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, np.zeros_like(sigma_xx_pred_on_fem_mesh), sigma_xy_pred_on_fem_mesh, np.zeros_like(sigma_xx_pred_on_fem_mesh), np.zeros_like(sigma_xx_pred_on_fem_mesh)))
+        tensor_cauchy_stress_pred_on_fem_mesh = np.transpose(np.array([[sigma_xx_pred_on_fem_mesh.flatten(), sigma_xy_pred_on_fem_mesh.flatten()],
+                                                                       [sigma_xy_pred_on_fem_mesh.flatten(), sigma_yy_pred_on_fem_mesh.flatten()]]),(2,0,1))
+        tensor_cauchy_stress_fem = np.array([[cauchy_stress_fem[:,0], cauchy_stress_fem[:,3],
+                                              cauchy_stress_fem[:,3], cauchy_stress_fem[:,1]]]).T.reshape(-1,2,2)
+
+        # Compute L2-error
+        volume_integral = fem_reference.copy()
+        volume_integral.point_data["squared_error_disp"] = np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem, axis=1) ** 2
+        volume_integral.point_data["squared_disp"] = np.linalg.norm(displacement_fem, axis=1) ** 2
+        volume_integral.point_data["squared_error_stress"] = np.linalg.norm(tensor_cauchy_stress_pred_on_fem_mesh - tensor_cauchy_stress_fem, axis=(1,2), ord="fro") ** 2
+        volume_integral.point_data["squared_stress"] = np.linalg.norm(tensor_cauchy_stress_fem, axis=(1,2), ord="fro") ** 2
+        volume_integral = volume_integral.integrate_data()
+        l2_iteration.append(train_state.step)
+        rel_err_l2_disp.append(np.sqrt(volume_integral.point_data["squared_error_disp"][0] / volume_integral.point_data["squared_disp"][0]))
+        print(f"Relative L2 error for displacement:   {rel_err_l2_disp[-1]}")
+        rel_err_l2_stress.append(np.sqrt(volume_integral.point_data["squared_error_stress"][0] / volume_integral.point_data["squared_stress"][0]))
+        print(f"Relative L2 error for stress:         {rel_err_l2_stress[-1]}")
+
+        # Compute mean absolute error
+        print(f"Mean absolute error for displacement: {np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem)/len(displacement_fem)}")
+        print(f"Mean absolute error for stress:       {np.mean(np.linalg.norm(tensor_cauchy_stress_pred_on_fem_mesh - tensor_cauchy_stress_fem, axis=(1,2), ord="fro"))}")
+
+        # Create output with relative pointwise errors
+        fem_reference.point_data["displacement_prediction"] = np.hstack((displacement_pred_on_fem_mesh, np.zeros_like(displacement_pred_on_fem_mesh[:,0:1])))
+        fem_reference.point_data["cauchy_stresses_prediction"] = cauchy_stress_pred_on_fem_mesh
+        fem_reference.point_data["absolute_displacement_error"] = np.hstack((abs(displacement_pred_on_fem_mesh - displacement_fem), np.zeros_like(displacement_pred_on_fem_mesh[:,0:1])))
+        fem_reference.point_data["absolute_cauchy_stress_error"] = abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem)
+        fem_reference.point_data["relative_displacement_error"] = np.divide(np.abs(displacement_pred_on_fem_mesh - displacement_fem), np.abs(displacement_fem), out=np.zeros_like(displacement_fem, dtype=float), where=displacement_fem!=0)
+        fem_reference.point_data["relative_cauchy_stress_error"] = np.divide(np.abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem), np.abs(cauchy_stress_fem), out=np.zeros_like(cauchy_stress_fem, dtype=float), where=cauchy_stress_fem!=0)
+        file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_fem_compare_{int(i+1):02}")
+        fem_reference.save(f"{file_path_fem_compare}.vtu")
+
     # Predict shape of the beam in each time step
     trajectory_edge_points[i+1,:,:] = coords_edge_points + model.predict(coords_edge_points)
     trajectory_corners[i+1,:,:] = coords_corners + model.predict(coords_corners)
@@ -293,6 +335,7 @@ fig2.savefig(f"{model_path}/{simulation_case}-{train_state.step}_edge_trajectory
 
 # Output trajectory points
 np.savez(f"{model_path}/{simulation_case}_meshsize_{2/mesh_size:03.0f}.npz", x=trajectory_edge_points_sorted, y=trajectory_corners)
+np.savez(f"{model_path}/{simulation_case}_l2_errors.npz", x=rel_err_l2_disp, y=rel_err_l2_stress)
 
 time_dict["total"].append(time.time())
 # Print times to output file
