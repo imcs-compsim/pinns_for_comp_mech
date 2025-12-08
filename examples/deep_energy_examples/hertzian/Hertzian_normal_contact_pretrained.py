@@ -1,9 +1,3 @@
-'''
-@author: tsahin
-'''
-import os
-os.environ["DDE_BACKEND"] = "tensorflow.compat.v1"
-
 import deepxde as dde
 import numpy as np
 import matplotlib.pyplot as plt
@@ -32,7 +26,7 @@ gmsh_options = {"General.Terminal":1, "Mesh.Algorithm": 11}
 radius = 1
 center = [0,0]
 
-Quarter_Disc = QuarterDisc(radius=radius, center=center, mesh_size=0.03, angle=270-4.358642, refine_times=5, gmsh_options=gmsh_options)
+Quarter_Disc = QuarterDisc(radius=radius, center=center, mesh_size=0.04, angle=255, refine_times=10, gmsh_options=gmsh_options)
 
 gmsh_model, x_loc_partition, y_loc_partition = Quarter_Disc.generateGmshModel(visualize_mesh=False)
 
@@ -117,13 +111,9 @@ def potential_energy(X,
     
     gap_y = inputs[:,1:2][beg_boundary:][cond] + outputs[:,1:2][beg_boundary:][cond] + radius
     gap_n = tf.math.divide_no_nan(gap_y, tf.math.abs(mapped_normal_boundary_t[:,1:2][cond]))
-    # eta=1e4
-    ### repulsive force
-    r_0 = 1e2
-    psi_0 = 1e2
-    # exp type energy
-    Erepulsive = psi_0 * tf.exp(-r_0 * tf.math.abs(gap_n))
-    contact_work = global_weights_boundary_t[cond]*(Erepulsive)*jacobian_boundary_t[cond]
+    eta=2e4
+    contact_force_density = 1/2*eta*bkd.relu(-gap_n)*bkd.relu(-gap_n)
+    contact_work = global_weights_boundary_t[cond]*(contact_force_density)*jacobian_boundary_t[cond]
     
     ####################################################################################################################
     # Reshape energy-work terms and sum over the gauss points  
@@ -166,10 +156,15 @@ initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
 
+model_path = str(Path(__file__).parent.parent.parent)+f"/pretrained_models/deep_energy_examples/hertzian/lame"
+model_restore_path = model_path + "-"+ str(1000) + ".ckpt"
+
 model = dde.Model(data, net)
 # if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
+
 model.compile("adam", lr=0.001)
-losshistory, train_state = model.train(epochs=200, display_every=100)
+model.restore(save_path=model_restore_path)
+losshistory, train_state = model.train(epochs=1000, display_every=100)
 
 model.compile("L-BFGS")
 model.train_step.optimizer_kwargs["options"]['maxiter']=1000
@@ -263,7 +258,7 @@ error_polar_stress_y =  abs(np.array(sigma_theta_pred.flatten().tolist()) - sigm
 error_polar_stress_xy =  abs(np.array(sigma_rtheta_pred.flatten().tolist()) - sigma_rtheta_fem.flatten())
 combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
 
-file_path = os.path.join(os.getcwd(), "deep_energy_hertzian_normal_contact_repulsive_precise")
+file_path = os.path.join(os.getcwd(), "deep_energy_hertzian_normal_contact_pretrained")
 
 dol_triangles = triangles.triangles
 offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
