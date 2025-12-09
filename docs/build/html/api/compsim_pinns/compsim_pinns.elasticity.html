@@ -299,14 +299,12 @@
 <dt class="sig sig-object py" id="compsim_pinns.elasticity.elasticity_utils.get_tractions_mixed_2d_spacetime">
 <span class="sig-prename descclassname"><span class="pre">compsim_pinns.elasticity.elasticity_utils.</span></span><span class="sig-name descname"><span class="pre">get_tractions_mixed_2d_spacetime</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/compsim_pinns/elasticity/elasticity_utils.html#get_tractions_mixed_2d_spacetime"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#compsim_pinns.elasticity.elasticity_utils.get_tractions_mixed_2d_spacetime" title="Link to this definition">¶</a></dt>
 <dd><p>Calculates traction components in the mixed formulation. Note that this method works only if space-time domain (dde.geometry.GeometryXTime) is generated.</p>
-<blockquote>
-<div><dl class="simple">
+<dl class="simple">
 <dt>y<span class="classifier">Placeholder (tensor)</span></dt><dd><p>contains the placeholder for network output: disp_x, disp_y, sigma_xx, sigma_yy, sigma_xy</p>
 </dd>
 <dt>X<span class="classifier">numpy.ndarray</span></dt><dd><p>Network input as numpy array (x,y,t)</p>
 </dd>
 </dl>
-</div></blockquote>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p><ul class="simple">
@@ -819,11 +817,11 @@ Additionally, it couples the velocity fields with displacements.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>(</strong><strong>any</strong><strong>)</strong> (<em>sigma_xy</em>)</p></li>
-<li><p><strong>(</strong><strong>any</strong><strong>)</strong></p></li>
-<li><p><strong>(</strong><strong>any</strong><strong>)</strong></p></li>
-<li><p><strong>(</strong><strong>vector</strong><strong>)</strong> (<em>normals</em>)</p></li>
-<li><p><strong>(</strong><strong>boolean</strong><strong>)</strong> (<em>cond</em>)</p></li>
+<li><p><strong>sigma_xx</strong> (<em>any</em>) – Stress component in x direction</p></li>
+<li><p><strong>sigma_yy</strong> (<em>any</em>) – Stress component in y direction</p></li>
+<li><p><strong>sigma_xy</strong> (<em>any</em>) – Stress component in xy direction (shear)</p></li>
+<li><p><strong>normals</strong> (<em>vector</em>) – Normal vectors</p></li>
+<li><p><strong>cond</strong> (<em>boolean</em>) – Dimensions of stresses and and normals have to match. Normals are calculated on the boundary, while stresses are calculated everywhere.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
