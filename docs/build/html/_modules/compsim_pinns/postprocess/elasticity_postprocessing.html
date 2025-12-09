@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>compsim_pinns.postprocess.elasticity_postprocessing &#8212; CompSim-PINN 2025.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../../_static/documentation_options.js?v=14229d9d"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for compsim_pinns.postprocess.elasticity_postprocessing</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xml.etree.ElementTree</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ET</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">triangle</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tr</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyevtk.hl</span><span class="w"> </span><span class="kn">import</span> <span class="n">unstructuredGridToVTK</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">compsim_pinns.geometry.geometry_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">polar_transformation_2d</span><span class="p">,</span> <span class="n">polar_transformation_3d_spherical</span><span class="p">,</span> <span class="n">polar_transformation_3d_cylindrical</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">deepxde.geometry.csg</span><span class="w"> </span><span class="kn">import</span> <span class="n">CSGUnion</span><span class="p">,</span> <span class="n">CSGDifference</span><span class="p">,</span> <span class="n">CSGIntersection</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">deepxde</span><span class="w"> </span><span class="kn">import</span> <span class="n">config</span>
+
+<div class="viewcode-block" id="meshGeometry">
+<a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.postprocess.html#compsim_pinns.postprocess.elasticity_postprocessing.meshGeometry">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">meshGeometry</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">n_boundary</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">holes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_mesh_area</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">boundary_distribution</span><span class="o">=</span><span class="s2">&quot;pseudo&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Meshes the geometry using boundary points</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geom : Class object</span>
+<span class="sd">        contains the geometry object</span>
+<span class="sd">    n_boundary: int</span>
+<span class="sd">        represents the number of points on boundary</span>
+<span class="sd">    holes: np.array</span>
+<span class="sd">        center location of the holes</span>
+<span class="sd">    max_mesh_area: float</span>
+<span class="sd">        max area of elements</span>
+<span class="sd">    boundary_distribution</span>
+<span class="sd">        the distribution of points on boundary, available options: pseudo, uniform, Sobol, LHS, Halton, Hammersley</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    vertices: numpy array</span>
+<span class="sd">        The location of vertices</span>
+<span class="sd">    triangles: numpy array</span>
+<span class="sd">        Mesh as triangle</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">geom</span><span class="p">,(</span><span class="n">CSGUnion</span><span class="p">,</span> <span class="n">CSGDifference</span><span class="p">,</span> <span class="n">CSGIntersection</span><span class="p">))</span> <span class="ow">and</span> <span class="n">holes</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="n">boundary_distribution</span> <span class="o">==</span> <span class="s2">&quot;uniform&quot;</span><span class="p">:</span>
+            <span class="n">boundary_points_1</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">geom1</span><span class="o">.</span><span class="n">uniform_boundary_points</span><span class="p">(</span><span class="n">n_boundary</span><span class="p">)</span>
+            <span class="n">connectivity_1</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">convex_hull</span><span class="p">(</span><span class="n">boundary_points_1</span><span class="p">)</span>
+
+            <span class="n">boundary_points_2</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">geom2</span><span class="o">.</span><span class="n">uniform_boundary_points</span><span class="p">(</span><span class="n">n_boundary</span><span class="p">)</span>
+            <span class="n">connectivity_2</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">convex_hull</span><span class="p">(</span><span class="n">boundary_points_2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">boundary_points_1</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">geom1</span><span class="o">.</span><span class="n">random_boundary_points</span><span class="p">(</span><span class="n">n_boundary</span><span class="p">,</span> <span class="n">random</span><span class="o">=</span><span class="n">boundary_distribution</span><span class="p">)</span>
+            <span class="n">connectivity_1</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">convex_hull</span><span class="p">(</span><span class="n">boundary_points_1</span><span class="p">)</span>
+
+            <span class="n">boundary_points_2</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">geom2</span><span class="o">.</span><span class="n">random_boundary_points</span><span class="p">(</span><span class="n">n_boundary</span><span class="p">,</span> <span class="n">random</span><span class="o">=</span><span class="n">boundary_distribution</span><span class="p">)</span>
+            <span class="n">connectivity_2</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">convex_hull</span><span class="p">(</span><span class="n">boundary_points_2</span><span class="p">)</span>
+
+        <span class="n">pts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">boundary_points_1</span><span class="p">,</span> <span class="n">boundary_points_2</span><span class="p">])</span>
+        <span class="n">seg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">connectivity_1</span><span class="p">,</span> <span class="n">connectivity_2</span> <span class="o">+</span> <span class="n">connectivity_1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+
+        <span class="n">domain</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">vertices</span><span class="o">=</span><span class="n">pts</span><span class="p">,</span> <span class="n">segments</span><span class="o">=</span><span class="n">seg</span><span class="p">,</span> <span class="n">holes</span><span class="o">=</span><span class="n">holes</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">max_mesh_area</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">domain_size_1</span> <span class="o">=</span> <span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">geom1</span><span class="o">.</span><span class="n">bbox</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">geom</span><span class="o">.</span><span class="n">geom1</span><span class="o">.</span><span class="n">bbox</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+            <span class="n">domain_size_2</span> <span class="o">=</span> <span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">geom2</span><span class="o">.</span><span class="n">bbox</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">geom</span><span class="o">.</span><span class="n">geom2</span><span class="o">.</span><span class="n">bbox</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+            <span class="n">max_mesh_area</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">domain_size_1</span><span class="p">,</span><span class="n">domain_size_2</span><span class="p">)</span><span class="o">/</span><span class="mi">100</span>
+
+        <span class="n">max_mesh_area_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;qpa</span><span class="si">{</span><span class="n">max_mesh_area</span><span class="si">}</span><span class="s2">&quot;</span>
+   
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">boundary_distribution</span> <span class="o">==</span> <span class="s2">&quot;uniform&quot;</span><span class="p">:</span>
+            <span class="n">boundary_points</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">uniform_boundary_points</span><span class="p">(</span><span class="n">n_boundary</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">boundary_points</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">random_boundary_points</span><span class="p">(</span><span class="n">n_boundary</span><span class="p">,</span> <span class="n">random</span><span class="o">=</span><span class="n">boundary_distribution</span><span class="p">)</span>
+        
+        <span class="n">domain</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">vertices</span><span class="o">=</span><span class="n">boundary_points</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">max_mesh_area</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">max_mesh_area</span> <span class="o">=</span> <span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">bbox</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">geom</span><span class="o">.</span><span class="n">bbox</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">/</span><span class="mi">100</span>  
+        
+        <span class="n">max_mesh_area_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;qa</span><span class="si">{</span><span class="n">max_mesh_area</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">triangulate</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">max_mesh_area_str</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">mesh</span><span class="p">[</span><span class="s1">&#39;vertices&#39;</span><span class="p">],</span> <span class="n">mesh</span><span class="p">[</span><span class="s1">&#39;triangles&#39;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="postProcess">
+<a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.postprocess.html#compsim_pinns.postprocess.elasticity_postprocessing.postProcess">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">postProcess</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;displacement&quot;</span><span class="p">,</span> <span class="n">operator</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">operator_name</span><span class="o">=</span><span class="s2">&quot;stress&quot;</span><span class="p">,</span> <span class="n">polar_transf</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">file_path</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Generates the vtu file to visualize results.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model : Class object</span>
+<span class="sd">        Trained model</span>
+<span class="sd">    X: numpy array</span>
+<span class="sd">        The location of vertices</span>
+<span class="sd">    triangles: numpy array</span>
+<span class="sd">        Mesh as triangle</span>
+<span class="sd">    output_name: str</span>
+<span class="sd">        Name of the output quantity</span>
+<span class="sd">    operator: function</span>
+<span class="sd">        The operator function which will be used to predict function quantity </span>
+<span class="sd">    operator_name: str</span>
+<span class="sd">        Name of the function output quantity</span>
+<span class="sd">    polar_transf: booelan</span>
+<span class="sd">        Activates if polar transformation will be done</span>
+<span class="sd">    file_path: str</span>
+<span class="sd">        The full file path to store the results</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+    <span class="c1"># check if the ouput 1d or 2d/3d or larger</span>
+    <span class="k">if</span> <span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">pointData</span> <span class="o">=</span> <span class="p">{</span><span class="n">output_name</span> <span class="p">:</span> <span class="n">output</span><span class="o">.</span><span class="n">flatten</span><span class="p">()}</span>
+    <span class="k">elif</span> <span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">output</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">output</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()),</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">output</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))))</span>
+        <span class="n">pointData</span> <span class="o">=</span> <span class="p">{</span><span class="n">output_name</span> <span class="p">:</span> <span class="n">output</span><span class="p">}</span>
+    <span class="k">elif</span> <span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">output</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">output</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">output</span><span class="p">[:,</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()))))</span>
+        <span class="n">pointData</span> <span class="o">=</span> <span class="p">{</span><span class="n">output_name</span> <span class="p">:</span> <span class="n">output</span><span class="p">}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Output dimension can not be larger than 3. If you have time as dimension, change the source code!&quot;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">operator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">operator_output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">operator</span><span class="o">=</span><span class="n">operator</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">operator_output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">pointData</span><span class="p">[</span><span class="n">operator_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">operator_output</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">operator_output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">operator_output</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">operator_output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">operator_output</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">operator_output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))))</span>
+            <span class="n">pointData</span><span class="p">[</span><span class="n">operator_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">operator_output</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">operator_output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">operator_output</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">operator_output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">operator_output</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">operator_output</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()))))</span>
+            <span class="n">pointData</span><span class="p">[</span><span class="n">operator_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">operator_output</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;The dimension of the output of operator dimension can not be larger than 3!. Operator results will not be stored!&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">polar_transf</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">operator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">operator_output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">operator_output_transformed</span> <span class="o">=</span> <span class="n">polar_transformation_2d</span><span class="p">(</span><span class="n">operator_output</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">operator_output</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">operator_output</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">X</span><span class="p">)</span>
+            <span class="n">pointData</span><span class="p">[</span><span class="n">operator_name</span><span class="o">+</span><span class="s2">&quot;_polar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">operator_output_transformed</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Transformation for </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">operator_output</span><span class="p">)</span><span class="si">}</span><span class="s2">D not implemented&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">file_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span><span class="s2">&quot;default_result_name&quot;</span><span class="p">)</span>
+
+    <span class="n">solutionFieldOnMeshToVtk</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">pointData</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="solutionFieldOnMeshToVtk">
+<a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.postprocess.html#compsim_pinns.postprocess.elasticity_postprocessing.solutionFieldOnMeshToVtk">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">solutionFieldOnMeshToVtk</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">pointData</span><span class="p">,</span> <span class="n">file_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Creates the vtu file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X: numpy array</span>
+<span class="sd">        The location of vertices</span>
+<span class="sd">    triangles: numpy array</span>
+<span class="sd">        Mesh as triangle</span>
+<span class="sd">    point_data: numpy array</span>
+<span class="sd">        Visualized the result as a point cloud </span>
+<span class="sd">    file_path: str</span>
+<span class="sd">        The full file path to store the results</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+     
+    <span class="n">x</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    
+    <span class="n">dol_triangles</span> <span class="o">=</span> <span class="n">triangles</span>
+    <span class="n">offset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="n">dol_triangles</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">dol_triangles</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">dol_triangles</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dol_triangles</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">cell_types</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">dol_triangles</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">*</span><span class="mi">5</span>
+    
+    <span class="n">unstructuredGridToVTK</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">dol_triangles</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">offset</span><span class="p">,</span> 
+                          <span class="n">cell_types</span><span class="p">,</span> <span class="n">pointData</span><span class="o">=</span><span class="n">pointData</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="solutionFieldOnMeshToVtk3D">
+<a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.postprocess.html#compsim_pinns.postprocess.elasticity_postprocessing.solutionFieldOnMeshToVtk3D">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">solutionFieldOnMeshToVtk3D</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> 
+                               <span class="n">model</span><span class="p">,</span> 
+                               <span class="n">save_folder_path</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                               <span class="n">file_name</span> <span class="o">=</span> <span class="s2">&quot;3D_example&quot;</span><span class="p">,</span>
+                               <span class="n">analytical_solution</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                               <span class="n">polar_transformation</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Creates the vtu file based on geom and model for 3D elasticity</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geom: object</span>
+<span class="sd">        The geometry object </span>
+<span class="sd">    model: object</span>
+<span class="sd">        The trained model</span>
+<span class="sd">    save_folder_path: str</span>
+<span class="sd">        The path to the folder for storing the results</span>
+<span class="sd">    file_name: str</span>
+<span class="sd">        The name of the resulting save file</span>
+<span class="sd">    analytical_displacements: numpy array, </span>
+<span class="sd">        Analytical displacement solutions. Order u_x, u_y, u_z</span>
+<span class="sd">    analytical_stresses: numpy array, </span>
+<span class="sd">        Analytical stress solutions. Order sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz</span>
+<span class="sd">    polar_transformation: str</span>
+<span class="sd">        Coordinate system for polar transformation: spherical or cylindrical</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="n">X</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">cell_types</span><span class="p">,</span> <span class="n">elements</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">get_mesh</span><span class="p">()</span>
+
+    <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+    <span class="c1"># .tolist() is applied to remove datatype</span>
+    <span class="n">u_pred</span><span class="p">,</span> <span class="n">v_pred</span><span class="p">,</span> <span class="n">w_pred</span> <span class="o">=</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># displacements</span>
+    <span class="n">sigma_xx_pred</span><span class="p">,</span> <span class="n">sigma_yy_pred</span><span class="p">,</span> <span class="n">sigma_zz_pred</span> <span class="o">=</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># normal stresses</span>
+    <span class="n">sigma_xy_pred</span><span class="p">,</span> <span class="n">sigma_yz_pred</span><span class="p">,</span> <span class="n">sigma_xz_pred</span> <span class="o">=</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">7</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">8</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># shear stresses</span>
+    
+    <span class="k">if</span> <span class="n">polar_transformation</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">polar_transformation</span> <span class="o">==</span> <span class="s2">&quot;spherical&quot;</span><span class="p">:</span>
+            <span class="n">sigma_rr</span><span class="p">,</span> <span class="n">sigma_thetatheta</span><span class="p">,</span> <span class="n">sigma_phiphi</span><span class="p">,</span> <span class="n">sigma_rtheta</span><span class="p">,</span> <span class="n">sigma_thetaphi</span><span class="p">,</span> <span class="n">sigma_rphi</span> <span class="o">=</span> <span class="n">polar_transformation_3d_spherical</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xx_pred</span><span class="p">),</span> 
+                                                                                                                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_yy_pred</span><span class="p">),</span> 
+                                                                                                                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_zz_pred</span><span class="p">),</span> 
+                                                                                                                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xy_pred</span><span class="p">),</span> 
+                                                                                                                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_yz_pred</span><span class="p">),</span> 
+                                                                                                                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xz_pred</span><span class="p">),</span> 
+                                                                                                                <span class="n">X</span><span class="p">)</span>
+            <span class="n">combined_normal_stress_pred_polar</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_rr</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_thetatheta</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_phiphi</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+            <span class="n">combined_shear_stress_pred_polar</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_rtheta</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_thetaphi</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_rphi</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>      
+        <span class="k">elif</span> <span class="n">polar_transformation</span> <span class="o">==</span> <span class="s2">&quot;cylindrical&quot;</span><span class="p">:</span>
+            <span class="n">sigma_rr</span><span class="p">,</span> <span class="n">sigma_thetatheta</span><span class="p">,</span> <span class="n">sigma_zz</span><span class="p">,</span> <span class="n">sigma_rtheta</span><span class="p">,</span> <span class="n">sigma_thetaz</span><span class="p">,</span> <span class="n">sigma_rz</span> <span class="o">=</span> <span class="n">polar_transformation_3d_cylindrical</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xx_pred</span><span class="p">),</span> 
+                                                                                                                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_yy_pred</span><span class="p">),</span> 
+                                                                                                                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_zz_pred</span><span class="p">),</span> 
+                                                                                                                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xy_pred</span><span class="p">),</span> 
+                                                                                                                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_yz_pred</span><span class="p">),</span> 
+                                                                                                                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xz_pred</span><span class="p">),</span> 
+                                                                                                                <span class="n">X</span><span class="p">)</span>
+        
+            <span class="n">combined_normal_stress_pred_polar</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_rr</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_thetatheta</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_zz</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+            <span class="n">combined_shear_stress_pred_polar</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_rtheta</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_thetaz</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_rz</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+    
+    <span class="k">if</span> <span class="n">analytical_solution</span><span class="p">:</span>
+        <span class="n">u_analy</span><span class="p">,</span> <span class="n">v_analy</span><span class="p">,</span> <span class="n">w_analy</span><span class="p">,</span> <span class="n">sigma_xx_analy</span><span class="p">,</span> <span class="n">sigma_yy_analy</span><span class="p">,</span> <span class="n">sigma_zz_analy</span><span class="p">,</span> <span class="n">sigma_xy_analy</span><span class="p">,</span> <span class="n">sigma_yz_analy</span><span class="p">,</span> <span class="n">sigma_xz_analy</span> <span class="o">=</span>  <span class="n">analytical_solution</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>    
+        
+        <span class="n">combined_disp_true</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">u_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">v_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">w_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+        <span class="n">combined_normal_stress_true</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_xx_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_yy_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_zz_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+        <span class="n">combined_shear_stress_true</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_xy_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_yz_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_xz_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+        
+        <span class="n">error_disp_x</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">u_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">u_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">error_disp_y</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">v_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">v_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">error_disp_z</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">w_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">w_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">combined_error_disp</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">error_disp_x</span><span class="p">,</span> <span class="n">error_disp_y</span><span class="p">,</span> <span class="n">error_disp_z</span><span class="p">)))</span>
+
+        <span class="n">error_stress_xx</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xx_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma_xx_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">error_stress_yy</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_yy_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma_yy_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">error_stress_zz</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xy_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma_zz_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">combined_error_normal_stress</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">error_stress_xx</span><span class="p">,</span> <span class="n">error_stress_yy</span><span class="p">,</span> <span class="n">error_stress_zz</span><span class="p">)))</span>
+        
+        <span class="n">error_stress_xy</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xy_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma_xy_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">error_stress_yz</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_yz_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma_yz_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">error_stress_xz</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xz_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma_xz_analy</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">combined_error_shear_stress</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">error_stress_xy</span><span class="p">,</span> <span class="n">error_stress_yz</span><span class="p">,</span> <span class="n">error_stress_xz</span><span class="p">)))</span>  
+        
+    <span class="n">combined_disp_pred</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">u_pred</span><span class="p">,</span> <span class="n">v_pred</span><span class="p">,</span> <span class="n">w_pred</span><span class="p">)))</span>
+    <span class="n">combined_normal_stress_pred</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_xx_pred</span><span class="p">,</span> <span class="n">sigma_yy_pred</span><span class="p">,</span> <span class="n">sigma_zz_pred</span><span class="p">)))</span> 
+    <span class="n">combined_shear_stress_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_xy_pred</span><span class="p">,</span> <span class="n">sigma_yz_pred</span><span class="p">,</span> <span class="n">sigma_xz_pred</span><span class="p">))</span>
+    <span class="c1">#combined_stress_pred = tuple(np.vstack((sigma_xx_pred, sigma_yy_pred, sigma_zz_pred, sigma_xy_pred, sigma_yz_pred, sigma_xz_pred)))</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">save_folder_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">save_folder_path</span><span class="p">)):</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="n">file_name</span><span class="p">)</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The folder to save does not exist or not given! It should be an existing full path! Example is stored in </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span> 
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">save_folder_path</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">file_name</span>
+    
+    <span class="n">pointData</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pred_displacement&quot;</span> <span class="p">:</span> <span class="n">combined_disp_pred</span><span class="p">,</span>
+                <span class="s2">&quot;pred_normal_stress&quot;</span> <span class="p">:</span> <span class="n">combined_normal_stress_pred</span><span class="p">,</span>
+                <span class="s2">&quot;pred_stress_xy&quot;</span><span class="p">:</span> <span class="n">combined_shear_stress_pred</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="s2">&quot;pred_stress_yz&quot;</span><span class="p">:</span> <span class="n">combined_shear_stress_pred</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="s2">&quot;pred_stress_xz&quot;</span><span class="p">:</span> <span class="n">combined_shear_stress_pred</span><span class="p">[</span><span class="mi">2</span><span class="p">]}</span>
+    
+    <span class="k">if</span> <span class="n">polar_transformation</span><span class="p">:</span>
+        <span class="n">pointData</span><span class="p">[</span><span class="s2">&quot;pred_normal_stress_polar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">combined_normal_stress_pred_polar</span>
+        <span class="n">pointData</span><span class="p">[</span><span class="s2">&quot;pred_shear_stress_polar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">combined_shear_stress_pred_polar</span>
+    
+    <span class="k">if</span> <span class="n">analytical_solution</span><span class="p">:</span>
+        <span class="n">pointData</span><span class="p">[</span><span class="s2">&quot;true_displacement&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">combined_disp_true</span>
+        <span class="n">pointData</span><span class="p">[</span><span class="s2">&quot;true_normal_stress&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">combined_normal_stress_true</span>
+        <span class="n">pointData</span><span class="p">[</span><span class="s2">&quot;true_stress_xy&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">combined_shear_stress_true</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">pointData</span><span class="p">[</span><span class="s2">&quot;true_stress_yz&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">combined_shear_stress_true</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">pointData</span><span class="p">[</span><span class="s2">&quot;true_stress_xz&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">combined_shear_stress_true</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">pointData</span><span class="p">[</span><span class="s2">&quot;error_displacement&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">combined_error_disp</span>
+        <span class="n">pointData</span><span class="p">[</span><span class="s2">&quot;error_normal_stress&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">combined_error_normal_stress</span>
+        <span class="n">pointData</span><span class="p">[</span><span class="s2">&quot;error_stress_xy&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">combined_error_shear_stress</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">pointData</span><span class="p">[</span><span class="s2">&quot;error_stress_yz&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">combined_error_shear_stress</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">pointData</span><span class="p">[</span><span class="s2">&quot;error_stress_xz&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">combined_error_shear_stress</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        
+    <span class="n">x</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    
+    <span class="n">unstructuredGridToVTK</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">elements</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">offset</span><span class="p">,</span> 
+                            <span class="n">cell_types</span><span class="p">,</span> <span class="n">pointData</span> <span class="o">=</span> <span class="n">pointData</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="indent">
+<a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.postprocess.html#compsim_pinns.postprocess.elasticity_postprocessing.indent">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">indent</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper function to add indentation to the XML tree for pretty-printing.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">level</span> <span class="o">*</span> <span class="s2">&quot;  &quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">elem</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">text</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">elem</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="s2">&quot;  &quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">tail</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">tail</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">elem</span><span class="o">.</span><span class="n">tail</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="k">for</span> <span class="n">subelem</span> <span class="ow">in</span> <span class="n">elem</span><span class="p">:</span>
+            <span class="n">indent</span><span class="p">(</span><span class="n">subelem</span><span class="p">,</span> <span class="n">level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">subelem</span><span class="o">.</span><span class="n">tail</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">subelem</span><span class="o">.</span><span class="n">tail</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">subelem</span><span class="o">.</span><span class="n">tail</span> <span class="o">=</span> <span class="n">i</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">level</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">tail</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">elem</span><span class="o">.</span><span class="n">tail</span><span class="o">.</span><span class="n">strip</span><span class="p">()):</span>
+            <span class="n">elem</span><span class="o">.</span><span class="n">tail</span> <span class="o">=</span> <span class="n">i</span></div>
+
+
+<div class="viewcode-block" id="create_vtk_collection_file">
+<a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.postprocess.html#compsim_pinns.postprocess.elasticity_postprocessing.create_vtk_collection_file">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_vtk_collection_file</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">base_filename</span><span class="p">,</span> <span class="n">output_filename</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Create a VTK collection file for `n` timesteps.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : int</span>
+<span class="sd">        Number of timesteps (or datasets) to be included in the file.</span>
+<span class="sd">    base_filename : str</span>
+<span class="sd">        Base name of the VTU files (e.g., &quot;Heat_2d_&quot;).</span>
+<span class="sd">    output_filename : str</span>
+<span class="sd">        Name of the output PVD file (default is &quot;Heat_2d_collection.pvd&quot;).</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c1"># Create the root element</span>
+    <span class="n">vtk_file</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="s1">&#39;VTKFile&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;Collection&quot;</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;0.1&quot;</span><span class="p">,</span> <span class="n">ByteOrder</span><span class="o">=</span><span class="s2">&quot;LittleEndian&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Create the Collection element</span>
+    <span class="n">collection</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">vtk_file</span><span class="p">,</span> <span class="s1">&#39;Collection&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Create individual DataSet elements for each timestep</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">timestep</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="n">file_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_filename</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">.vtu&quot;</span>
+        <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s1">&#39;DataSet&#39;</span><span class="p">,</span> <span class="n">timestep</span><span class="o">=</span><span class="n">timestep</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">part</span><span class="o">=</span><span class="s2">&quot;0&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">file_name</span><span class="p">)</span>
+
+    <span class="c1"># Indent the XML for pretty printing</span>
+    <span class="n">indent</span><span class="p">(</span><span class="n">vtk_file</span><span class="p">)</span>
+
+    <span class="c1"># Create the tree structure</span>
+    <span class="n">tree</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">ElementTree</span><span class="p">(</span><span class="n">vtk_file</span><span class="p">)</span>
+
+    <span class="c1"># Save the XML to a file</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_filename</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">tree</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">,</span> <span class="n">xml_declaration</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File &#39;</span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">&#39; created successfully.&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="solutionFieldOnMeshToVtkSpaceTime">
+<a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.postprocess.html#compsim_pinns.postprocess.elasticity_postprocessing.solutionFieldOnMeshToVtkSpaceTime">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">solutionFieldOnMeshToVtkSpaceTime</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> 
+                                    <span class="n">model</span><span class="p">,</span>
+                                    <span class="n">time_interval</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                                    <span class="n">time_steps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> 
+                                    <span class="n">save_folder_path</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                    <span class="n">file_name</span> <span class="o">=</span> <span class="s2">&quot;Spacetime_results&quot;</span><span class="p">,</span>
+                                    <span class="n">analytical_solution</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                    <span class="n">polar_transformation</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Creates the vtu files and pvd based on geom and model for 2D and 3D elastodynamics.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geom: object</span>
+<span class="sd">        The geometry object </span>
+<span class="sd">    model: object</span>
+<span class="sd">        The trained model</span>
+<span class="sd">    save_folder_path: str</span>
+<span class="sd">        The path to the folder for storing the results</span>
+<span class="sd">    file_path: str:</span>
+<span class="sd">        The full file path to store the results</span>
+<span class="sd">    analytical_solution: function, </span>
+<span class="sd">        Analytical solution for displacements and stresses: Order u_x, u_y, sigma_xx, sigma_yy, sigma_xy</span>
+<span class="sd">    polar_transformation: str</span>
+<span class="sd">        Coordinate system for polar transformation: spherical or cylindrical</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="n">X</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">cell_types</span><span class="p">,</span> <span class="n">elements</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">get_mesh</span><span class="p">()</span>
+
+    <span class="n">time_element</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">time_interval</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">time_interval</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">time_steps</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="p">(</span><span class="n">save_folder_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">save_folder_path</span><span class="p">)):</span>
+            <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="n">file_name</span><span class="p">)</span>
+            <span class="n">save_folder_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The folder to save does not exist or not given! It should be an existing full path! Example is stored in </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span> 
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">save_folder_path</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">file_name</span>
+    
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">current_time</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">time_element</span><span class="p">):</span>
+        
+        <span class="n">current_file_path</span> <span class="o">=</span> <span class="n">file_path</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="n">X_spacetime</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">X</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="mi">1</span><span class="p">],</span> <span class="n">current_time</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">np</span><span class="p">))))</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_spacetime</span><span class="p">)</span>
+        
+        <span class="n">problem_dimension</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="k">if</span> <span class="n">problem_dimension</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># .tolist() is applied to remove datatype</span>
+            <span class="n">u_pred</span><span class="p">,</span> <span class="n">v_pred</span><span class="p">,</span> <span class="n">w_pred</span> <span class="o">=</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># displacements</span>
+            <span class="n">sigma_xx_pred</span><span class="p">,</span> <span class="n">sigma_yy_pred</span><span class="p">,</span> <span class="n">sigma_zz_pred</span> <span class="o">=</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># normal stresses</span>
+            <span class="n">sigma_xy_pred</span><span class="p">,</span> <span class="n">sigma_yz_pred</span><span class="p">,</span> <span class="n">sigma_xz_pred</span> <span class="o">=</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">7</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">8</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># shear stresses</span>
+            
+            <span class="k">if</span> <span class="n">polar_transformation</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">polar_transformation</span> <span class="o">==</span> <span class="s2">&quot;spherical&quot;</span><span class="p">:</span>
+                    <span class="n">sigma_rr</span><span class="p">,</span> <span class="n">sigma_thetatheta</span><span class="p">,</span> <span class="n">sigma_phiphi</span><span class="p">,</span> <span class="n">sigma_rtheta</span><span class="p">,</span> <span class="n">sigma_thetaphi</span><span class="p">,</span> <span class="n">sigma_rphi</span> <span class="o">=</span> <span class="n">polar_transformation_3d_spherical</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xx_pred</span><span class="p">),</span> 
+                                                                                                                        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_yy_pred</span><span class="p">),</span> 
+                                                                                                                        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_zz_pred</span><span class="p">),</span> 
+                                                                                                                        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xy_pred</span><span class="p">),</span> 
+                                                                                                                        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_yz_pred</span><span class="p">),</span> 
+                                                                                                                        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xz_pred</span><span class="p">),</span> 
+                                                                                                                        <span class="n">X</span><span class="p">)</span>
+                    <span class="n">combined_normal_stress_pred_polar</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_rr</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_thetatheta</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_phiphi</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+                    <span class="n">combined_shear_stress_pred_polar</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_rtheta</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_thetaphi</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_rphi</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>      
+                <span class="k">elif</span> <span class="n">polar_transformation</span> <span class="o">==</span> <span class="s2">&quot;cylindrical&quot;</span><span class="p">:</span>
+                    <span class="n">sigma_rr</span><span class="p">,</span> <span class="n">sigma_thetatheta</span><span class="p">,</span> <span class="n">sigma_zz</span><span class="p">,</span> <span class="n">sigma_rtheta</span><span class="p">,</span> <span class="n">sigma_thetaz</span><span class="p">,</span> <span class="n">sigma_rz</span> <span class="o">=</span> <span class="n">polar_transformation_3d_cylindrical</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xx_pred</span><span class="p">),</span> 
+                                                                                                                        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_yy_pred</span><span class="p">),</span> 
+                                                                                                                        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_zz_pred</span><span class="p">),</span> 
+                                                                                                                        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xy_pred</span><span class="p">),</span> 
+                                                                                                                        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_yz_pred</span><span class="p">),</span> 
+                                                                                                                        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xz_pred</span><span class="p">),</span> 
+                                                                                                                        <span class="n">X</span><span class="p">)</span>
+                
+                    <span class="n">combined_normal_stress_pred_polar</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_rr</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_thetatheta</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_zz</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+                    <span class="n">combined_shear_stress_pred_polar</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_rtheta</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_thetaz</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_rz</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+                
+            <span class="n">combined_disp_pred</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">u_pred</span><span class="p">,</span> <span class="n">v_pred</span><span class="p">,</span> <span class="n">w_pred</span><span class="p">)))</span>
+            <span class="n">combined_normal_stress_pred</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_xx_pred</span><span class="p">,</span> <span class="n">sigma_yy_pred</span><span class="p">,</span> <span class="n">sigma_zz_pred</span><span class="p">)))</span> 
+            <span class="n">combined_shear_stress_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_xy_pred</span><span class="p">,</span> <span class="n">sigma_yz_pred</span><span class="p">,</span> <span class="n">sigma_xz_pred</span><span class="p">))</span>
+            <span class="c1">#combined_stress_pred = tuple(np.vstack((sigma_xx_pred, sigma_yy_pred, sigma_zz_pred, sigma_xy_pred, sigma_yz_pred, sigma_xz_pred)))</span>
+
+            <span class="n">x</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">polar_transformation</span><span class="p">:</span>
+                <span class="n">unstructuredGridToVTK</span><span class="p">(</span><span class="n">current_file_path</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">elements</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">offset</span><span class="p">,</span> 
+                                    <span class="n">cell_types</span><span class="p">,</span> <span class="n">pointData</span> <span class="o">=</span> <span class="p">{</span> <span class="s2">&quot;pred_displacement&quot;</span> <span class="p">:</span> <span class="n">combined_disp_pred</span><span class="p">,</span>
+                                                            <span class="s2">&quot;pred_normal_stress&quot;</span> <span class="p">:</span> <span class="n">combined_normal_stress_pred</span><span class="p">,</span>
+                                                            <span class="s2">&quot;pred_stress_xy&quot;</span><span class="p">:</span> <span class="n">combined_shear_stress_pred</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                                            <span class="s2">&quot;pred_stress_yz&quot;</span><span class="p">:</span> <span class="n">combined_shear_stress_pred</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                                            <span class="s2">&quot;pred_stress_xz&quot;</span><span class="p">:</span> <span class="n">combined_shear_stress_pred</span><span class="p">[</span><span class="mi">2</span><span class="p">]})</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">unstructuredGridToVTK</span><span class="p">(</span><span class="n">current_file_path</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">elements</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">offset</span><span class="p">,</span> 
+                                    <span class="n">cell_types</span><span class="p">,</span> <span class="n">pointData</span> <span class="o">=</span> <span class="p">{</span> <span class="s2">&quot;pred_displacement&quot;</span> <span class="p">:</span> <span class="n">combined_disp_pred</span><span class="p">,</span>
+                                                            <span class="s2">&quot;pred_normal_stress&quot;</span> <span class="p">:</span> <span class="n">combined_normal_stress_pred</span><span class="p">,</span>
+                                                            <span class="s2">&quot;pred_stress_xy&quot;</span><span class="p">:</span> <span class="n">combined_shear_stress_pred</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                                            <span class="s2">&quot;pred_stress_yz&quot;</span><span class="p">:</span> <span class="n">combined_shear_stress_pred</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                                            <span class="s2">&quot;pred_stress_xz&quot;</span><span class="p">:</span> <span class="n">combined_shear_stress_pred</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                                                            <span class="s2">&quot;pred_normal_stress_polar&quot;</span> <span class="p">:</span> <span class="n">combined_normal_stress_pred_polar</span><span class="p">,</span>
+                                                            <span class="s2">&quot;pred_shear_stress_polar&quot;</span> <span class="p">:</span> <span class="n">combined_shear_stress_pred_polar</span><span class="p">})</span>
+        <span class="k">elif</span> <span class="n">problem_dimension</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="c1">#.tolist() is applied to remove datatype</span>
+            <span class="n">u_pred</span><span class="p">,</span> <span class="n">v_pred</span> <span class="o">=</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># displacements</span>
+            <span class="n">w_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">output</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">sigma_xx_pred</span><span class="p">,</span> <span class="n">sigma_yy_pred</span><span class="p">,</span> <span class="n">sigma_xy_pred</span> <span class="o">=</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># stresses</span>
+                
+            <span class="n">combined_disp_pred</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">u_pred</span><span class="p">,</span> <span class="n">v_pred</span><span class="p">,</span> <span class="n">w_pred</span><span class="p">)))</span>
+            <span class="n">combined_stress_pred</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_xx_pred</span><span class="p">,</span> <span class="n">sigma_yy_pred</span><span class="p">,</span> <span class="n">sigma_xy_pred</span><span class="p">)))</span>
+            
+            <span class="k">if</span> <span class="n">analytical_solution</span><span class="p">:</span>
+                <span class="n">u_analytical</span><span class="p">,</span> <span class="n">v_analytical</span><span class="p">,</span> <span class="n">sigma_xx_analytical</span><span class="p">,</span> <span class="n">sigma_yy_analytical</span><span class="p">,</span> <span class="n">sigma_xy_analytical</span> <span class="o">=</span> <span class="n">analytical_solution</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">t</span><span class="o">=</span><span class="n">current_time</span><span class="p">)</span>
+                
+                <span class="n">combined_disp_true</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">u_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">v_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">u_analytical</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+                <span class="n">combined_stress_true</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_xx_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_yy_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_xy_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+                
+                <span class="n">error_disp_x</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">u_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">u_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="n">error_disp_y</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">v_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">v_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="n">combined_error_disp</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">error_disp_x</span><span class="p">,</span> <span class="n">error_disp_y</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">u_analytical</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+
+                <span class="n">error_stress_x</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xx_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma_xx_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="n">error_stress_y</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_yy_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma_yy_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="n">error_stress_xy</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xy_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma_xy_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="n">combined_error_stress</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">error_stress_x</span><span class="p">,</span> <span class="n">error_stress_y</span><span class="p">,</span><span class="n">error_stress_xy</span><span class="p">)))</span>
+
+            <span class="n">x</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">analytical_solution</span><span class="p">:</span>
+                <span class="n">unstructuredGridToVTK</span><span class="p">(</span><span class="n">current_file_path</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">elements</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">offset</span><span class="p">,</span> 
+                                    <span class="n">cell_types</span><span class="p">,</span> <span class="n">pointData</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pred_displacement&quot;</span> <span class="p">:</span> <span class="n">combined_disp_pred</span><span class="p">,</span>
+                                                            <span class="s2">&quot;pred_stress&quot;</span> <span class="p">:</span> <span class="n">combined_stress_pred</span><span class="p">,</span>
+                                                            <span class="s2">&quot;true_displacement&quot;</span> <span class="p">:</span> <span class="n">combined_disp_true</span><span class="p">,</span>
+                                                            <span class="s2">&quot;true_stress&quot;</span> <span class="p">:</span> <span class="n">combined_stress_true</span><span class="p">,</span>
+                                                            <span class="s2">&quot;error_displacement&quot;</span><span class="p">:</span> <span class="n">combined_error_disp</span><span class="p">,</span>
+                                                            <span class="s2">&quot;error_stress&quot;</span><span class="p">:</span> <span class="n">combined_error_stress</span><span class="p">,}</span>
+                                                            <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">unstructuredGridToVTK</span><span class="p">(</span><span class="n">current_file_path</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">elements</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">offset</span><span class="p">,</span> 
+                                    <span class="n">cell_types</span><span class="p">,</span> <span class="n">pointData</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pred_displacement&quot;</span> <span class="p">:</span> <span class="n">combined_disp_pred</span><span class="p">,</span>
+                                                            <span class="s2">&quot;pred_stress&quot;</span> <span class="p">:</span> <span class="n">combined_stress_pred</span><span class="p">}</span>
+                                                            <span class="p">)</span>
+            
+    <span class="n">output_file_pvd</span> <span class="o">=</span>  <span class="n">save_folder_path</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">file_name</span> <span class="o">+</span> <span class="s2">&quot;.pvd&quot;</span>   
+    <span class="n">create_vtk_collection_file</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">time_steps</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> 
+                                <span class="n">base_filename</span><span class="o">=</span><span class="n">file_name</span><span class="p">,</span>
+                                <span class="n">output_filename</span><span class="o">=</span><span class="n">output_file_pvd</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="solutionFieldOnMeshToVtkSpaceTimeBackuP">
+<a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.postprocess.html#compsim_pinns.postprocess.elasticity_postprocessing.solutionFieldOnMeshToVtkSpaceTimeBackuP">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">solutionFieldOnMeshToVtkSpaceTimeBackuP</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> 
+                                    <span class="n">model</span><span class="p">,</span>
+                                    <span class="n">time_interval</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                                    <span class="n">time_steps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> 
+                                    <span class="n">save_folder_path</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                    <span class="n">file_name</span> <span class="o">=</span> <span class="s2">&quot;2D_spacetime&quot;</span><span class="p">,</span>
+                                    <span class="n">analytical_solution</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Creates the vtu files and pvd based on geom and model for 2D elastoplasticity</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geom: object</span>
+<span class="sd">        The geometry object </span>
+<span class="sd">    model: object</span>
+<span class="sd">        The trained model</span>
+<span class="sd">    save_folder_path: str</span>
+<span class="sd">        The path to the folder for storing the results</span>
+<span class="sd">    file_path: str:</span>
+<span class="sd">        The full file path to store the results</span>
+<span class="sd">    analytical_solution: function, </span>
+<span class="sd">        Analytical solution for displacements and stresses: Order u_x, u_y, sigma_xx, sigma_yy, sigma_xy</span>
+<span class="sd">    polar_transformation: str</span>
+<span class="sd">        Coordinate system for polar transformation: spherical or cylindrical</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="n">X</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">cell_types</span><span class="p">,</span> <span class="n">elements</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">get_mesh</span><span class="p">()</span>
+    
+    <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="bp">NotImplemented</span><span class="p">(</span><span class="s2">&quot;The method for the problems other than 2D not implemented!&quot;</span><span class="p">)</span>
+
+    <span class="n">time_element</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">time_interval</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">time_interval</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">time_steps</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="p">(</span><span class="n">save_folder_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">save_folder_path</span><span class="p">)):</span>
+            <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="n">file_name</span><span class="p">)</span>
+            <span class="n">save_folder_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The folder to save does not exist or not given! It should be an existing full path! Example is stored in </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span> 
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">save_folder_path</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">file_name</span>
+    
+    <span class="k">for</span> <span class="n">time_step</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">time_steps</span><span class="p">):</span>
+        
+        <span class="n">current_file_path</span> <span class="o">=</span> <span class="n">file_path</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">time_step</span><span class="p">)</span>
+        <span class="n">current_time</span> <span class="o">=</span> <span class="n">time_element</span><span class="p">[</span><span class="n">time_step</span><span class="p">]</span>
+        <span class="n">X_spacetime</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">X</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="mi">1</span><span class="p">],</span> <span class="n">current_time</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">np</span><span class="p">))))</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_spacetime</span><span class="p">)</span>
+
+        <span class="c1"># .tolist() is applied to remove datatype</span>
+        <span class="n">u_pred</span><span class="p">,</span> <span class="n">v_pred</span> <span class="o">=</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># displacements</span>
+        <span class="n">w_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">output</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">sigma_xx_pred</span><span class="p">,</span> <span class="n">sigma_yy_pred</span><span class="p">,</span> <span class="n">sigma_xy_pred</span> <span class="o">=</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">output</span><span class="p">[:,</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># stresses</span>
+            
+        <span class="n">combined_disp_pred</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">u_pred</span><span class="p">,</span> <span class="n">v_pred</span><span class="p">,</span> <span class="n">w_pred</span><span class="p">)))</span>
+        <span class="n">combined_stress_pred</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_xx_pred</span><span class="p">,</span> <span class="n">sigma_yy_pred</span><span class="p">,</span> <span class="n">sigma_xy_pred</span><span class="p">)))</span>
+        
+        <span class="k">if</span> <span class="n">analytical_solution</span><span class="p">:</span>
+            <span class="n">u_analytical</span><span class="p">,</span> <span class="n">v_analytical</span><span class="p">,</span> <span class="n">sigma_xx_analytical</span><span class="p">,</span> <span class="n">sigma_yy_analytical</span><span class="p">,</span> <span class="n">sigma_xy_analytical</span> <span class="o">=</span> <span class="n">analytical_solution</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">t</span><span class="o">=</span><span class="n">current_time</span><span class="p">)</span>
+            
+            <span class="n">combined_disp_true</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">u_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">v_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">u_analytical</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+            <span class="n">combined_stress_true</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">sigma_xx_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_yy_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">sigma_xy_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+            
+            <span class="n">error_disp_x</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">u_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">u_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">error_disp_y</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">v_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">v_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">combined_error_disp</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">error_disp_x</span><span class="p">,</span> <span class="n">error_disp_y</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">u_analytical</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">())))</span>
+
+            <span class="n">error_stress_x</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xx_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma_xx_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">error_stress_y</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_yy_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma_yy_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">error_stress_xy</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sigma_xy_pred</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma_xy_analytical</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">combined_error_stress</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">error_stress_x</span><span class="p">,</span> <span class="n">error_stress_y</span><span class="p">,</span><span class="n">error_stress_xy</span><span class="p">)))</span>
+
+        <span class="n">x</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">analytical_solution</span><span class="p">:</span>
+            <span class="n">unstructuredGridToVTK</span><span class="p">(</span><span class="n">current_file_path</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">elements</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">offset</span><span class="p">,</span> 
+                                <span class="n">cell_types</span><span class="p">,</span> <span class="n">pointData</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pred_displacement&quot;</span> <span class="p">:</span> <span class="n">combined_disp_pred</span><span class="p">,</span>
+                                                        <span class="s2">&quot;pred_stress&quot;</span> <span class="p">:</span> <span class="n">combined_stress_pred</span><span class="p">,</span>
+                                                        <span class="s2">&quot;true_displacement&quot;</span> <span class="p">:</span> <span class="n">combined_disp_true</span><span class="p">,</span>
+                                                        <span class="s2">&quot;true_stress&quot;</span> <span class="p">:</span> <span class="n">combined_stress_true</span><span class="p">,</span>
+                                                        <span class="s2">&quot;error_displacement&quot;</span><span class="p">:</span> <span class="n">combined_error_disp</span><span class="p">,</span>
+                                                        <span class="s2">&quot;error_stress&quot;</span><span class="p">:</span> <span class="n">combined_error_stress</span><span class="p">,}</span>
+                                                        <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">unstructuredGridToVTK</span><span class="p">(</span><span class="n">current_file_path</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">elements</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">offset</span><span class="p">,</span> 
+                                <span class="n">cell_types</span><span class="p">,</span> <span class="n">pointData</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pred_displacement&quot;</span> <span class="p">:</span> <span class="n">combined_disp_pred</span><span class="p">,</span>
+                                                        <span class="s2">&quot;pred_stress&quot;</span> <span class="p">:</span> <span class="n">combined_stress_pred</span><span class="p">}</span>
+                                                        <span class="p">)</span>
+    <span class="n">output_file_pvd</span> <span class="o">=</span>  <span class="n">save_folder_path</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">file_name</span> <span class="o">+</span> <span class="s2">&quot;.pvd&quot;</span>   
+    <span class="n">create_vtk_collection_file</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">time_steps</span><span class="p">,</span> 
+                                <span class="n">base_filename</span><span class="o">=</span><span class="n">file_name</span><span class="p">,</span>
+                                <span class="n">output_filename</span><span class="o">=</span><span class="n">output_file_pvd</span><span class="p">)</span>        </div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">CompSim-PINN</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=imcs-compsim&repo=pinns_for_comp_mech&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/compsim_pinns/modules.html">compsim_pinns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/tests/modules.html">tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/examples/modules.html">examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Institute for Mathematics and Computer-Based Simulation (IMCS).
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/imcs-compsim/pinns_for_comp_mech" class="github">
+        <img src="../../../_static/github-banner.svg" alt="Fork me on GitHub" class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

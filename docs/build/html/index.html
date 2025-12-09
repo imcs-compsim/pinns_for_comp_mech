@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Welcome to the CompSim_PINNs documentation ! &#8212; CompSim-PINN 2025.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=14229d9d"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="compsim_pinns" href="api/compsim_pinns/modules.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="welcome-to-the-compsim-pinns-documentation">
+<h1>Welcome to the <strong>CompSim_PINNs</strong> documentation !<a class="headerlink" href="#welcome-to-the-compsim-pinns-documentation" title="Link to this heading">¶</a></h1>
+<p><strong>CompSim_PINNs</strong> is a Python framework origniated and maintained by the <a class="reference external" href="https://www.unibw.de/imcs-en">Institute for Mathematics and Computer-Based Simulation (IMCS)</a> at the <a class="reference external" href="https://www.unibw.de/home-en">University of the Bundeswehr Munich</a>.</p>
+<p>This framework implements the functionalities of <abbr title="Physics-Informed Neural Networks">PINNs</abbr> using the <a class="reference external" href="https://deepxde.readthedocs.io/en/latest/">DeepXDE</a> package for solid and contact mechanics.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This framework is under active development.</p>
+</div>
+<section id="physics-informed-neural-networks-for-computational-mechanics-compsim-pinns">
+<h2>Physics-Informed Neural Networks for Computational Mechanics (compsim_pinns)<a class="headerlink" href="#physics-informed-neural-networks-for-computational-mechanics-compsim-pinns" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> ██████╗ ██████╗ ███╗   ███╗██████╗ ███████╗██╗███╗   ███╗        ██████╗ ██╗███╗   ██╗███╗   ██╗███████╗
+██╔════╝██╔═══██╗████╗ ████║██╔══██╗██╔════╝██║████╗ ████║        ██╔══██╗██║████╗  ██║████╗  ██║██╔════╝
+██║     ██║   ██║██╔████╔██║██████╔╝███████╗██║██╔████╔██║        ██████╔╝██║██╔██╗ ██║██╔██╗ ██║███████╗
+██║     ██║   ██║██║╚██╔╝██║██╔═══╝ ╚════██║██║██║╚██╔╝██║        ██╔═══╝ ██║██║╚██╗██║██║╚██╗██║╚════██║
+╚██████╗╚██████╔╝██║ ╚═╝ ██║██║     ███████║██║██║ ╚═╝ ██║███████╗██║     ██║██║ ╚████║██║ ╚████║███████║
+ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚══════╝╚═╝╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝                                   
+</pre></div>
+</div>
+<hr class="docutils" />
+<section id="a-multipurpose-python-framework-for-computational-mechanics-based-on-physics-informed-neural-networks-pinns">
+<h3>A Multipurpose Python Framework for Computational Mechanics
+based on Physics-Informed Neural Networks (PINNs)<a class="headerlink" href="#a-multipurpose-python-framework-for-computational-mechanics-based-on-physics-informed-neural-networks-pinns" title="Link to this heading">¶</a></h3>
+<section id="included-examples">
+<h4>Included examples<a class="headerlink" href="#included-examples" title="Link to this heading">¶</a></h4>
+<hr class="docutils" />
+<ul class="simple">
+<li><p>Euler-Bernoulli beams</p>
+<ul>
+<li><p>Dynamic beam equation</p></li>
+<li><p>Static beam equation</p></li>
+</ul>
+</li>
+<li><p>Heat equation problems</p></li>
+<li><p>Linear elasticity</p>
+<ul>
+<li><p>Four-point bending test</p></li>
+<li><p>Forward and inverse Lamé problem</p></li>
+<li><p>Solid beam</p></li>
+<li><p>3D hollow sphere subjected to internal pressure</p></li>
+<li><p>4D problem: 3D hollow sphere under time-dependent loading</p></li>
+</ul>
+</li>
+<li><p>Contact problems</p>
+<ul>
+<li><p>2D contact between an elastic block and a rigid surface</p></li>
+<li><p>2D Hertzian contact problem</p></li>
+<li><p>3D single contact patch test</p></li>
+<li><p>3D cylindrical contact problem</p></li>
+</ul>
+</li>
+<li><p>Large deformation (Deep-energy methods)</p>
+<ul>
+<li><p>Solid mechanics</p>
+<ul>
+<li><p>Bending beam under shear load (2D)</p></li>
+<li><p>Lamé problem</p></li>
+<li><p>3D torsion of a square prism</p></li>
+</ul>
+</li>
+<li><p>Contact mechanics (single-step and incremental loading approaches)</p>
+<ul>
+<li><p>Single patch test (2D and 3D)</p></li>
+<li><p>2D Hertzian contact problem</p></li>
+<li><p>2D Contact ring example (2D)</p></li>
+<li><p>3D spherical contact problem</p></li>
+<li><p>3D torus contact instability problem</p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+<hr class="docutils" />
+<section id="installation-of-the-deepxde-package-and-required-libraries">
+<h3>Installation of the DeepXDE package and required libraries<a class="headerlink" href="#installation-of-the-deepxde-package-and-required-libraries" title="Link to this heading">¶</a></h3>
+<p>This framework relies on the <code class="docutils literal notranslate"><span class="pre">deepxde</span></code> package for training PINNs.</p>
+<blockquote>
+<div><p><strong>Note</strong>: If you want to be able to debug your PINN training code and step
+into functions provided by <code class="docutils literal notranslate"><span class="pre">deepxde</span></code>, you might want to skip the following
+instructions and instead install it from source in editable mode.
+Read <a class="reference external" href="https://deepxde.readthedocs.io/en/latest/user/installation.html">their website</a>
+for instructions on how to do that.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">deepxde</span></code> needs one of the following packages for the backend-calculation.</p>
+<ul class="simple">
+<li><p>PyTorch (preferred backend)</p></li>
+<li><p>TensorFlow (not supported by all examples, remaining support might be dropped in the future)</p></li>
+</ul>
+<p>You can specify your backend of choice when seting up this framework by running</p>
+<ul class="simple">
+<li><p>for Tensorflow</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[tf]&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>for Pytorch</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[torch]&quot;</span>
+</pre></div>
+</div>
+<p>in the top-level repository folder after cloning.</p>
+<p>If you additionally want to install packages for development (i.e., for running unittests or buidling the documentation), you can do so by additionally selecting the <code class="docutils literal notranslate"><span class="pre">dev</span></code> configuration, e.g.,</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[tf,dev]&quot;</span>
+</pre></div>
+</div>
+<section id="setup-with-conda">
+<h4>Setup with <code class="docutils literal notranslate"><span class="pre">conda</span></code><a class="headerlink" href="#setup-with-conda" title="Link to this heading">¶</a></h4>
+<p>This repository also comes with an <code class="docutils literal notranslate"><span class="pre">env.yaml</span></code> file to directly create a <code class="docutils literal notranslate"><span class="pre">conda</span></code> environment with all dependencies.
+The provided <code class="docutils literal notranslate"><span class="pre">conda</span></code> environment is configured to include the development dependencies and use <code class="docutils literal notranslate"><span class="pre">tensorflow</span></code> as backend for PINN training.
+Here we leverage an installation via <code class="docutils literal notranslate"><span class="pre">conda-forge</span></code> to be able to install specific versions that are tailored to the available hardware.
+To create an environment, run</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>env.yaml
+</pre></div>
+</div>
+<p>in the top-level repository folder after cloning.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="testing">
+<h3>Testing<a class="headerlink" href="#testing" title="Link to this heading">¶</a></h3>
+<p>This repo has <code class="docutils literal notranslate"><span class="pre">integration_tests</span></code> (testing for examples/frameworks) and <code class="docutils literal notranslate"><span class="pre">unittests</span></code> (testing for specific functions).
+Testing is done by <code class="docutils literal notranslate"><span class="pre">pytest</span></code> and tests are configured in the <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> file.</p>
+<p>To run tests, type on the terminal:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pytest
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="cluster-setup">
+<h3>Cluster setup<a class="headerlink" href="#cluster-setup" title="Link to this heading">¶</a></h3>
+<p>For cluster, we should use <code class="docutils literal notranslate"><span class="pre">conda</span></code> since we had issues in terms of package installation particularly the package <code class="docutils literal notranslate"><span class="pre">gmsh</span></code>.  Enable pinn repo to run on cluster:</p>
+<ol class="arabic">
+<li><p>Install miniconda https://docs.conda.io/en/latest/miniconda.html :</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>wget<span class="w"> </span>https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+./Miniconda3-latest-Linux-x86_64.sh
+</pre></div>
+</div>
+</li>
+<li><p>Create the virtual environment using <code class="docutils literal notranslate"><span class="pre">env.yaml</span></code> which includes all necessary packages.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>env.yaml
+</pre></div>
+</div>
+</li>
+<li><p>Activate the generated venv (<code class="docutils literal notranslate"><span class="pre">compsim_pinns</span></code>)</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>activate<span class="w"> </span>compsim_pinns
+</pre></div>
+</div>
+</li>
+<li><p>To test cluster, submit a job on a compute node. This is achieved through <code class="docutils literal notranslate"><span class="pre">test_cluster.sh</span></code> (full path: pinnswithdxde/tests/integration_tests/cluster/test_cluster.sh).</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>sbatch<span class="w"> </span><span class="nv">$HOME</span>/pinnswithdxde/tests/integration_tests/cluster/test_cluster.sh
+</pre></div>
+</div>
+<p>Number of threads is set in <code class="docutils literal notranslate"><span class="pre">test_cluster.sh</span></code> file. TensorFlow needs to be <code class="docutils literal notranslate"><span class="pre">intra_op_parallelism_threads</span></code> and <code class="docutils literal notranslate"><span class="pre">inter_op_parallelism_threads</span></code> parameters set. Thus, we give  <code class="docutils literal notranslate"><span class="pre">tf_cluster_settings.py</span></code> to the slurm job via sbatch. This enables TensorFlow to set OMP parameters that defined in <code class="docutils literal notranslate"><span class="pre">test_cluster.sh</span></code>.</p>
+</li>
+</ol>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">NOTE</span></code>: Do not forget to adopt the inside of the <code class="docutils literal notranslate"><span class="pre">test_cluster.sh</span></code> to specify the slurm options e.g., <code class="docutils literal notranslate"><span class="pre">--mail-user</span></code>. But the default one should work without error.</p>
+</div></blockquote>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">NOTE</span></code>: Always be sure that you activated venv <code class="docutils literal notranslate"><span class="pre">compsim_pinns</span></code> (step 3) before <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> any slurm script. This includes other scripts you will run as well. The reason behind is that activating venv in <code class="docutils literal notranslate"><span class="pre">test_cluster.sh</span></code> needs the full path for the conda env <code class="docutils literal notranslate"><span class="pre">compsim_pinns</span></code> and it gives some <strong>init</strong> error if the full path is used.</p>
+</div></blockquote>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">NOTE</span></code>: For conda commands: A conda <a class="reference external" href="https://docs.conda.io/projects/conda/en/latest/_downloads/843d9e0198f2a193a3484886fa28163c/conda-cheatsheet.pdf">cheatsheet</a> can be very useful.</p>
+</div></blockquote>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">NOTE</span></code>: Some usefull information regarding <a class="reference external" href="https://github.com/PrincetonUniversity/slurm_mnist/tree/master/cpu_only#readme">CPU</a> on cluster.</p>
+</div></blockquote>
+</section>
+<hr class="docutils" />
+<section id="how-to-use-docker">
+<h3>How to use docker?<a class="headerlink" href="#how-to-use-docker" title="Link to this heading">¶</a></h3>
+<p>First, build the docker container using <code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code> and type the following command on the terminal</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>imcs-pinn<span class="w"> </span>-f<span class="w"> </span>docker/Dockerfile<span class="w"> </span>.
+</pre></div>
+</div>
+<p>Then, run the docker container by typing the following command on the terminal</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>run<span class="w"> </span>imcs-pinn
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">NOTE</span></code>: The command above will automatically run the default commands defined in Dockerfile.</p>
+<p>When you want to open an interactive shell inside the container or interact with the process manually, for instance for debugging, then run</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>imcs-pinn<span class="w"> </span>bash
+</pre></div>
+</div>
+<p>Run, a specific example</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>imcs-pinn<span class="w"> </span>conda<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>compsim_pinns<span class="w"> </span>python<span class="w"> </span>examples/elasticity_3d/linear_elasticity/block_under_shear.py
+</pre></div>
+</div>
+</section>
+<section id="citing-compsim-pinns">
+<h3>Citing ‘compsim_pinns’<a class="headerlink" href="#citing-compsim-pinns" title="Link to this heading">¶</a></h3>
+<p>Whenever you use or mention ‘compsim_pinns’ in some sort of scientific document/publication/presentation, please cite the following publications. They are publicly avaliable at <a class="reference external" href="https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3">AMSES</a> and <a class="reference external" href="https://arxiv.org/abs/2412.09022">ArXiv</a>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nd">@article</span><span class="p">{</span><span class="n">sahin2024</span><span class="p">,</span>
+  <span class="n">title</span> <span class="o">=</span> <span class="p">{</span><span class="n">Solving</span> <span class="n">Forward</span> <span class="ow">and</span> <span class="n">Inverse</span> <span class="n">Problems</span> <span class="n">of</span> <span class="n">Contact</span> <span class="n">Mechanics</span> <span class="n">Using</span> <span class="n">Physics</span><span class="o">-</span><span class="n">Informed</span> <span class="n">Neural</span> <span class="n">Networks</span><span class="p">},</span>
+  <span class="n">author</span> <span class="o">=</span> <span class="p">{</span><span class="n">Sahin</span><span class="p">,</span> <span class="n">Tarik</span> <span class="ow">and</span> <span class="n">Von</span> <span class="n">Danwitz</span><span class="p">,</span> <span class="n">Max</span> <span class="ow">and</span> <span class="n">Popp</span><span class="p">,</span> <span class="n">Alexander</span><span class="p">},</span>
+  <span class="n">year</span> <span class="o">=</span> <span class="p">{</span><span class="mi">2024</span><span class="p">},</span>
+  <span class="n">journal</span> <span class="o">=</span> <span class="p">{</span><span class="n">Advanced</span> <span class="n">Modeling</span> <span class="ow">and</span> <span class="n">Simulation</span> <span class="ow">in</span> <span class="n">Engineering</span> <span class="n">Sciences</span><span class="p">},</span>
+  <span class="n">volume</span> <span class="o">=</span> <span class="p">{</span><span class="mi">11</span><span class="p">},</span>
+  <span class="n">number</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">},</span>
+  <span class="n">pages</span> <span class="o">=</span> <span class="p">{</span><span class="mi">11</span><span class="p">},</span>
+  <span class="n">issn</span> <span class="o">=</span> <span class="p">{</span><span class="mi">2213</span><span class="o">-</span><span class="mi">7467</span><span class="p">},</span>
+  <span class="n">doi</span> <span class="o">=</span> <span class="p">{</span><span class="mf">10.1186</span><span class="o">/</span><span class="n">s40323</span><span class="o">-</span><span class="mi">024</span><span class="o">-</span><span class="mi">00265</span><span class="o">-</span><span class="mi">3</span><span class="p">},</span>
+  <span class="n">date</span> <span class="o">=</span> <span class="p">{</span><span class="mi">2024</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">08</span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nd">@article</span><span class="p">{</span><span class="n">Sahin2024b</span><span class="p">,</span>
+  <span class="n">title</span><span class="o">=</span><span class="p">{</span><span class="n">Physics</span><span class="o">-</span><span class="n">Informed</span> <span class="n">Neural</span> <span class="n">Networks</span> <span class="k">for</span> <span class="n">Solving</span> <span class="n">Contact</span> <span class="n">Problems</span> <span class="ow">in</span> <span class="n">Three</span> <span class="n">Dimensions</span><span class="p">},</span>
+  <span class="n">author</span><span class="o">=</span><span class="p">{</span><span class="n">Sahin</span><span class="p">,</span> <span class="n">Tarik</span> <span class="ow">and</span> <span class="n">Wolff</span><span class="p">,</span> <span class="n">Daniel</span> <span class="ow">and</span> <span class="n">Popp</span><span class="p">,</span> <span class="n">Alexander</span><span class="p">},</span>
+  <span class="n">journal</span><span class="o">=</span><span class="p">{</span><span class="n">arXiv</span> <span class="n">preprint</span> <span class="n">arXiv</span><span class="p">:</span><span class="mf">2412.09022</span><span class="p">},</span>
+  <span class="n">year</span><span class="o">=</span><span class="p">{</span><span class="mi">2024</span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Paper results are obtained in hastag: c79d3f24023e36341385f10d728e5a93c925fad3</p>
+</section>
+</section>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/compsim_pinns/modules.html">compsim_pinns</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/compsim_pinns/compsim_pinns.html">compsim_pinns package</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/tests/modules.html">tests</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/examples/modules.html">examples</a><ul class="simple">
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">CompSim-PINN</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=imcs-compsim&repo=pinns_for_comp_mech&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/compsim_pinns/modules.html">compsim_pinns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/tests/modules.html">tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/examples/modules.html">examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="api/compsim_pinns/modules.html" title="next chapter">compsim_pinns</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Institute for Mathematics and Computer-Based Simulation (IMCS).
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/imcs-compsim/pinns_for_comp_mech" class="github">
+        <img src="_static/github-banner.svg" alt="Fork me on GitHub" class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
