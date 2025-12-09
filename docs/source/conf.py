@@ -24,6 +24,7 @@ extensions = [
     "sphinx.ext.napoleon",        # Google/NumPy style docstrings
     "sphinx.ext.autosummary",     # summary tables + stubs
     "sphinx.ext.viewcode",        # link to highlighted source
+    "sphinx.ext.intersphinx",     # link to other documentations
     "myst_parser",                # Markdown parser
 ]
 
@@ -33,6 +34,16 @@ napoleon_numpy_docstring = True
 
 templates_path = ['_templates']
 exclude_patterns = []
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "torch": ("https://pytorch.org/docs/stable/", None),
+    "tensorflow": (
+        "https://www.tensorflow.org/api_docs/python",
+        "https://github.com/GPflow/tensorflow-intersphinx/raw/master/tf2_py_objects.inv",
+    ),
+}
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

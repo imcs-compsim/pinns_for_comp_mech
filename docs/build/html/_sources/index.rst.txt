@@ -11,7 +11,7 @@ Welcome to the **CompSim_PINNs** documentation !
 This framework implements the functionalities of :abbr:`PINNs (Physics-Informed Neural Networks)` using the `DeepXDE <https://deepxde.readthedocs.io/en/latest/>`_ package for solid and contact mechanics.
 
 .. note::
-   This framework is under active development.
+   This framework and documentation are under active development.
 
 .. include:: ../../README.md
    :parser: myst_parser.sphinx_

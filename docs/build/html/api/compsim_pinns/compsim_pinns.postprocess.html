@@ -72,11 +72,11 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>x</strong> – The input data.</p></li>
 <li><p><strong>op</strong> – The operator with inputs (x, y).</p></li>
-<li><p><strong>period</strong> (<em>int</em>) – Interval (number of epochs) between checking values.</p></li>
+<li><p><strong>period</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Interval (number of epochs) between checking values.</p></li>
 <li><p><strong>filename</strong> (<em>string</em>) – Output the values to the file <cite>filename</cite>.
 The file is kept open to allow instances to be re-used.
 If <code class="docutils literal notranslate"><span class="pre">None</span></code>, output to the screen.</p></li>
-<li><p><strong>precision</strong> (<em>int</em>) – The precision of variables to display.</p></li>
+<li><p><strong>precision</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The precision of variables to display.</p></li>
 </ul>
 </dd>
 </dl>
@@ -97,9 +97,9 @@ If <code class="docutils literal notranslate"><span class="pre">None</span></cod
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>n</strong> (<em>int</em>) – Number of timesteps (or datasets) to be included in the file.</p></li>
-<li><p><strong>base_filename</strong> (<em>str</em>) – Base name of the VTU files (e.g., “<a href="#id1"><span class="problematic" id="id2">Heat_2d_</span></a>”).</p></li>
-<li><p><strong>output_filename</strong> (<em>str</em>) – Name of the output PVD file (default is “Heat_2d_collection.pvd”).</p></li>
+<li><p><strong>n</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Number of timesteps (or datasets) to be included in the file.</p></li>
+<li><p><strong>base_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Base name of the VTU files (e.g., “<a href="#id1"><span class="problematic" id="id2">Heat_2d_</span></a>”).</p></li>
+<li><p><strong>output_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name of the output PVD file (default is “Heat_2d_collection.pvd”).</p></li>
 </ul>
 </dd>
 </dl>
@@ -119,9 +119,9 @@ If <code class="docutils literal notranslate"><span class="pre">None</span></cod
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>geom</strong> (<em>Class object</em>) – contains the geometry object</p></li>
-<li><p><strong>n_boundary</strong> (<em>int</em>) – represents the number of points on boundary</p></li>
+<li><p><strong>n_boundary</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – represents the number of points on boundary</p></li>
 <li><p><strong>holes</strong> (<em>np.array</em>) – center location of the holes</p></li>
-<li><p><strong>max_mesh_area</strong> (<em>float</em>) – max area of elements</p></li>
+<li><p><strong>max_mesh_area</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – max area of elements</p></li>
 <li><p><strong>boundary_distribution</strong> – the distribution of points on boundary, available options: pseudo, uniform, Sobol, LHS, Halton, Hammersley</p></li>
 </ul>
 </dd>
@@ -145,11 +145,11 @@ If <code class="docutils literal notranslate"><span class="pre">None</span></cod
 <li><p><strong>model</strong> (<em>Class object</em>) – Trained model</p></li>
 <li><p><strong>X</strong> (<em>numpy array</em>) – The location of vertices</p></li>
 <li><p><strong>triangles</strong> (<em>numpy array</em>) – Mesh as triangle</p></li>
-<li><p><strong>output_name</strong> (<em>str</em>) – Name of the output quantity</p></li>
+<li><p><strong>output_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name of the output quantity</p></li>
 <li><p><strong>operator</strong> (<em>function</em>) – The operator function which will be used to predict function quantity</p></li>
-<li><p><strong>operator_name</strong> (<em>str</em>) – Name of the function output quantity</p></li>
+<li><p><strong>operator_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name of the function output quantity</p></li>
 <li><p><strong>polar_transf</strong> (<em>booelan</em>) – Activates if polar transformation will be done</p></li>
-<li><p><strong>file_path</strong> (<em>str</em>) – The full file path to store the results</p></li>
+<li><p><strong>file_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The full file path to store the results</p></li>
 </ul>
 </dd>
 </dl>
@@ -165,7 +165,7 @@ If <code class="docutils literal notranslate"><span class="pre">None</span></cod
 <li><p><strong>X</strong> (<em>numpy array</em>) – The location of vertices</p></li>
 <li><p><strong>triangles</strong> (<em>numpy array</em>) – Mesh as triangle</p></li>
 <li><p><strong>point_data</strong> (<em>numpy array</em>) – Visualized the result as a point cloud</p></li>
-<li><p><strong>file_path</strong> (<em>str</em>) – The full file path to store the results</p></li>
+<li><p><strong>file_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The full file path to store the results</p></li>
 </ul>
 </dd>
 </dl>
@@ -178,13 +178,13 @@ If <code class="docutils literal notranslate"><span class="pre">None</span></cod
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>geom</strong> (<em>object</em>) – The geometry object</p></li>
-<li><p><strong>model</strong> (<em>object</em>) – The trained model</p></li>
-<li><p><strong>save_folder_path</strong> (<em>str</em>) – The path to the folder for storing the results</p></li>
-<li><p><strong>file_name</strong> (<em>str</em>) – The name of the resulting save file</p></li>
+<li><p><strong>geom</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><em>object</em></a>) – The geometry object</p></li>
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><em>object</em></a>) – The trained model</p></li>
+<li><p><strong>save_folder_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The path to the folder for storing the results</p></li>
+<li><p><strong>file_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The name of the resulting save file</p></li>
 <li><p><strong>analytical_displacements</strong> (<em>numpy array</em><em>,</em>) – Analytical displacement solutions. Order u_x, u_y, u_z</p></li>
 <li><p><strong>analytical_stresses</strong> (<em>numpy array</em><em>,</em>) – Analytical stress solutions. Order sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz</p></li>
-<li><p><strong>polar_transformation</strong> (<em>str</em>) – Coordinate system for polar transformation: spherical or cylindrical</p></li>
+<li><p><strong>polar_transformation</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Coordinate system for polar transformation: spherical or cylindrical</p></li>
 </ul>
 </dd>
 </dl>
@@ -197,12 +197,12 @@ If <code class="docutils literal notranslate"><span class="pre">None</span></cod
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>geom</strong> (<em>object</em>) – The geometry object</p></li>
-<li><p><strong>model</strong> (<em>object</em>) – The trained model</p></li>
-<li><p><strong>save_folder_path</strong> (<em>str</em>) – The path to the folder for storing the results</p></li>
+<li><p><strong>geom</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><em>object</em></a>) – The geometry object</p></li>
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><em>object</em></a>) – The trained model</p></li>
+<li><p><strong>save_folder_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The path to the folder for storing the results</p></li>
 <li><p><strong>file_path</strong> (<em>str:</em>) – The full file path to store the results</p></li>
 <li><p><strong>analytical_solution</strong> (<em>function</em><em>,</em>) – Analytical solution for displacements and stresses: Order u_x, u_y, sigma_xx, sigma_yy, sigma_xy</p></li>
-<li><p><strong>polar_transformation</strong> (<em>str</em>) – Coordinate system for polar transformation: spherical or cylindrical</p></li>
+<li><p><strong>polar_transformation</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Coordinate system for polar transformation: spherical or cylindrical</p></li>
 </ul>
 </dd>
 </dl>
@@ -215,12 +215,12 @@ If <code class="docutils literal notranslate"><span class="pre">None</span></cod
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>geom</strong> (<em>object</em>) – The geometry object</p></li>
-<li><p><strong>model</strong> (<em>object</em>) – The trained model</p></li>
-<li><p><strong>save_folder_path</strong> (<em>str</em>) – The path to the folder for storing the results</p></li>
+<li><p><strong>geom</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><em>object</em></a>) – The geometry object</p></li>
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><em>object</em></a>) – The trained model</p></li>
+<li><p><strong>save_folder_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The path to the folder for storing the results</p></li>
 <li><p><strong>file_path</strong> (<em>str:</em>) – The full file path to store the results</p></li>
 <li><p><strong>analytical_solution</strong> (<em>function</em><em>,</em>) – Analytical solution for displacements and stresses: Order u_x, u_y, sigma_xx, sigma_yy, sigma_xy</p></li>
-<li><p><strong>polar_transformation</strong> (<em>str</em>) – Coordinate system for polar transformation: spherical or cylindrical</p></li>
+<li><p><strong>polar_transformation</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Coordinate system for polar transformation: spherical or cylindrical</p></li>
 </ul>
 </dd>
 </dl>

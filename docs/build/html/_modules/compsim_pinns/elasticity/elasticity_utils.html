@@ -116,13 +116,13 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        nu : Float</span>
+<span class="sd">        nu : float</span>
 <span class="sd">            Poisson&#39;s ratio</span>
-<span class="sd">        lame: Float</span>
+<span class="sd">        lame: float</span>
 <span class="sd">            Lame parameter</span>
-<span class="sd">        shear: Float</span>
+<span class="sd">        shear: float</span>
 <span class="sd">            Shear modulus</span>
-<span class="sd">        e_modul: Float</span>
+<span class="sd">        e_modul: float</span>
 <span class="sd">            Young&#39;s modulus</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">e_modul</span> <span class="o">=</span> <span class="n">shear</span><span class="o">*</span><span class="p">(</span><span class="mi">3</span><span class="o">*</span><span class="n">lame</span><span class="o">+</span><span class="mi">2</span><span class="o">*</span><span class="n">shear</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">lame</span><span class="o">+</span><span class="n">shear</span><span class="p">)</span>
@@ -196,20 +196,20 @@
 <a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.elasticity.html#compsim_pinns.elasticity.elasticity_utils.zero_neumman_plane_stress_x">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">zero_neumman_plane_stress_x</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Calculates x component of the homogeneous Neumann BC</span>
+<span class="sd">    Calculates x component of the homogeneous Neumann BC.</span>
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : tensor</span>
+<span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments (coordinates x and y)</span>
-<span class="sd">    y: tensor</span>
+<span class="sd">    y: torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output (predicted displacement in x and y direction)</span>
-<span class="sd">    X: np.array</span>
+<span class="sd">    X: numpy.ndarray</span>
 <span class="sd">        the input arguments as an array (coordinates x and y)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_xx_n_x + sigma_xy_n_y: tensor</span>
+<span class="sd">    sigma_xx_n_x + sigma_xy_n_y: torch.Tensor or tf.Tensor</span>
 <span class="sd">        x component of the homogeneous Neumann BC</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
@@ -225,20 +225,20 @@
 <a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.elasticity.html#compsim_pinns.elasticity.elasticity_utils.zero_neumman_plane_stress_y">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">zero_neumman_plane_stress_y</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Calculates y component of the homogeneous Neumann BC</span>
+<span class="sd">    Calculates y component of the homogeneous Neumann BC.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : tensor</span>
+<span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments (coordinates x and y)</span>
-<span class="sd">    y: tensor</span>
+<span class="sd">    y: torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output (predicted displacement in x and y direction)</span>
-<span class="sd">    X: np.array</span>
+<span class="sd">    X: numpy.ndarray</span>
 <span class="sd">        the input arguments as an array (coordinates x and y)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_yx_n_x + sigma_yy_n_y: tensor</span>
+<span class="sd">    sigma_yx_n_x + sigma_yy_n_y: torch.Tensor or tf.Tensor</span>
 <span class="sd">        y component of the homogeneous Neumann BC</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
@@ -254,20 +254,20 @@
 <a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.elasticity.html#compsim_pinns.elasticity.elasticity_utils.zero_neumman_plane_strain_x">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">zero_neumman_plane_strain_x</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Calculates x component of the homogeneous Neumann BC</span>
+<span class="sd">    Calculates x component of the homogeneous Neumann BC.</span>
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : tensor</span>
+<span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments (coordinates x and y)</span>
-<span class="sd">    y: tensor</span>
+<span class="sd">    y: torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output (predicted displacement in x and y direction)</span>
-<span class="sd">    X: np.array</span>
+<span class="sd">    X: numpy.ndarray</span>
 <span class="sd">        the input arguments as an array (coordinates x and y)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_xx_n_x + sigma_xy_n_y: tensor</span>
+<span class="sd">    sigma_xx_n_x + sigma_xy_n_y: torch.Tensor or tf.Tensor</span>
 <span class="sd">        x component of the homogeneous Neumann BC</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
@@ -283,20 +283,20 @@
 <a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.elasticity.html#compsim_pinns.elasticity.elasticity_utils.zero_neumman_plane_strain_y">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">zero_neumman_plane_strain_y</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Calculates y component of the homogeneous Neumann BC</span>
+<span class="sd">    Calculates y component of the homogeneous Neumann BC.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : tensor</span>
+<span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments (coordinates x and y)</span>
-<span class="sd">    y: tensor</span>
+<span class="sd">    y: torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output (predicted displacement in x and y direction)</span>
-<span class="sd">    X: np.array</span>
+<span class="sd">    X: numpy.ndarray</span>
 <span class="sd">        the input arguments as an array (coordinates x and y)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_yx_n_x + sigma_yy_n_y: tensor</span>
+<span class="sd">    sigma_yx_n_x + sigma_yy_n_y: torch.Tensor or tf.Tensor</span>
 <span class="sd">        y component of the homogeneous Neumann BC</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
@@ -316,14 +316,14 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : tensor</span>
+<span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments</span>
-<span class="sd">    y: tensor</span>
+<span class="sd">    y: torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    term_x, term_y, term_xy: tensor</span>
+<span class="sd">    term_x, term_y, term_xy: torch.Tensor or tf.Tensor</span>
 <span class="sd">        difference between predicted stresses and calculated stresses in X, Y and XY direction </span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
@@ -340,18 +340,18 @@
 <a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.elasticity.html#compsim_pinns.elasticity.elasticity_utils.pde_mixed_plane_stress">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">pde_mixed_plane_stress</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane stress</span>
+<span class="sd">    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane stress.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : tensor</span>
+<span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments</span>
-<span class="sd">    y: tensor</span>
+<span class="sd">    y: torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    momentum_x, momentum_y, term_x, term_y, term_xy: tensor</span>
+<span class="sd">    momentum_x, momentum_y, term_x, term_y, term_xy: torch.Tensor or tf.Tensor</span>
 <span class="sd">        momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses</span>
 <span class="sd">        term_x, term_y, term_xy: difference between predicted stresses and calculated stresses in X, Y and XY direction</span>
 <span class="sd">    &#39;&#39;&#39;</span>
@@ -377,14 +377,14 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : tensor</span>
+<span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments</span>
-<span class="sd">    y: tensor</span>
+<span class="sd">    y: torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    term_x, term_y, term_xy: tensor</span>
+<span class="sd">    term_x, term_y, term_xy: torch.Tensor or tf.Tensor</span>
 <span class="sd">        difference between predicted stresses and calculated stresses in X, Y and XY direction </span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
@@ -401,18 +401,18 @@
 <a class="viewcode-back" href="../../../api/compsim_pinns/compsim_pinns.elasticity.html#compsim_pinns.elasticity.elasticity_utils.pde_mixed_plane_strain">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">pde_mixed_plane_strain</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane strain</span>
+<span class="sd">    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane strain.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : tensor</span>
+<span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments</span>
-<span class="sd">    y: tensor</span>
+<span class="sd">    y: torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    momentum_x, momentum_y, term_x, term_y, term_xy: tensor</span>
+<span class="sd">    momentum_x, momentum_y, term_x, term_y, term_xy: torch.Tensor or tf.Tensor</span>
 <span class="sd">        momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses</span>
 <span class="sd">        term_x, term_y, term_xy: difference between predicted stresses and calculated stresses in X, Y and XY direction</span>
 <span class="sd">    &#39;&#39;&#39;</span>
@@ -476,11 +476,11 @@
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    -----------</span>
-<span class="sd">        x : tensor</span>
+<span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: tensor</span>
+<span class="sd">        y: torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
-<span class="sd">        X : np array</span>
+<span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
 
 <span class="sd">    Returns</span>
@@ -506,11 +506,11 @@
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    -----------</span>
-<span class="sd">        x : tensor</span>
+<span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: tensor</span>
+<span class="sd">        y: torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
-<span class="sd">        X : np array</span>
+<span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
 
 <span class="sd">    Returns</span>
@@ -533,11 +533,11 @@
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    -----------</span>
-<span class="sd">        x : tensor</span>
+<span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: tensor</span>
+<span class="sd">        y: torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
-<span class="sd">        X : np array</span>
+<span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
 
 <span class="sd">    Returns</span>
@@ -779,16 +779,16 @@
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    -----------</span>
-<span class="sd">        x : tensor</span>
+<span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: tensor</span>
+<span class="sd">        y: torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
-<span class="sd">        X : np array</span>
+<span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        Tx, Ty, Tz, Tn, Tt_1, Tt_2: tensor</span>
+<span class="sd">        Tx, Ty, Tz, Tn, Tt_1, Tt_2: torch.Tensor or tf.Tensor</span>
 <span class="sd">            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))</span>
 <span class="sd">    &#39;&#39;&#39;</span>    
     <span class="n">sigma_xx</span> <span class="o">=</span>  <span class="n">y</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span>
@@ -813,16 +813,16 @@
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    -----------</span>
-<span class="sd">        x : tensor</span>
+<span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: tensor</span>
+<span class="sd">        y: torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
-<span class="sd">        X : np array</span>
+<span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        Tx: tensor</span>
+<span class="sd">        Tx: torch.Tensor or tf.Tensor</span>
 <span class="sd">            x component of traction vector</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
@@ -839,16 +839,16 @@
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    -----------</span>
-<span class="sd">        x : tensor</span>
+<span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: tensor</span>
+<span class="sd">        y: torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
-<span class="sd">        X : np array</span>
+<span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        Ty: tensor</span>
+<span class="sd">        Ty: torch.Tensor or tf.Tensor</span>
 <span class="sd">            y component of traction vector</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
@@ -865,16 +865,16 @@
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    -----------</span>
-<span class="sd">        x : tensor</span>
+<span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: tensor</span>
+<span class="sd">        y: torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
-<span class="sd">        X : np array</span>
+<span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        Tz: tensor</span>
+<span class="sd">        Tz: torch.Tensor or tf.Tensor</span>
 <span class="sd">            z component of traction vector</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
@@ -988,7 +988,7 @@
 <span class="sd">            contains the placeholder for coordinates of input points and time: x, y, t</span>
 <span class="sd">        y : Placeholder (tensor)</span>
 <span class="sd">            contains the placeholder for network output: disp_x, disp_y, sigma_xx, sigma_yy, sigma_xy</span>
-<span class="sd">        X : np array</span>
+<span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array (x,y,t)</span>
 
 <span class="sd">    Returns</span>
@@ -1019,7 +1019,7 @@
 <span class="sd">            contains the placeholder for coordinates of input points and time: x, y, t</span>
 <span class="sd">        y : Placeholder (tensor)</span>
 <span class="sd">            contains the placeholder for network output: disp_x, disp_y, sigma_xx, sigma_yy, sigma_xy</span>
-<span class="sd">        X : np array</span>
+<span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array (x,y,t)</span>
 
 <span class="sd">    Returns</span>
@@ -1276,7 +1276,7 @@
 <span class="sd">            contains the placeholder for coordinates of input points an time: x, y, z, t</span>
 <span class="sd">        y : Placeholder (tensor)</span>
 <span class="sd">            contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz</span>
-<span class="sd">        X : np array</span>
+<span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array (x,y,z,t)</span>
 
 <span class="sd">    Returns</span>

@@ -72,13 +72,13 @@ def problem_parameters():
 
     Returns
     -------
-        nu : Float
+        nu : float
             Poisson's ratio
-        lame: Float
+        lame: float
             Lame parameter
-        shear: Float
+        shear: float
             Shear modulus
-        e_modul: Float
+        e_modul: float
             Young's modulus
     '''
     e_modul = shear*(3*lame+2*shear)/(lame+shear)
@@ -143,20 +143,20 @@ def stress_plane_stress(x,y):
 
 def zero_neumman_plane_stress_x(x, y, X):
     '''
-    Calculates x component of the homogeneous Neumann BC
+    Calculates x component of the homogeneous Neumann BC.
     
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments (coordinates x and y)
-    y: tensor
+    y: torch.Tensor or tf.Tensor
         the network output (predicted displacement in x and y direction)
-    X: np.array
+    X: numpy.ndarray
         the input arguments as an array (coordinates x and y)
 
     Returns
     -------
-    sigma_xx_n_x + sigma_xy_n_y: tensor
+    sigma_xx_n_x + sigma_xy_n_y: torch.Tensor or tf.Tensor
         x component of the homogeneous Neumann BC
     '''
     
@@ -169,20 +169,20 @@ def zero_neumman_plane_stress_x(x, y, X):
 
 def zero_neumman_plane_stress_y(x, y, X):
     '''
-    Calculates y component of the homogeneous Neumann BC
+    Calculates y component of the homogeneous Neumann BC.
 
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments (coordinates x and y)
-    y: tensor
+    y: torch.Tensor or tf.Tensor
         the network output (predicted displacement in x and y direction)
-    X: np.array
+    X: numpy.ndarray
         the input arguments as an array (coordinates x and y)
 
     Returns
     -------
-    sigma_yx_n_x + sigma_yy_n_y: tensor
+    sigma_yx_n_x + sigma_yy_n_y: torch.Tensor or tf.Tensor
         y component of the homogeneous Neumann BC
     '''
 
@@ -195,20 +195,20 @@ def zero_neumman_plane_stress_y(x, y, X):
 
 def zero_neumman_plane_strain_x(x, y, X):
     '''
-    Calculates x component of the homogeneous Neumann BC
+    Calculates x component of the homogeneous Neumann BC.
     
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments (coordinates x and y)
-    y: tensor
+    y: torch.Tensor or tf.Tensor
         the network output (predicted displacement in x and y direction)
-    X: np.array
+    X: numpy.ndarray
         the input arguments as an array (coordinates x and y)
 
     Returns
     -------
-    sigma_xx_n_x + sigma_xy_n_y: tensor
+    sigma_xx_n_x + sigma_xy_n_y: torch.Tensor or tf.Tensor
         x component of the homogeneous Neumann BC
     '''
     
@@ -221,20 +221,20 @@ def zero_neumman_plane_strain_x(x, y, X):
 
 def zero_neumman_plane_strain_y(x, y, X):
     '''
-    Calculates y component of the homogeneous Neumann BC
+    Calculates y component of the homogeneous Neumann BC.
 
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments (coordinates x and y)
-    y: tensor
+    y: torch.Tensor or tf.Tensor
         the network output (predicted displacement in x and y direction)
-    X: np.array
+    X: numpy.ndarray
         the input arguments as an array (coordinates x and y)
 
     Returns
     -------
-    sigma_yx_n_x + sigma_yy_n_y: tensor
+    sigma_yx_n_x + sigma_yy_n_y: torch.Tensor or tf.Tensor
         y component of the homogeneous Neumann BC
     '''
 
@@ -251,14 +251,14 @@ def lin_iso_elasticity_plane_stress(x,y):
 
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments
-    y: tensor
+    y: torch.Tensor or tf.Tensor
         the network output
 
     Returns
     -------
-    term_x, term_y, term_xy: tensor
+    term_x, term_y, term_xy: torch.Tensor or tf.Tensor
         difference between predicted stresses and calculated stresses in X, Y and XY direction 
     '''
     
@@ -272,18 +272,18 @@ def lin_iso_elasticity_plane_stress(x,y):
 
 def pde_mixed_plane_stress(x,y):
     '''
-    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane stress
+    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane stress.
 
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments
-    y: tensor
+    y: torch.Tensor or tf.Tensor
         the network output
 
     Returns
     -------
-    momentum_x, momentum_y, term_x, term_y, term_xy: tensor
+    momentum_x, momentum_y, term_x, term_y, term_xy: torch.Tensor or tf.Tensor
         momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses
         term_x, term_y, term_xy: difference between predicted stresses and calculated stresses in X, Y and XY direction
     '''
@@ -306,14 +306,14 @@ def lin_iso_elasticity_plane_strain(x,y):
 
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments
-    y: tensor
+    y: torch.Tensor or tf.Tensor
         the network output
 
     Returns
     -------
-    term_x, term_y, term_xy: tensor
+    term_x, term_y, term_xy: torch.Tensor or tf.Tensor
         difference between predicted stresses and calculated stresses in X, Y and XY direction 
     '''
     
@@ -327,18 +327,18 @@ def lin_iso_elasticity_plane_strain(x,y):
 
 def pde_mixed_plane_strain(x,y):
     '''
-    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane strain
+    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane strain.
 
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments
-    y: tensor
+    y: torch.Tensor or tf.Tensor
         the network output
 
     Returns
     -------
-    momentum_x, momentum_y, term_x, term_y, term_xy: tensor
+    momentum_x, momentum_y, term_x, term_y, term_xy: torch.Tensor or tf.Tensor
         momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses
         term_x, term_y, term_xy: difference between predicted stresses and calculated stresses in X, Y and XY direction
     '''
@@ -396,11 +396,11 @@ def calculate_traction_mixed_formulation(x, y, X):
     
     Parameters
     -----------
-        x : tensor
+        x : torch.Tensor or tf.Tensor
             Network input
-        y: tensor
+        y: torch.Tensor or tf.Tensor
             Network output
-        X : np array
+        X : numpy.ndarray
             Network input as numpy array
 
     Returns
@@ -423,11 +423,11 @@ def zero_neumann_x_mixed_formulation(x, y, X):
     
     Parameters
     -----------
-        x : tensor
+        x : torch.Tensor or tf.Tensor
             Network input
-        y: tensor
+        y: torch.Tensor or tf.Tensor
             Network output
-        X : np array
+        X : numpy.ndarray
             Network input as numpy array
 
     Returns
@@ -447,11 +447,11 @@ def zero_neumann_y_mixed_formulation(x, y, X):
     
     Parameters
     -----------
-        x : tensor
+        x : torch.Tensor or tf.Tensor
             Network input
-        y: tensor
+        y: torch.Tensor or tf.Tensor
             Network output
-        X : np array
+        X : numpy.ndarray
             Network input as numpy array
 
     Returns
@@ -675,16 +675,16 @@ def get_tractions_mixed_3d(x, y, X):
     
     Parameters
     -----------
-        x : tensor
+        x : torch.Tensor or tf.Tensor
             Network input
-        y: tensor
+        y: torch.Tensor or tf.Tensor
             Network output
-        X : np array
+        X : numpy.ndarray
             Network input as numpy array
 
     Returns
     -------
-        Tx, Ty, Tz, Tn, Tt_1, Tt_2: tensor
+        Tx, Ty, Tz, Tn, Tt_1, Tt_2: torch.Tensor or tf.Tensor
             Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
     '''    
     sigma_xx =  y[:, 3:4]
@@ -706,16 +706,16 @@ def apply_zero_neumann_x_mixed_formulation(x, y, X):
     
     Parameters
     -----------
-        x : tensor
+        x : torch.Tensor or tf.Tensor
             Network input
-        y: tensor
+        y: torch.Tensor or tf.Tensor
             Network output
-        X : np array
+        X : numpy.ndarray
             Network input as numpy array
 
     Returns
     -------
-        Tx: tensor
+        Tx: torch.Tensor or tf.Tensor
             x component of traction vector
     '''
     
@@ -729,16 +729,16 @@ def apply_zero_neumann_y_mixed_formulation(x, y, X):
     
     Parameters
     -----------
-        x : tensor
+        x : torch.Tensor or tf.Tensor
             Network input
-        y: tensor
+        y: torch.Tensor or tf.Tensor
             Network output
-        X : np array
+        X : numpy.ndarray
             Network input as numpy array
 
     Returns
     -------
-        Ty: tensor
+        Ty: torch.Tensor or tf.Tensor
             y component of traction vector
     '''
     
@@ -752,16 +752,16 @@ def apply_zero_neumann_z_mixed_formulation(x, y, X):
     
     Parameters
     -----------
-        x : tensor
+        x : torch.Tensor or tf.Tensor
             Network input
-        y: tensor
+        y: torch.Tensor or tf.Tensor
             Network output
-        X : np array
+        X : numpy.ndarray
             Network input as numpy array
 
     Returns
     -------
-        Tz: tensor
+        Tz: torch.Tensor or tf.Tensor
             z component of traction vector
     '''
     
@@ -866,7 +866,7 @@ def get_tractions_mixed_2d_time(x, y, X):
             contains the placeholder for coordinates of input points and time: x, y, t
         y : Placeholder (tensor)
             contains the placeholder for network output: disp_x, disp_y, sigma_xx, sigma_yy, sigma_xy
-        X : np array
+        X : numpy.ndarray
             Network input as numpy array (x,y,t)
 
     Returns
@@ -894,7 +894,7 @@ def get_tractions_mixed_2d_spacetime(x, y, X):
             contains the placeholder for coordinates of input points and time: x, y, t
         y : Placeholder (tensor)
             contains the placeholder for network output: disp_x, disp_y, sigma_xx, sigma_yy, sigma_xy
-        X : np array
+        X : numpy.ndarray
             Network input as numpy array (x,y,t)
 
     Returns
@@ -1130,7 +1130,7 @@ def get_tractions_mixed_3d_spacetime(x, y, X):
             contains the placeholder for coordinates of input points an time: x, y, z, t
         y : Placeholder (tensor)
             contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz
-        X : np array
+        X : numpy.ndarray
             Network input as numpy array (x,y,z,t)
 
     Returns
