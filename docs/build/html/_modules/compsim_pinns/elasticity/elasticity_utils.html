@@ -97,8 +97,12 @@
 
 <span class="sd">    Returns </span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_xx, sigma_yy, sigma_xy: Placeholder (tf)</span>
-<span class="sd">        contains the components of stress tensor </span>
+<span class="sd">    sigma_xx : Placeholder (tf)</span>
+<span class="sd">        xx component of stress tensor</span>
+<span class="sd">    sigma_yy : Placeholder (tf)</span>
+<span class="sd">        yy component of stress tensor</span>
+<span class="sd">    sigma_xy : Placeholder (tf)</span>
+<span class="sd">        xy component of stress tensor</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">eps_xx</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="n">eps_yy</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -118,11 +122,11 @@
 <span class="sd">    -------</span>
 <span class="sd">        nu : float</span>
 <span class="sd">            Poisson&#39;s ratio</span>
-<span class="sd">        lame: float</span>
+<span class="sd">        lame : float</span>
 <span class="sd">            Lame parameter</span>
-<span class="sd">        shear: float</span>
+<span class="sd">        shear : float</span>
 <span class="sd">            Shear modulus</span>
-<span class="sd">        e_modul: float</span>
+<span class="sd">        e_modul : float</span>
 <span class="sd">            Young&#39;s modulus</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">e_modul</span> <span class="o">=</span> <span class="n">shear</span><span class="o">*</span><span class="p">(</span><span class="mi">3</span><span class="o">*</span><span class="n">lame</span><span class="o">+</span><span class="mi">2</span><span class="o">*</span><span class="n">shear</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">lame</span><span class="o">+</span><span class="n">shear</span><span class="p">)</span>
@@ -147,8 +151,12 @@
 
 <span class="sd">    Returns </span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_xx, sigma_yy, sigma_xy: Placeholder (tf)</span>
-<span class="sd">        contains the components of stress tensor </span>
+<span class="sd">    sigma_xx : Placeholder (tf)</span>
+<span class="sd">        xx component of stress tensor</span>
+<span class="sd">    sigma_yy : Placeholder (tf)</span>
+<span class="sd">        yy component of stress tensor</span>
+<span class="sd">    sigma_xy : Placeholder (tf)</span>
+<span class="sd">        xy component of stress tensor</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">eps_xx</span><span class="p">,</span> <span class="n">eps_yy</span><span class="p">,</span> <span class="n">eps_xy</span> <span class="o">=</span> <span class="n">elastic_strain_2d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
 
@@ -178,8 +186,12 @@
 
 <span class="sd">    Returns </span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_xx, sigma_yy, sigma_xy: Placeholder (tf)</span>
-<span class="sd">        contains the components of stress tensor </span>
+<span class="sd">    sigma_xx : Placeholder (tf)</span>
+<span class="sd">        xx component of stress tensor</span>
+<span class="sd">    sigma_yy : Placeholder (tf)</span>
+<span class="sd">        yy component of stress tensor</span>
+<span class="sd">    sigma_xy : Placeholder (tf)</span>
+<span class="sd">        xy component of stress tensor</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">eps_xx</span><span class="p">,</span> <span class="n">eps_yy</span><span class="p">,</span> <span class="n">eps_xy</span> <span class="o">=</span> <span class="n">elastic_strain_2d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
 
@@ -202,14 +214,14 @@
 <span class="sd">    ----------</span>
 <span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments (coordinates x and y)</span>
-<span class="sd">    y: torch.Tensor or tf.Tensor</span>
+<span class="sd">    y : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output (predicted displacement in x and y direction)</span>
-<span class="sd">    X: numpy.ndarray</span>
+<span class="sd">    X : numpy.ndarray</span>
 <span class="sd">        the input arguments as an array (coordinates x and y)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_xx_n_x + sigma_xy_n_y: torch.Tensor or tf.Tensor</span>
+<span class="sd">    Tx : torch.Tensor or tf.Tensor</span>
 <span class="sd">        x component of the homogeneous Neumann BC</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
@@ -231,14 +243,14 @@
 <span class="sd">    ----------</span>
 <span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments (coordinates x and y)</span>
-<span class="sd">    y: torch.Tensor or tf.Tensor</span>
+<span class="sd">    y : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output (predicted displacement in x and y direction)</span>
-<span class="sd">    X: numpy.ndarray</span>
+<span class="sd">    X : numpy.ndarray</span>
 <span class="sd">        the input arguments as an array (coordinates x and y)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_yx_n_x + sigma_yy_n_y: torch.Tensor or tf.Tensor</span>
+<span class="sd">    Ty : torch.Tensor or tf.Tensor</span>
 <span class="sd">        y component of the homogeneous Neumann BC</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
@@ -260,14 +272,14 @@
 <span class="sd">    ----------</span>
 <span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments (coordinates x and y)</span>
-<span class="sd">    y: torch.Tensor or tf.Tensor</span>
+<span class="sd">    y : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output (predicted displacement in x and y direction)</span>
-<span class="sd">    X: numpy.ndarray</span>
+<span class="sd">    X : numpy.ndarray</span>
 <span class="sd">        the input arguments as an array (coordinates x and y)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_xx_n_x + sigma_xy_n_y: torch.Tensor or tf.Tensor</span>
+<span class="sd">    Tx : torch.Tensor or tf.Tensor</span>
 <span class="sd">        x component of the homogeneous Neumann BC</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
@@ -289,14 +301,14 @@
 <span class="sd">    ----------</span>
 <span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments (coordinates x and y)</span>
-<span class="sd">    y: torch.Tensor or tf.Tensor</span>
+<span class="sd">    y : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output (predicted displacement in x and y direction)</span>
-<span class="sd">    X: numpy.ndarray</span>
+<span class="sd">    X : numpy.ndarray</span>
 <span class="sd">        the input arguments as an array (coordinates x and y)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_yx_n_x + sigma_yy_n_y: torch.Tensor or tf.Tensor</span>
+<span class="sd">    Ty : torch.Tensor or tf.Tensor</span>
 <span class="sd">        y component of the homogeneous Neumann BC</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
@@ -318,22 +330,26 @@
 <span class="sd">    ----------</span>
 <span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments</span>
-<span class="sd">    y: torch.Tensor or tf.Tensor</span>
+<span class="sd">    y : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    term_x, term_y, term_xy: torch.Tensor or tf.Tensor</span>
-<span class="sd">        difference between predicted stresses and calculated stresses in X, Y and XY direction </span>
+<span class="sd">    term_xx : torch.Tensor or tf.Tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for xx component</span>
+<span class="sd">    term_yy : torch.Tensor or tf.Tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for yy component</span>
+<span class="sd">    term_xy : torch.Tensor or tf.Tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for xy component</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
     <span class="n">sigma_xx</span><span class="p">,</span> <span class="n">sigma_yy</span><span class="p">,</span> <span class="n">sigma_xy</span> <span class="o">=</span> <span class="n">stress_plane_stress</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
     
-    <span class="n">term_x</span> <span class="o">=</span> <span class="n">sigma_xx</span> <span class="o">-</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
-    <span class="n">term_y</span> <span class="o">=</span> <span class="n">sigma_yy</span> <span class="o">-</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span>
+    <span class="n">term_xx</span> <span class="o">=</span> <span class="n">sigma_xx</span> <span class="o">-</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+    <span class="n">term_yy</span> <span class="o">=</span> <span class="n">sigma_yy</span> <span class="o">-</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span>
     <span class="n">term_xy</span> <span class="o">=</span> <span class="n">sigma_xy</span> <span class="o">-</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span>
     
-    <span class="k">return</span> <span class="n">term_x</span><span class="p">,</span> <span class="n">term_y</span><span class="p">,</span> <span class="n">term_xy</span></div>
+    <span class="k">return</span> <span class="n">term_xx</span><span class="p">,</span> <span class="n">term_yy</span><span class="p">,</span> <span class="n">term_xy</span></div>
 
 
 <div class="viewcode-block" id="pde_mixed_plane_stress">
@@ -346,14 +362,21 @@
 <span class="sd">    ----------</span>
 <span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments</span>
-<span class="sd">    y: torch.Tensor or tf.Tensor</span>
+<span class="sd">    y : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    momentum_x, momentum_y, term_x, term_y, term_xy: torch.Tensor or tf.Tensor</span>
-<span class="sd">        momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses</span>
-<span class="sd">        term_x, term_y, term_xy: difference between predicted stresses and calculated stresses in X, Y and XY direction</span>
+<span class="sd">    momentum_x : torch.Tensor or tf.Tensor</span>
+<span class="sd">        momentum terms in x based on derivatives of predicted stresses</span>
+<span class="sd">    momentum_y : torch.Tensor or tf.Tensor</span>
+<span class="sd">        momentum terms in y based on derivatives of predicted stresses</span>
+<span class="sd">    term_xx : torch.Tensor or tf.Tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for xx component</span>
+<span class="sd">    term_yy : torch.Tensor or tf.Tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for yy component</span>
+<span class="sd">    term_xy : torch.Tensor or tf.Tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for xy component</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">sigma_xx_x</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="n">sigma_yy_y</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -364,9 +387,9 @@
     <span class="n">momentum_y</span> <span class="o">=</span> <span class="n">sigma_yy_y</span> <span class="o">+</span> <span class="n">sigma_xy_x</span>
     
     <span class="c1"># material law</span>
-    <span class="n">term_x</span><span class="p">,</span> <span class="n">term_y</span><span class="p">,</span> <span class="n">term_xy</span> <span class="o">=</span> <span class="n">lin_iso_elasticity_plane_stress</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">term_xx</span><span class="p">,</span> <span class="n">term_yy</span><span class="p">,</span> <span class="n">term_xy</span> <span class="o">=</span> <span class="n">lin_iso_elasticity_plane_stress</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="p">[</span><span class="n">momentum_x</span><span class="p">,</span> <span class="n">momentum_y</span><span class="p">,</span> <span class="n">term_x</span><span class="p">,</span> <span class="n">term_y</span><span class="p">,</span> <span class="n">term_xy</span><span class="p">]</span></div>
+    <span class="k">return</span> <span class="p">[</span><span class="n">momentum_x</span><span class="p">,</span> <span class="n">momentum_y</span><span class="p">,</span> <span class="n">term_xx</span><span class="p">,</span> <span class="n">term_yy</span><span class="p">,</span> <span class="n">term_xy</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="lin_iso_elasticity_plane_strain">
@@ -379,22 +402,26 @@
 <span class="sd">    ----------</span>
 <span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments</span>
-<span class="sd">    y: torch.Tensor or tf.Tensor</span>
+<span class="sd">    y : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    term_x, term_y, term_xy: torch.Tensor or tf.Tensor</span>
-<span class="sd">        difference between predicted stresses and calculated stresses in X, Y and XY direction </span>
+<span class="sd">    term_xx :torch.Tensor or tf.Tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for xx component</span>
+<span class="sd">    term_yy : torch.Tensor or tf.Tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for yy component</span>
+<span class="sd">    term_xy : torch.Tensor or tf.Tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for xy component</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
     <span class="n">sigma_xx</span><span class="p">,</span> <span class="n">sigma_yy</span><span class="p">,</span> <span class="n">sigma_xy</span> <span class="o">=</span> <span class="n">stress_plane_strain</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
     
-    <span class="n">term_x</span> <span class="o">=</span> <span class="n">sigma_xx</span> <span class="o">-</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
-    <span class="n">term_y</span> <span class="o">=</span> <span class="n">sigma_yy</span> <span class="o">-</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span>
+    <span class="n">term_xx</span> <span class="o">=</span> <span class="n">sigma_xx</span> <span class="o">-</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+    <span class="n">term_yy</span> <span class="o">=</span> <span class="n">sigma_yy</span> <span class="o">-</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span>
     <span class="n">term_xy</span> <span class="o">=</span> <span class="n">sigma_xy</span> <span class="o">-</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span>
     
-    <span class="k">return</span> <span class="n">term_x</span><span class="p">,</span> <span class="n">term_y</span><span class="p">,</span> <span class="n">term_xy</span></div>
+    <span class="k">return</span> <span class="n">term_xx</span><span class="p">,</span> <span class="n">term_yy</span><span class="p">,</span> <span class="n">term_xy</span></div>
 
 
 <div class="viewcode-block" id="pde_mixed_plane_strain">
@@ -407,14 +434,21 @@
 <span class="sd">    ----------</span>
 <span class="sd">    x : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the input arguments</span>
-<span class="sd">    y: torch.Tensor or tf.Tensor</span>
+<span class="sd">    y : torch.Tensor or tf.Tensor</span>
 <span class="sd">        the network output</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    momentum_x, momentum_y, term_x, term_y, term_xy: torch.Tensor or tf.Tensor</span>
-<span class="sd">        momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses</span>
-<span class="sd">        term_x, term_y, term_xy: difference between predicted stresses and calculated stresses in X, Y and XY direction</span>
+<span class="sd">    momentum_x : torch.Tensor or tf.Tensor</span>
+<span class="sd">        momentum terms in x based on derivatives of predicted stresses</span>
+<span class="sd">    momentum_y : torch.Tensor or tf.Tensor</span>
+<span class="sd">        momentum terms in y based on derivatives of predicted stresses</span>
+<span class="sd">    term_xx : torch.Tensor or tf.Tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for xx component</span>
+<span class="sd">    term_yy : torch.Tensor or tf.Tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for yy component</span>
+<span class="sd">    term_xy : torch.Tensor or tf.Tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for xy component</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># governing equation</span>
     <span class="n">sigma_xx_x</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
@@ -426,9 +460,9 @@
     <span class="n">momentum_y</span> <span class="o">=</span> <span class="n">sigma_yy_y</span> <span class="o">+</span> <span class="n">sigma_xy_x</span>
     
     <span class="c1"># material law</span>
-    <span class="n">term_x</span><span class="p">,</span> <span class="n">term_y</span><span class="p">,</span> <span class="n">term_xy</span> <span class="o">=</span> <span class="n">lin_iso_elasticity_plane_strain</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">term_xx</span><span class="p">,</span> <span class="n">term_yy</span><span class="p">,</span> <span class="n">term_xy</span> <span class="o">=</span> <span class="n">lin_iso_elasticity_plane_strain</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="p">[</span><span class="n">momentum_x</span><span class="p">,</span> <span class="n">momentum_y</span><span class="p">,</span> <span class="n">term_x</span><span class="p">,</span> <span class="n">term_y</span><span class="p">,</span> <span class="n">term_xy</span><span class="p">]</span></div>
+    <span class="k">return</span> <span class="p">[</span><span class="n">momentum_x</span><span class="p">,</span> <span class="n">momentum_y</span><span class="p">,</span> <span class="n">term_xx</span><span class="p">,</span> <span class="n">term_yy</span><span class="p">,</span> <span class="n">term_xy</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="stress_to_traction_2d">
@@ -447,8 +481,14 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        Tx, Ty, Tn, Tt: any</span>
-<span class="sd">            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))</span>
+<span class="sd">        Tx : any</span>
+<span class="sd">            Traction components in cartesian x direction</span>
+<span class="sd">        Ty : any</span>
+<span class="sd">            Traction components in cartesian y direction</span>
+<span class="sd">        Tn : any</span>
+<span class="sd">            Traction components in polar n (normal) direction</span>
+<span class="sd">        Tt : any</span>
+<span class="sd">            Traction components in polar t (tangential) direction</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
     <span class="n">nx</span> <span class="o">=</span> <span class="n">normals</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span>
@@ -478,15 +518,21 @@
 <span class="sd">    -----------</span>
 <span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: torch.Tensor or tf.Tensor</span>
+<span class="sd">        y : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
 <span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        Tx, Ty, Tn, Tt: any</span>
-<span class="sd">            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))</span>
+<span class="sd">        Tx : any</span>
+<span class="sd">            Traction components in cartesian x direction</span>
+<span class="sd">        Ty : any</span>
+<span class="sd">            Traction components in cartesian y direction</span>
+<span class="sd">        Tn : any</span>
+<span class="sd">            Traction components in polar n (normal) direction</span>
+<span class="sd">        Tt : any</span>
+<span class="sd">            Traction components in polar t (tangential) direction</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
     <span class="n">sigma_xx</span><span class="p">,</span> <span class="n">sigma_yy</span><span class="p">,</span> <span class="n">sigma_xy</span> <span class="o">=</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:</span><span class="mi">3</span><span class="p">],</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">:</span><span class="mi">4</span><span class="p">],</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span> 
@@ -508,7 +554,7 @@
 <span class="sd">    -----------</span>
 <span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: torch.Tensor or tf.Tensor</span>
+<span class="sd">        y : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
 <span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
@@ -535,7 +581,7 @@
 <span class="sd">    -----------</span>
 <span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: torch.Tensor or tf.Tensor</span>
+<span class="sd">        y : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
 <span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
@@ -569,8 +615,18 @@
 
 <span class="sd">    Returns </span>
 <span class="sd">    -------</span>
-<span class="sd">    eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz: tensor</span>
-<span class="sd">        contains the components of strain tensor in 3D</span>
+<span class="sd">    eps_xx : tensor</span>
+<span class="sd">        contains the xx components of strain tensor in 3D</span>
+<span class="sd">    eps_yy : tensor</span>
+<span class="sd">        contains the yy components of strain tensor in 3D</span>
+<span class="sd">    eps_zz : tensor</span>
+<span class="sd">        contains the zz components of strain tensor in 3D</span>
+<span class="sd">    eps_xy : tensor</span>
+<span class="sd">        contains the xy components of strain tensor in 3D</span>
+<span class="sd">    eps_yz : tensor</span>
+<span class="sd">        contains the yz components of strain tensor in 3D</span>
+<span class="sd">    eps_xz : tensor</span>
+<span class="sd">        contains the xz components of strain tensor in 3D</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># Normal strains</span>
     <span class="n">eps_xx</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
@@ -600,8 +656,18 @@
 
 <span class="sd">    Returns </span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz: tensor</span>
-<span class="sd">        contains the components of stress tensor in 3D</span>
+<span class="sd">    sigma_xx : tensor</span>
+<span class="sd">        contains the xx components of stress tensor in 3D</span>
+<span class="sd">    sigma_yy : tensor</span>
+<span class="sd">        contains the yy components of stress tensor in 3D</span>
+<span class="sd">    sigma_zz : tensor</span>
+<span class="sd">        contains the zz components of stress tensor in 3D</span>
+<span class="sd">    sigma_xy : tensor</span>
+<span class="sd">        contains the xy components of stress tensor in 3D</span>
+<span class="sd">    sigma_yz : tensor</span>
+<span class="sd">        contains the yz components of stress tensor in 3D</span>
+<span class="sd">    sigma_xz : tensor</span>
+<span class="sd">        contains the xz components of stress tensor in 3D</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">eps_xx</span><span class="p">,</span> <span class="n">eps_yy</span><span class="p">,</span> <span class="n">eps_zz</span><span class="p">,</span> <span class="n">eps_xy</span><span class="p">,</span> <span class="n">eps_yz</span><span class="p">,</span> <span class="n">eps_xz</span> <span class="o">=</span> <span class="n">get_elastic_strain_3d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
 
@@ -636,8 +702,18 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor</span>
-<span class="sd">        difference between predicted stresses and calculated stresses in 3D</span>
+<span class="sd">    term_xx : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in xx component in 3D</span>
+<span class="sd">    term_yy : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in yy component in 3D</span>
+<span class="sd">    term_zz : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in zz component in 3D</span>
+<span class="sd">    term_xy : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in xy component in 3D</span>
+<span class="sd">    term_yz : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in yz component in 3D</span>
+<span class="sd">    term_xz : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in xz component in 3D</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
     <span class="n">sigma_xx</span><span class="p">,</span> <span class="n">sigma_yy</span><span class="p">,</span> <span class="n">sigma_zz</span><span class="p">,</span> <span class="n">sigma_xy</span><span class="p">,</span> <span class="n">sigma_yz</span><span class="p">,</span> <span class="n">sigma_xz</span> <span class="o">=</span> <span class="n">get_stress_tensor</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
@@ -667,9 +743,24 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    momentum_x, momentum_y, momentum_z, term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor</span>
-<span class="sd">        momentum_x, momentum_y, momentum_z: momentum terms based on derivatives of predicted stresses</span>
-<span class="sd">        term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: difference between predicted stresses and calculated stresses in X, Y, Z, XY, YZ, and XZ directions</span>
+<span class="sd">    momentum_x : tensor</span>
+<span class="sd">        momentum terms in x based on derivatives of predicted stresses</span>
+<span class="sd">    momentum_y : tensor</span>
+<span class="sd">        momentum terms in y based on derivatives of predicted stresses</span>
+<span class="sd">    momentum_z : tensor</span>
+<span class="sd">        momentum terms in z based on derivatives of predicted stresses</span>
+<span class="sd">    term_xx : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in xx component in 3D</span>
+<span class="sd">    term_yy : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in yy component in 3D</span>
+<span class="sd">    term_zz : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in zz component in 3D</span>
+<span class="sd">    term_xy : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in xy component in 3D</span>
+<span class="sd">    term_yz : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in yz component in 3D</span>
+<span class="sd">    term_xz : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in xz component in 3D</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># Stress derivatives</span>
     <span class="n">sigma_xx_x</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
@@ -738,8 +829,18 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    Tx, Ty, Tz, Tn, Tt_1, Tt_2: any</span>
-<span class="sd">        Traction components in Cartesian (x, y, z) coordinates and in normal (n) and tangential directions (t_1, t_2)</span>
+<span class="sd">    Tx : any</span>
+<span class="sd">        Traction components in cartesian x direction</span>
+<span class="sd">    Ty : any</span>
+<span class="sd">        Traction components in cartesian y direction</span>
+<span class="sd">    Tz : any</span>
+<span class="sd">        Traction components in cartesian z direction</span>
+<span class="sd">    Tn : any</span>
+<span class="sd">        Traction components in polar n (normal) direction</span>
+<span class="sd">    Tt_1 : any</span>
+<span class="sd">        Traction components in polar t_1 (tangential) direction</span>
+<span class="sd">    Tt_2 : any</span>
+<span class="sd">        Traction components in polar t_2 (tangential) direction</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># normals </span>
     <span class="n">nx</span> <span class="o">=</span> <span class="n">normals</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span>
@@ -781,15 +882,25 @@
 <span class="sd">    -----------</span>
 <span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: torch.Tensor or tf.Tensor</span>
+<span class="sd">        y : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
 <span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        Tx, Ty, Tz, Tn, Tt_1, Tt_2: torch.Tensor or tf.Tensor</span>
-<span class="sd">            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))</span>
+<span class="sd">    Tx : torch.Tensor or tf.Tensor</span>
+<span class="sd">        Traction components in cartesian x direction</span>
+<span class="sd">    Ty : torch.Tensor or tf.Tensor</span>
+<span class="sd">        Traction components in cartesian y direction</span>
+<span class="sd">    Tz : torch.Tensor or tf.Tensor</span>
+<span class="sd">        Traction components in cartesian z direction</span>
+<span class="sd">    Tn : torch.Tensor or tf.Tensor</span>
+<span class="sd">        Traction components in polar n (normal) direction</span>
+<span class="sd">    Tt_1 : torch.Tensor or tf.Tensor</span>
+<span class="sd">        Traction components in polar t_1 (tangential) direction</span>
+<span class="sd">    Tt_2 : torch.Tensor or tf.Tensor</span>
+<span class="sd">        Traction components in polar t_2 (tangential) direction</span>
 <span class="sd">    &#39;&#39;&#39;</span>    
     <span class="n">sigma_xx</span> <span class="o">=</span>  <span class="n">y</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span>
     <span class="n">sigma_yy</span> <span class="o">=</span>  <span class="n">y</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span>
@@ -815,7 +926,7 @@
 <span class="sd">    -----------</span>
 <span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: torch.Tensor or tf.Tensor</span>
+<span class="sd">        y : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
 <span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
@@ -826,7 +937,7 @@
 <span class="sd">            x component of traction vector</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
-    <span class="n">Tx</span><span class="p">,</span> <span class="n">Ty</span><span class="p">,</span> <span class="n">Tz</span><span class="p">,</span> <span class="n">Tn</span><span class="p">,</span> <span class="n">Tt_1</span><span class="p">,</span> <span class="n">Tt_2</span> <span class="o">=</span> <span class="n">get_tractions_mixed_3d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+    <span class="n">Tx</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">get_tractions_mixed_3d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">Tx</span></div>
 
@@ -841,7 +952,7 @@
 <span class="sd">    -----------</span>
 <span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: torch.Tensor or tf.Tensor</span>
+<span class="sd">        y : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
 <span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
@@ -852,7 +963,7 @@
 <span class="sd">            y component of traction vector</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
-    <span class="n">Tx</span><span class="p">,</span> <span class="n">Ty</span><span class="p">,</span> <span class="n">Tz</span><span class="p">,</span> <span class="n">Tn</span><span class="p">,</span> <span class="n">Tt_1</span><span class="p">,</span> <span class="n">Tt_2</span> <span class="o">=</span> <span class="n">get_tractions_mixed_3d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">Ty</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">get_tractions_mixed_3d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">Ty</span></div>
 
@@ -867,7 +978,7 @@
 <span class="sd">    -----------</span>
 <span class="sd">        x : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network input</span>
-<span class="sd">        y: torch.Tensor or tf.Tensor</span>
+<span class="sd">        y : torch.Tensor or tf.Tensor</span>
 <span class="sd">            Network output</span>
 <span class="sd">        X : numpy.ndarray</span>
 <span class="sd">            Network input as numpy array</span>
@@ -878,7 +989,7 @@
 <span class="sd">            z component of traction vector</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     
-    <span class="n">Tx</span><span class="p">,</span> <span class="n">Ty</span><span class="p">,</span> <span class="n">Tz</span><span class="p">,</span> <span class="n">Tn</span><span class="p">,</span> <span class="n">Tt_1</span><span class="p">,</span> <span class="n">Tt_2</span> <span class="o">=</span> <span class="n">get_tractions_mixed_3d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">Tz</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">get_tractions_mixed_3d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">Tz</span></div>
 
@@ -901,10 +1012,16 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        momentum_x, momentum_y, term_x, term_y, term_xy: tensor</span>
-<span class="sd">            momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses</span>
-<span class="sd">        term_x, term_y, term_xy: tensor</span>
-<span class="sd">            Difference between predicted stresses and calculated stresses in X, Y and XY direction in case of plane stress</span>
+<span class="sd">    momentum_x : tensor</span>
+<span class="sd">        momentum terms in x based on derivatives of predicted stresses</span>
+<span class="sd">    momentum_y : tensor</span>
+<span class="sd">        momentum terms in y based on derivatives of predicted stresses</span>
+<span class="sd">    term_xx : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for xx component</span>
+<span class="sd">    term_yy : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for yy component</span>
+<span class="sd">    term_xy : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for xy component</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># get ddu_x/dt2</span>
     <span class="n">u_x_tt</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">component</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># component is u_x, tt is the third input which is time tt=&gt;ij</span>
@@ -925,9 +1042,9 @@
         <span class="n">momentum_y</span> <span class="o">=</span> <span class="n">sigma_yy_y</span> <span class="o">+</span> <span class="n">sigma_xy_x</span>
     
     <span class="c1"># material law</span>
-    <span class="n">term_x</span><span class="p">,</span> <span class="n">term_y</span><span class="p">,</span> <span class="n">term_xy</span> <span class="o">=</span> <span class="n">lin_iso_elasticity_plane_stress</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">term_xx</span><span class="p">,</span> <span class="n">term_yy</span><span class="p">,</span> <span class="n">term_xy</span> <span class="o">=</span> <span class="n">lin_iso_elasticity_plane_stress</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="p">[</span><span class="n">momentum_x</span><span class="p">,</span> <span class="n">momentum_y</span><span class="p">,</span> <span class="n">term_x</span><span class="p">,</span> <span class="n">term_y</span><span class="p">,</span> <span class="n">term_xy</span><span class="p">]</span></div>
+    <span class="k">return</span> <span class="p">[</span><span class="n">momentum_x</span><span class="p">,</span> <span class="n">momentum_y</span><span class="p">,</span> <span class="n">term_xx</span><span class="p">,</span> <span class="n">term_yy</span><span class="p">,</span> <span class="n">term_xy</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="pde_mixed_plane_strain_time_dependent">
@@ -946,10 +1063,16 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        momentum_x, momentum_y, term_x, term_y, term_xy : tensor</span>
-<span class="sd">            momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses</span>
-<span class="sd">        term_x, term_y, term_xy : tensor</span>
-<span class="sd">            Difference between predicted stresses and calculated stresses in X, Y and XY direction in case of plane strain</span>
+<span class="sd">    momentum_x : tensor</span>
+<span class="sd">        momentum terms in x based on derivatives of predicted stresses</span>
+<span class="sd">    momentum_y : tensor</span>
+<span class="sd">        momentum terms in y based on derivatives of predicted stresses</span>
+<span class="sd">    term_xx : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for xx component</span>
+<span class="sd">    term_yy : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for yy component</span>
+<span class="sd">    term_xy : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses for xy component</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># get ddu_x/dt2</span>
     <span class="n">u_x_tt</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">component</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># component is u_x, tt is the third input which is time tt=&gt;ij</span>
@@ -971,9 +1094,9 @@
         <span class="n">momentum_y</span> <span class="o">=</span> <span class="n">sigma_yy_y</span> <span class="o">+</span> <span class="n">sigma_xy_x</span> <span class="o">-</span> <span class="n">rho</span><span class="o">*</span><span class="n">u_y_tt</span>
     
     <span class="c1"># material law</span>
-    <span class="n">term_x</span><span class="p">,</span> <span class="n">term_y</span><span class="p">,</span> <span class="n">term_xy</span> <span class="o">=</span> <span class="n">lin_iso_elasticity_plane_strain</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">term_xx</span><span class="p">,</span> <span class="n">term_yy</span><span class="p">,</span> <span class="n">term_xy</span> <span class="o">=</span> <span class="n">lin_iso_elasticity_plane_strain</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="p">[</span><span class="n">momentum_x</span><span class="p">,</span> <span class="n">momentum_y</span><span class="p">,</span> <span class="n">term_x</span><span class="p">,</span> <span class="n">term_y</span><span class="p">,</span> <span class="n">term_xy</span><span class="p">]</span></div>
+    <span class="k">return</span> <span class="p">[</span><span class="n">momentum_x</span><span class="p">,</span> <span class="n">momentum_y</span><span class="p">,</span> <span class="n">term_xx</span><span class="p">,</span> <span class="n">term_yy</span><span class="p">,</span> <span class="n">term_xy</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="get_tractions_mixed_2d_time">
@@ -993,8 +1116,14 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        Tx, Ty, Tn, Tt: tensor</span>
-<span class="sd">            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))</span>
+<span class="sd">        Tx : any</span>
+<span class="sd">            Traction components in cartesian x direction</span>
+<span class="sd">        Ty : any</span>
+<span class="sd">            Traction components in cartesian y direction</span>
+<span class="sd">        Tn : any</span>
+<span class="sd">            Traction components in polar n (normal) direction</span>
+<span class="sd">        Tt : any</span>
+<span class="sd">            Traction components in polar t (tangential) direction</span>
 <span class="sd">    &#39;&#39;&#39;</span>    
     <span class="n">sigma_xx</span> <span class="o">=</span>  <span class="n">y</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
     <span class="n">sigma_yy</span> <span class="o">=</span>  <span class="n">y</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span>
@@ -1024,8 +1153,14 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        Tx, Ty, Tn, Tt: any</span>
-<span class="sd">            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))</span>
+<span class="sd">        Tx : any</span>
+<span class="sd">            Traction components in cartesian x direction</span>
+<span class="sd">        Ty : any</span>
+<span class="sd">            Traction components in cartesian y direction</span>
+<span class="sd">        Tn : any</span>
+<span class="sd">            Traction components in polar n (normal) direction</span>
+<span class="sd">        Tt : any</span>
+<span class="sd">            Traction components in polar t (tangential) direction</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
     <span class="n">sigma_xx</span><span class="p">,</span> <span class="n">sigma_yy</span><span class="p">,</span> <span class="n">sigma_xy</span> <span class="o">=</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:</span><span class="mi">3</span><span class="p">],</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">:</span><span class="mi">4</span><span class="p">],</span> <span class="n">y</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span> 
@@ -1052,8 +1187,12 @@
 
 <span class="sd">    Returns </span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_xx, sigma_yy, sigma_xy: Placeholder (tf)</span>
-<span class="sd">        contains the components of stress tensor </span>
+<span class="sd">    sigma_xx : Placeholder (tf)</span>
+<span class="sd">        xx component of stress tensor</span>
+<span class="sd">    sigma_yy : Placeholder (tf)</span>
+<span class="sd">        yy component of stress tensor</span>
+<span class="sd">    sigma_xy : Placeholder (tf)</span>
+<span class="sd">        xy component of stress tensor</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">eps_xx_rate</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="n">eps_yy_rate</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -1077,8 +1216,12 @@
 
 <span class="sd">    Returns </span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_xx, sigma_yy, sigma_xy: Placeholder (tf)</span>
-<span class="sd">        contains the components of stress tensor </span>
+<span class="sd">    sigma_xx : Placeholder (tf)</span>
+<span class="sd">        xx component of stress tensor</span>
+<span class="sd">    sigma_yy : Placeholder (tf)</span>
+<span class="sd">        yy component of stress tensor</span>
+<span class="sd">    sigma_xy : Placeholder (tf)</span>
+<span class="sd">        xy component of stress tensor</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># get the strain rates for plane strain</span>
     <span class="n">eps_xx_rate</span><span class="p">,</span> <span class="n">eps_yy_rate</span><span class="p">,</span> <span class="n">eps_xy_rate</span> <span class="o">=</span> <span class="n">strain_rate_2d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
@@ -1101,15 +1244,17 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : Placeholder (tensor)</span>
-<span class="sd">        contains the placeholder for coordinates of input points</span>
-<span class="sd">    y : Placeholder (tensor)</span>
-<span class="sd">        contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz</span>
+<span class="sd">        x : Placeholder (tensor)</span>
+<span class="sd">            contains the placeholder for coordinates of input points</span>
+<span class="sd">        y : Placeholder (tensor)</span>
+<span class="sd">            contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor</span>
-<span class="sd">        difference between predicted stresses and calculated stresses in 3D</span>
+<span class="sd">        term_x_velocity : tensor</span>
+<span class="sd">            difference between predicted velocity and calulated velocity in x direction</span>
+<span class="sd">        term_y_velocity : tensor</span>
+<span class="sd">            difference between predicted velocity and calulated velocity in y direction</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># get stress rates from velocity fields</span>
     <span class="n">sigma_xx_t_v</span><span class="p">,</span> <span class="n">sigma_yy_t_v</span><span class="p">,</span> <span class="n">sigma_xy_t_v</span> <span class="o">=</span> <span class="n">stress_rate_plane_strain</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
@@ -1118,11 +1263,11 @@
     <span class="n">sigma_yy_t_s</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
     <span class="n">sigma_xy_t_s</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
     <span class="c1"># couple the stress rates</span>
-    <span class="n">term_x_rate</span> <span class="o">=</span> <span class="n">sigma_xx_t_v</span> <span class="o">-</span> <span class="n">sigma_xx_t_s</span>
-    <span class="n">term_y_rate</span> <span class="o">=</span> <span class="n">sigma_yy_t_v</span> <span class="o">-</span> <span class="n">sigma_yy_t_s</span>
+    <span class="n">term_xx_rate</span> <span class="o">=</span> <span class="n">sigma_xx_t_v</span> <span class="o">-</span> <span class="n">sigma_xx_t_s</span>
+    <span class="n">term_yy_rate</span> <span class="o">=</span> <span class="n">sigma_yy_t_v</span> <span class="o">-</span> <span class="n">sigma_yy_t_s</span>
     <span class="n">term_xy_rate</span> <span class="o">=</span> <span class="n">sigma_xy_t_v</span> <span class="o">-</span> <span class="n">sigma_xy_t_s</span>
     
-    <span class="k">return</span> <span class="n">term_x_rate</span><span class="p">,</span> <span class="n">term_y_rate</span><span class="p">,</span> <span class="n">term_xy_rate</span></div>
+    <span class="k">return</span> <span class="n">term_xx_rate</span><span class="p">,</span> <span class="n">term_yy_rate</span><span class="p">,</span> <span class="n">term_xy_rate</span></div>
 
 
 <div class="viewcode-block" id="get_velocity_coupling_2d">
@@ -1156,10 +1301,26 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        momentum_x, momentum_y : tensor</span>
-<span class="sd">            momentum terms based on derivatives of predicted stresses</span>
-<span class="sd">        term_x, term_y, term_xy : tensor</span>
-<span class="sd">            Difference between predicted stresses and calculated stresses in X, Y and XY direction in case of plane strain</span>
+<span class="sd">        momentum_x : tensor</span>
+<span class="sd">            momentum terms in x based on derivatives of predicted stresses</span>
+<span class="sd">        momentum_y : tensor</span>
+<span class="sd">            momentum terms in y based on derivatives of predicted stresses</span>
+<span class="sd">        term_xx_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in xx component</span>
+<span class="sd">        term_yy_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in yy component</span>
+<span class="sd">        term_xy_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in xy component</span>
+<span class="sd">        term_x_velocity : tensor</span>
+<span class="sd">            difference between predicted velocity and calulated velocity in x direction</span>
+<span class="sd">        term_y_velocity : tensor</span>
+<span class="sd">            difference between predicted velocity and calulated velocity in y direction</span>
+<span class="sd">        term_xx : tensor</span>
+<span class="sd">            difference between predicted stresses and calculated stresses in xx component</span>
+<span class="sd">        term_yy : tensor</span>
+<span class="sd">            difference between predicted stresses and calculated stresses in yy component</span>
+<span class="sd">        term_xy : tensor</span>
+<span class="sd">            difference between predicted stresses and calculated stresses in xy component</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># get stress derivatives</span>
     <span class="n">sigma_xx_x</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
@@ -1181,15 +1342,15 @@
         <span class="n">momentum_y</span> <span class="o">=</span> <span class="n">sigma_yy_y</span> <span class="o">+</span> <span class="n">sigma_xy_x</span> <span class="o">-</span> <span class="n">rho</span><span class="o">*</span><span class="n">v_y_t</span>
     
    <span class="c1"># Coupling of stress rates</span>
-    <span class="n">term_x_rate</span><span class="p">,</span> <span class="n">term_y_rate</span><span class="p">,</span> <span class="n">term_xy_rate</span> <span class="o">=</span> <span class="n">get_plane_strain_stress_rate_coupling</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">term_xx_rate</span><span class="p">,</span> <span class="n">term_yy_rate</span><span class="p">,</span> <span class="n">term_xy_rate</span> <span class="o">=</span> <span class="n">get_plane_strain_stress_rate_coupling</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
     
     <span class="c1"># Coupling of velocities</span>
     <span class="n">term_x_velocity</span><span class="p">,</span> <span class="n">term_y_velocity</span> <span class="o">=</span> <span class="n">get_velocity_coupling_2d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
     
     <span class="c1"># material law</span>
-    <span class="n">term_x</span><span class="p">,</span> <span class="n">term_y</span><span class="p">,</span> <span class="n">term_xy</span> <span class="o">=</span> <span class="n">lin_iso_elasticity_plane_strain</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">term_xx</span><span class="p">,</span> <span class="n">term_yy</span><span class="p">,</span> <span class="n">term_xy</span> <span class="o">=</span> <span class="n">lin_iso_elasticity_plane_strain</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="p">[</span><span class="n">momentum_x</span><span class="p">,</span> <span class="n">momentum_y</span><span class="p">,</span> <span class="n">term_x_rate</span><span class="p">,</span> <span class="n">term_y_rate</span><span class="p">,</span> <span class="n">term_xy_rate</span><span class="p">,</span> <span class="n">term_x_velocity</span><span class="p">,</span> <span class="n">term_y_velocity</span><span class="p">,</span> <span class="n">term_x</span><span class="p">,</span> <span class="n">term_y</span><span class="p">,</span> <span class="n">term_xy</span> <span class="p">]</span></div>
+    <span class="k">return</span> <span class="p">[</span><span class="n">momentum_x</span><span class="p">,</span> <span class="n">momentum_y</span><span class="p">,</span> <span class="n">term_xx_rate</span><span class="p">,</span> <span class="n">term_yy_rate</span><span class="p">,</span> <span class="n">term_xy_rate</span><span class="p">,</span> <span class="n">term_x_velocity</span><span class="p">,</span> <span class="n">term_y_velocity</span><span class="p">,</span> <span class="n">term_xx</span><span class="p">,</span> <span class="n">term_yy</span><span class="p">,</span> <span class="n">term_xy</span><span class="p">]</span></div>
 
 
 <span class="c1">#################################################################################################################################################################################</span>
@@ -1210,9 +1371,24 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    momentum_x, momentum_y, momentum_z, term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor</span>
-<span class="sd">        momentum_x, momentum_y, momentum_z: momentum terms based on derivatives of predicted stresses</span>
-<span class="sd">        term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: difference between predicted stresses and calculated stresses in X, Y, Z, XY, YZ, and XZ directions</span>
+<span class="sd">    momentum_x : tensor</span>
+<span class="sd">        momentum terms in x based on derivatives of predicted stresses</span>
+<span class="sd">    momentum_y : tensor</span>
+<span class="sd">        momentum terms in y based on derivatives of predicted stresses</span>
+<span class="sd">    momentum_z : tensor</span>
+<span class="sd">        momentum terms in z based on derivatives of predicted stresses</span>
+<span class="sd">    term_xx : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in xx component in 3D</span>
+<span class="sd">    term_yy : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in yy component in 3D</span>
+<span class="sd">    term_zz : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in zz component in 3D</span>
+<span class="sd">    term_xy : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in xy component in 3D</span>
+<span class="sd">    term_yz : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in yz component in 3D</span>
+<span class="sd">    term_xz : tensor</span>
+<span class="sd">        difference between predicted stresses and calculated stresses in xz component in 3D</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># Stress derivatives</span>
     <span class="n">sigma_xx_x</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
@@ -1281,8 +1457,18 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">        Tx, Ty, Tz, Tn, Tt_1, Tt_2: tensor</span>
-<span class="sd">            Traction components in cartesian (x,y,z) and polar coordinates (n (normal), t_1 (tangential 1), t_2 (tangential 2))</span>
+<span class="sd">    Tx : tensor</span>
+<span class="sd">        Traction components in cartesian x direction</span>
+<span class="sd">    Ty : tensor</span>
+<span class="sd">        Traction components in cartesian y direction</span>
+<span class="sd">    Tz : tensor</span>
+<span class="sd">        Traction components in cartesian z direction</span>
+<span class="sd">    Tn : tensor</span>
+<span class="sd">        Traction components in polar n (normal) direction</span>
+<span class="sd">    Tt_1 : tensor</span>
+<span class="sd">        Traction components in polar t_1 (tangential) direction</span>
+<span class="sd">    Tt_2 : tensor</span>
+<span class="sd">        Traction components in polar t_2 (tangential) direction</span>
 <span class="sd">    &#39;&#39;&#39;</span>    
     <span class="n">sigma_xx</span> <span class="o">=</span>  <span class="n">y</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span>
     <span class="n">sigma_yy</span> <span class="o">=</span>  <span class="n">y</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span>
@@ -1316,8 +1502,18 @@
 
 <span class="sd">    Returns </span>
 <span class="sd">    -------</span>
-<span class="sd">    eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz: tensor</span>
-<span class="sd">        contains the components of strain tensor in 3D</span>
+<span class="sd">    eps_xx_rate : tensor</span>
+<span class="sd">        contains the xx components of strain rate tensor in 3D</span>
+<span class="sd">    eps_yy_rate : tensor</span>
+<span class="sd">        contains the yy components of strain rate tensor in 3D</span>
+<span class="sd">    eps_zz_rate : tensor</span>
+<span class="sd">        contains the zz components of strain rate tensor in 3D</span>
+<span class="sd">    eps_xy_rate : tensor</span>
+<span class="sd">        contains the xy components of strain rate tensor in 3D</span>
+<span class="sd">    eps_yz_rate : tensor</span>
+<span class="sd">        contains the yz components of strain rate tensor in 3D</span>
+<span class="sd">    eps_xz_rate : tensor</span>
+<span class="sd">        contains the xz components of strain rate tensor in 3D</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># Normal strain rates</span>
     <span class="n">eps_xx_rate</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
@@ -1347,8 +1543,18 @@
 
 <span class="sd">    Returns </span>
 <span class="sd">    -------</span>
-<span class="sd">    sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz: tensor</span>
-<span class="sd">        contains the components of stress tensor in 3D</span>
+<span class="sd">    sigma_xx_rate : tensor</span>
+<span class="sd">        contains the xx components of stress rate tensor in 3D</span>
+<span class="sd">    sigma_yy_rate : tensor</span>
+<span class="sd">        contains the yy components of stress rate tensor in 3D</span>
+<span class="sd">    sigma_zz_rate : tensor</span>
+<span class="sd">        contains the zz components of stress rate tensor in 3D</span>
+<span class="sd">    sigma_xy_rate : tensor</span>
+<span class="sd">        contains the xy components of stress rate tensor in 3D</span>
+<span class="sd">    sigma_yz_rate : tensor</span>
+<span class="sd">        contains the yz components of stress rate tensor in 3D</span>
+<span class="sd">    sigma_xz_rate : tensor</span>
+<span class="sd">        contains the xz components of stress rate tensor in 3D</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">eps_xx_rate</span><span class="p">,</span> <span class="n">eps_yy_rate</span><span class="p">,</span> <span class="n">eps_zz_rate</span><span class="p">,</span> <span class="n">eps_xy_rate</span><span class="p">,</span> <span class="n">eps_yz_rate</span><span class="p">,</span> <span class="n">eps_xz_rate</span> <span class="o">=</span> <span class="n">elastic_strain_rate_3d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
 
@@ -1376,15 +1582,25 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : Placeholder (tensor)</span>
-<span class="sd">        contains the placeholder for coordinates of input points</span>
-<span class="sd">    y : Placeholder (tensor)</span>
-<span class="sd">        contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz</span>
+<span class="sd">        x : Placeholder (tensor)</span>
+<span class="sd">            contains the placeholder for coordinates of input points</span>
+<span class="sd">        y : Placeholder (tensor)</span>
+<span class="sd">            contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor</span>
-<span class="sd">        difference between predicted stresses and calculated stresses in 3D</span>
+<span class="sd">        term_xx_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in xx component</span>
+<span class="sd">        term_yy_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in yy component</span>
+<span class="sd">        term_zz_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in zz component</span>
+<span class="sd">        term_xy_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in xy component</span>
+<span class="sd">        term_yz_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in yz component</span>
+<span class="sd">        term_xz_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in xz component</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># get the stress rate from velocity fields</span>
     <span class="n">sigma_xx_rate_v</span><span class="p">,</span> <span class="n">sigma_yy_rate_v</span><span class="p">,</span> <span class="n">sigma_zz_rate_v</span><span class="p">,</span> <span class="n">sigma_xy_rate_v</span><span class="p">,</span> <span class="n">sigma_yz_rate_v</span><span class="p">,</span> <span class="n">sigma_xz_rate_v</span> <span class="o">=</span> <span class="n">stress_rate_tensor_3d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
@@ -1434,16 +1650,49 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : Placeholder (tensor)</span>
-<span class="sd">        contains the placeholder for coordinates of input points an time: x, y, z, t</span>
-<span class="sd">    y : Placeholder (tensor)</span>
-<span class="sd">        contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz</span>
+<span class="sd">        x : Placeholder (tensor)</span>
+<span class="sd">            contains the placeholder for coordinates of input points an time: x, y, z, t</span>
+<span class="sd">        y : Placeholder (tensor)</span>
+<span class="sd">            contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    momentum_x, momentum_y, momentum_z, term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor</span>
-<span class="sd">        momentum_x, momentum_y, momentum_z: momentum terms based on derivatives of predicted stresses</span>
-<span class="sd">        term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: difference between predicted stresses and calculated stresses in X, Y, Z, XY, YZ, and XZ directions</span>
+<span class="sd">        momentum_x : tensor</span>
+<span class="sd">            momentum terms in x based on derivatives of predicted stresses</span>
+<span class="sd">        momentum_y : tensor</span>
+<span class="sd">            momentum terms in y based on derivatives of predicted stresses</span>
+<span class="sd">        momentum_z : tensor</span>
+<span class="sd">            momentum terms in z based on derivatives of predicted stresses</span>
+<span class="sd">        term_xx_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in xx component</span>
+<span class="sd">        term_yy_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in yy component</span>
+<span class="sd">        term_zz_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in zz component</span>
+<span class="sd">        term_xy_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in xy component</span>
+<span class="sd">        term_yz_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in yz component</span>
+<span class="sd">        term_xz_rate : tensor</span>
+<span class="sd">            difference between predicted stress rates and calculated stress rates in xz component</span>
+<span class="sd">        term_x_velocity : tensor</span>
+<span class="sd">            difference between predicted velocity and calulated velocity in x direction</span>
+<span class="sd">        term_y_velocity : tensor</span>
+<span class="sd">            difference between predicted velocity and calulated velocity in y direction</span>
+<span class="sd">        term_z_velocity : tensor</span>
+<span class="sd">            difference between predicted velocity and calulated velocity in z direction</span>
+<span class="sd">        term_xx : tensor</span>
+<span class="sd">            difference between predicted stresses and calculated stresses in xx component</span>
+<span class="sd">        term_yy : tensor</span>
+<span class="sd">            difference between predicted stresses and calculated stresses in yy component</span>
+<span class="sd">        term_zz : tensor</span>
+<span class="sd">            difference between predicted stresses and calculated stresses in zz component</span>
+<span class="sd">        term_xy : tensor</span>
+<span class="sd">            difference between predicted stresses and calculated stresses in xy component</span>
+<span class="sd">        term_yz : tensor</span>
+<span class="sd">            difference between predicted stresses and calculated stresses in yz component</span>
+<span class="sd">        term_xz : tensor</span>
+<span class="sd">            difference between predicted stresses and calculated stresses in xz component</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="c1"># Stress derivatives</span>
     <span class="n">sigma_xx_x</span> <span class="o">=</span> <span class="n">dde</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>

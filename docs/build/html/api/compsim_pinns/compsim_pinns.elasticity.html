@@ -116,10 +116,13 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>Tx, Ty, Tn, Tt</strong> – Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>any</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>Tx</strong> (<em>any</em>) – Traction components in cartesian x direction</p></li>
+<li><p><strong>Ty</strong> (<em>any</em>) – Traction components in cartesian y direction</p></li>
+<li><p><strong>Tn</strong> (<em>any</em>) – Traction components in polar n (normal) direction</p></li>
+<li><p><strong>Tt</strong> (<em>any</em>) – Traction components in polar t (tangential) direction</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -136,10 +139,12 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>sigma_xx, sigma_yy, sigma_xy</strong> – contains the components of stress tensor</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Placeholder (tf)</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>sigma_xx</strong> (<em>Placeholder (tf)</em>) – xx component of stress tensor</p></li>
+<li><p><strong>sigma_yy</strong> (<em>Placeholder (tf)</em>) – yy component of stress tensor</p></li>
+<li><p><strong>sigma_xy</strong> (<em>Placeholder (tf)</em>) – xy component of stress tensor</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -156,10 +161,15 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz</strong> – contains the components of strain tensor in 3D</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tensor</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>eps_xx_rate</strong> (<em>tensor</em>) – contains the xx components of strain rate tensor in 3D</p></li>
+<li><p><strong>eps_yy_rate</strong> (<em>tensor</em>) – contains the yy components of strain rate tensor in 3D</p></li>
+<li><p><strong>eps_zz_rate</strong> (<em>tensor</em>) – contains the zz components of strain rate tensor in 3D</p></li>
+<li><p><strong>eps_xy_rate</strong> (<em>tensor</em>) – contains the xy components of strain rate tensor in 3D</p></li>
+<li><p><strong>eps_yz_rate</strong> (<em>tensor</em>) – contains the yz components of strain rate tensor in 3D</p></li>
+<li><p><strong>eps_xz_rate</strong> (<em>tensor</em>) – contains the xz components of strain rate tensor in 3D</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -176,10 +186,15 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz</strong> – contains the components of strain tensor in 3D</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tensor</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>eps_xx</strong> (<em>tensor</em>) – contains the xx components of strain tensor in 3D</p></li>
+<li><p><strong>eps_yy</strong> (<em>tensor</em>) – contains the yy components of strain tensor in 3D</p></li>
+<li><p><strong>eps_zz</strong> (<em>tensor</em>) – contains the zz components of strain tensor in 3D</p></li>
+<li><p><strong>eps_xy</strong> (<em>tensor</em>) – contains the xy components of strain tensor in 3D</p></li>
+<li><p><strong>eps_yz</strong> (<em>tensor</em>) – contains the yz components of strain tensor in 3D</p></li>
+<li><p><strong>eps_xz</strong> (<em>tensor</em>) – contains the xz components of strain tensor in 3D</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -196,10 +211,11 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>term_xx, term_yy, term_zz, term_xy, term_yz, term_xz</strong> – difference between predicted stresses and calculated stresses in 3D</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tensor</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>term_x_velocity</strong> (<em>tensor</em>) – difference between predicted velocity and calulated velocity in x direction</p></li>
+<li><p><strong>term_y_velocity</strong> (<em>tensor</em>) – difference between predicted velocity and calulated velocity in y direction</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -216,10 +232,15 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>term_xx, term_yy, term_zz, term_xy, term_yz, term_xz</strong> – difference between predicted stresses and calculated stresses in 3D</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tensor</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>term_xx</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xx component in 3D</p></li>
+<li><p><strong>term_yy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in yy component in 3D</p></li>
+<li><p><strong>term_zz</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in zz component in 3D</p></li>
+<li><p><strong>term_xy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xy component in 3D</p></li>
+<li><p><strong>term_yz</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in yz component in 3D</p></li>
+<li><p><strong>term_xz</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xz component in 3D</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -236,10 +257,15 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>term_xx, term_yy, term_zz, term_xy, term_yz, term_xz</strong> – difference between predicted stresses and calculated stresses in 3D</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tensor</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>term_xx_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in xx component</p></li>
+<li><p><strong>term_yy_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in yy component</p></li>
+<li><p><strong>term_zz_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in zz component</p></li>
+<li><p><strong>term_xy_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in xy component</p></li>
+<li><p><strong>term_yz_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in yz component</p></li>
+<li><p><strong>term_xz_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in xz component</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -256,10 +282,15 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz</strong> – contains the components of stress tensor in 3D</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tensor</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>sigma_xx</strong> (<em>tensor</em>) – contains the xx components of stress tensor in 3D</p></li>
+<li><p><strong>sigma_yy</strong> (<em>tensor</em>) – contains the yy components of stress tensor in 3D</p></li>
+<li><p><strong>sigma_zz</strong> (<em>tensor</em>) – contains the zz components of stress tensor in 3D</p></li>
+<li><p><strong>sigma_xy</strong> (<em>tensor</em>) – contains the xy components of stress tensor in 3D</p></li>
+<li><p><strong>sigma_yz</strong> (<em>tensor</em>) – contains the yz components of stress tensor in 3D</p></li>
+<li><p><strong>sigma_xz</strong> (<em>tensor</em>) – contains the xz components of stress tensor in 3D</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -278,10 +309,13 @@
 </div></blockquote>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>Tx, Ty, Tn, Tt</strong> – Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>any</p>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><strong>Tx</strong> (<em>any</em>) – Traction components in cartesian x direction</p></li>
+<li><p><strong>Ty</strong> (<em>any</em>) – Traction components in cartesian y direction</p></li>
+<li><p><strong>Tn</strong> (<em>any</em>) – Traction components in polar n (normal) direction</p></li>
+<li><p><strong>Tt</strong> (<em>any</em>) – Traction components in polar t (tangential) direction</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -299,10 +333,13 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>Tx, Ty, Tn, Tt</strong> – Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tensor</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>Tx</strong> (<em>any</em>) – Traction components in cartesian x direction</p></li>
+<li><p><strong>Ty</strong> (<em>any</em>) – Traction components in cartesian y direction</p></li>
+<li><p><strong>Tn</strong> (<em>any</em>) – Traction components in polar n (normal) direction</p></li>
+<li><p><strong>Tt</strong> (<em>any</em>) – Traction components in polar t (tangential) direction</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -320,10 +357,15 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>Tx, Ty, Tz, Tn, Tt_1, Tt_2</strong> – Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)">torch.Tensor</a> or <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/Tensor" title="(in TensorFlow v2.4)">tf.Tensor</a></p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>Tx</strong> (<em>torch.Tensor or tf.Tensor</em>) – Traction components in cartesian x direction</p></li>
+<li><p><strong>Ty</strong> (<em>torch.Tensor or tf.Tensor</em>) – Traction components in cartesian y direction</p></li>
+<li><p><strong>Tz</strong> (<em>torch.Tensor or tf.Tensor</em>) – Traction components in cartesian z direction</p></li>
+<li><p><strong>Tn</strong> (<em>torch.Tensor or tf.Tensor</em>) – Traction components in polar n (normal) direction</p></li>
+<li><p><strong>Tt_1</strong> (<em>torch.Tensor or tf.Tensor</em>) – Traction components in polar t_1 (tangential) direction</p></li>
+<li><p><strong>Tt_2</strong> (<em>torch.Tensor or tf.Tensor</em>) – Traction components in polar t_2 (tangential) direction</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -341,10 +383,15 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>Tx, Ty, Tz, Tn, Tt_1, Tt_2</strong> – Traction components in cartesian (x,y,z) and polar coordinates (n (normal), t_1 (tangential 1), t_2 (tangential 2))</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tensor</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>Tx</strong> (<em>tensor</em>) – Traction components in cartesian x direction</p></li>
+<li><p><strong>Ty</strong> (<em>tensor</em>) – Traction components in cartesian y direction</p></li>
+<li><p><strong>Tz</strong> (<em>tensor</em>) – Traction components in cartesian z direction</p></li>
+<li><p><strong>Tn</strong> (<em>tensor</em>) – Traction components in polar n (normal) direction</p></li>
+<li><p><strong>Tt_1</strong> (<em>tensor</em>) – Traction components in polar t_1 (tangential) direction</p></li>
+<li><p><strong>Tt_2</strong> (<em>tensor</em>) – Traction components in polar t_2 (tangential) direction</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -371,10 +418,12 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>term_x, term_y, term_xy</strong> – difference between predicted stresses and calculated stresses in X, Y and XY direction</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)">torch.Tensor</a> or <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/Tensor" title="(in TensorFlow v2.4)">tf.Tensor</a></p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>term_xx</strong> (<em>torch.Tensor or tf.Tensor</em>) – difference between predicted stresses and calculated stresses for xx component</p></li>
+<li><p><strong>term_yy</strong> (<em>torch.Tensor or tf.Tensor</em>) – difference between predicted stresses and calculated stresses for yy component</p></li>
+<li><p><strong>term_xy</strong> (<em>torch.Tensor or tf.Tensor</em>) – difference between predicted stresses and calculated stresses for xy component</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -391,10 +440,12 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>term_x, term_y, term_xy</strong> – difference between predicted stresses and calculated stresses in X, Y and XY direction</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)">torch.Tensor</a> or <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/Tensor" title="(in TensorFlow v2.4)">tf.Tensor</a></p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>term_xx</strong> (<em>torch.Tensor or tf.Tensor</em>) – difference between predicted stresses and calculated stresses for xx component</p></li>
+<li><p><strong>term_yy</strong> (<em>torch.Tensor or tf.Tensor</em>) – difference between predicted stresses and calculated stresses for yy component</p></li>
+<li><p><strong>term_xy</strong> (<em>torch.Tensor or tf.Tensor</em>) – difference between predicted stresses and calculated stresses for xy component</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -421,11 +472,18 @@
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>momentum_x, momentum_y, momentum_z, term_xx, term_yy, term_zz, term_xy, term_yz, term_xz</strong> – momentum_x, momentum_y, momentum_z: momentum terms based on derivatives of predicted stresses
-term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: difference between predicted stresses and calculated stresses in X, Y, Z, XY, YZ, and XZ directions</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tensor</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>momentum_x</strong> (<em>tensor</em>) – momentum terms in x based on derivatives of predicted stresses</p></li>
+<li><p><strong>momentum_y</strong> (<em>tensor</em>) – momentum terms in y based on derivatives of predicted stresses</p></li>
+<li><p><strong>momentum_z</strong> (<em>tensor</em>) – momentum terms in z based on derivatives of predicted stresses</p></li>
+<li><p><strong>term_xx</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xx component in 3D</p></li>
+<li><p><strong>term_yy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in yy component in 3D</p></li>
+<li><p><strong>term_zz</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in zz component in 3D</p></li>
+<li><p><strong>term_xy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xy component in 3D</p></li>
+<li><p><strong>term_yz</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in yz component in 3D</p></li>
+<li><p><strong>term_xz</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xz component in 3D</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -442,11 +500,18 @@ term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: difference between predict
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>momentum_x, momentum_y, momentum_z, term_xx, term_yy, term_zz, term_xy, term_yz, term_xz</strong> – momentum_x, momentum_y, momentum_z: momentum terms based on derivatives of predicted stresses
-term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: difference between predicted stresses and calculated stresses in X, Y, Z, XY, YZ, and XZ directions</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tensor</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>momentum_x</strong> (<em>tensor</em>) – momentum terms in x based on derivatives of predicted stresses</p></li>
+<li><p><strong>momentum_y</strong> (<em>tensor</em>) – momentum terms in y based on derivatives of predicted stresses</p></li>
+<li><p><strong>momentum_z</strong> (<em>tensor</em>) – momentum terms in z based on derivatives of predicted stresses</p></li>
+<li><p><strong>term_xx</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xx component in 3D</p></li>
+<li><p><strong>term_yy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in yy component in 3D</p></li>
+<li><p><strong>term_zz</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in zz component in 3D</p></li>
+<li><p><strong>term_xy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xy component in 3D</p></li>
+<li><p><strong>term_yz</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in yz component in 3D</p></li>
+<li><p><strong>term_xz</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xz component in 3D</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -463,11 +528,14 @@ term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: difference between predict
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>momentum_x, momentum_y, term_x, term_y, term_xy</strong> – momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses
-term_x, term_y, term_xy: difference between predicted stresses and calculated stresses in X, Y and XY direction</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)">torch.Tensor</a> or <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/Tensor" title="(in TensorFlow v2.4)">tf.Tensor</a></p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>momentum_x</strong> (<em>torch.Tensor or tf.Tensor</em>) – momentum terms in x based on derivatives of predicted stresses</p></li>
+<li><p><strong>momentum_y</strong> (<em>torch.Tensor or tf.Tensor</em>) – momentum terms in y based on derivatives of predicted stresses</p></li>
+<li><p><strong>term_xx</strong> (<em>torch.Tensor or tf.Tensor</em>) – difference between predicted stresses and calculated stresses for xx component</p></li>
+<li><p><strong>term_yy</strong> (<em>torch.Tensor or tf.Tensor</em>) – difference between predicted stresses and calculated stresses for yy component</p></li>
+<li><p><strong>term_xy</strong> (<em>torch.Tensor or tf.Tensor</em>) – difference between predicted stresses and calculated stresses for xy component</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -486,8 +554,11 @@ It generates the terms for pde of the displacement-stress mixed-variable formula
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><ul class="simple">
-<li><p><strong>momentum_x, momentum_y, term_x, term_y, term_xy</strong> (<em>tensor</em>) – momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses</p></li>
-<li><p><strong>term_x, term_y, term_xy</strong> (<em>tensor</em>) – Difference between predicted stresses and calculated stresses in X, Y and XY direction in case of plane strain</p></li>
+<li><p><strong>momentum_x</strong> (<em>tensor</em>) – momentum terms in x based on derivatives of predicted stresses</p></li>
+<li><p><strong>momentum_y</strong> (<em>tensor</em>) – momentum terms in y based on derivatives of predicted stresses</p></li>
+<li><p><strong>term_xx</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses for xx component</p></li>
+<li><p><strong>term_yy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses for yy component</p></li>
+<li><p><strong>term_xy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses for xy component</p></li>
 </ul>
 </p>
 </dd>
@@ -506,11 +577,14 @@ It generates the terms for pde of the displacement-stress mixed-variable formula
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>momentum_x, momentum_y, term_x, term_y, term_xy</strong> – momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses
-term_x, term_y, term_xy: difference between predicted stresses and calculated stresses in X, Y and XY direction</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)">torch.Tensor</a> or <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/Tensor" title="(in TensorFlow v2.4)">tf.Tensor</a></p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>momentum_x</strong> (<em>torch.Tensor or tf.Tensor</em>) – momentum terms in x based on derivatives of predicted stresses</p></li>
+<li><p><strong>momentum_y</strong> (<em>torch.Tensor or tf.Tensor</em>) – momentum terms in y based on derivatives of predicted stresses</p></li>
+<li><p><strong>term_xx</strong> (<em>torch.Tensor or tf.Tensor</em>) – difference between predicted stresses and calculated stresses for xx component</p></li>
+<li><p><strong>term_yy</strong> (<em>torch.Tensor or tf.Tensor</em>) – difference between predicted stresses and calculated stresses for yy component</p></li>
+<li><p><strong>term_xy</strong> (<em>torch.Tensor or tf.Tensor</em>) – difference between predicted stresses and calculated stresses for xy component</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -529,8 +603,11 @@ It generates the terms for pde of the displacement-stress mixed-variable formula
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><ul class="simple">
-<li><p><strong>momentum_x, momentum_y, term_x, term_y, term_xy</strong> (<em>tensor</em>) – momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses</p></li>
-<li><p><strong>term_x, term_y, term_xy</strong> (<em>tensor</em>) – Difference between predicted stresses and calculated stresses in X, Y and XY direction in case of plane stress</p></li>
+<li><p><strong>momentum_x</strong> (<em>tensor</em>) – momentum terms in x based on derivatives of predicted stresses</p></li>
+<li><p><strong>momentum_y</strong> (<em>tensor</em>) – momentum terms in y based on derivatives of predicted stresses</p></li>
+<li><p><strong>term_xx</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses for xx component</p></li>
+<li><p><strong>term_yy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses for yy component</p></li>
+<li><p><strong>term_xy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses for xy component</p></li>
 </ul>
 </p>
 </dd>
@@ -549,11 +626,27 @@ It generates the terms for pde of the displacement-stress mixed-variable formula
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>momentum_x, momentum_y, momentum_z, term_xx, term_yy, term_zz, term_xy, term_yz, term_xz</strong> – momentum_x, momentum_y, momentum_z: momentum terms based on derivatives of predicted stresses
-term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: difference between predicted stresses and calculated stresses in X, Y, Z, XY, YZ, and XZ directions</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tensor</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>momentum_x</strong> (<em>tensor</em>) – momentum terms in x based on derivatives of predicted stresses</p></li>
+<li><p><strong>momentum_y</strong> (<em>tensor</em>) – momentum terms in y based on derivatives of predicted stresses</p></li>
+<li><p><strong>momentum_z</strong> (<em>tensor</em>) – momentum terms in z based on derivatives of predicted stresses</p></li>
+<li><p><strong>term_xx_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in xx component</p></li>
+<li><p><strong>term_yy_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in yy component</p></li>
+<li><p><strong>term_zz_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in zz component</p></li>
+<li><p><strong>term_xy_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in xy component</p></li>
+<li><p><strong>term_yz_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in yz component</p></li>
+<li><p><strong>term_xz_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in xz component</p></li>
+<li><p><strong>term_x_velocity</strong> (<em>tensor</em>) – difference between predicted velocity and calulated velocity in x direction</p></li>
+<li><p><strong>term_y_velocity</strong> (<em>tensor</em>) – difference between predicted velocity and calulated velocity in y direction</p></li>
+<li><p><strong>term_z_velocity</strong> (<em>tensor</em>) – difference between predicted velocity and calulated velocity in z direction</p></li>
+<li><p><strong>term_xx</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xx component</p></li>
+<li><p><strong>term_yy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in yy component</p></li>
+<li><p><strong>term_zz</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in zz component</p></li>
+<li><p><strong>term_xy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xy component</p></li>
+<li><p><strong>term_yz</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in yz component</p></li>
+<li><p><strong>term_xz</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xz component</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -573,8 +666,16 @@ Additionally, it couples the velocity fields with displacements.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><ul class="simple">
-<li><p><strong>momentum_x, momentum_y</strong> (<em>tensor</em>) – momentum terms based on derivatives of predicted stresses</p></li>
-<li><p><strong>term_x, term_y, term_xy</strong> (<em>tensor</em>) – Difference between predicted stresses and calculated stresses in X, Y and XY direction in case of plane strain</p></li>
+<li><p><strong>momentum_x</strong> (<em>tensor</em>) – momentum terms in x based on derivatives of predicted stresses</p></li>
+<li><p><strong>momentum_y</strong> (<em>tensor</em>) – momentum terms in y based on derivatives of predicted stresses</p></li>
+<li><p><strong>term_xx_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in xx component</p></li>
+<li><p><strong>term_yy_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in yy component</p></li>
+<li><p><strong>term_xy_rate</strong> (<em>tensor</em>) – difference between predicted stress rates and calculated stress rates in xy component</p></li>
+<li><p><strong>term_x_velocity</strong> (<em>tensor</em>) – difference between predicted velocity and calulated velocity in x direction</p></li>
+<li><p><strong>term_y_velocity</strong> (<em>tensor</em>) – difference between predicted velocity and calulated velocity in y direction</p></li>
+<li><p><strong>term_xx</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xx component</p></li>
+<li><p><strong>term_yy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in yy component</p></li>
+<li><p><strong>term_xy</strong> (<em>tensor</em>) – difference between predicted stresses and calculated stresses in xy component</p></li>
 </ul>
 </p>
 </dd>
@@ -610,10 +711,12 @@ Additionally, it couples the velocity fields with displacements.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>sigma_xx, sigma_yy, sigma_xy</strong> – contains the components of stress tensor</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Placeholder (tf)</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>sigma_xx</strong> (<em>Placeholder (tf)</em>) – xx component of stress tensor</p></li>
+<li><p><strong>sigma_yy</strong> (<em>Placeholder (tf)</em>) – yy component of stress tensor</p></li>
+<li><p><strong>sigma_xy</strong> (<em>Placeholder (tf)</em>) – xy component of stress tensor</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -630,10 +733,12 @@ Additionally, it couples the velocity fields with displacements.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>sigma_xx, sigma_yy, sigma_xy</strong> – contains the components of stress tensor</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Placeholder (tf)</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>sigma_xx</strong> (<em>Placeholder (tf)</em>) – xx component of stress tensor</p></li>
+<li><p><strong>sigma_yy</strong> (<em>Placeholder (tf)</em>) – yy component of stress tensor</p></li>
+<li><p><strong>sigma_xy</strong> (<em>Placeholder (tf)</em>) – xy component of stress tensor</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -650,10 +755,12 @@ Additionally, it couples the velocity fields with displacements.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>sigma_xx, sigma_yy, sigma_xy</strong> – contains the components of stress tensor</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Placeholder (tf)</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>sigma_xx</strong> (<em>Placeholder (tf)</em>) – xx component of stress tensor</p></li>
+<li><p><strong>sigma_yy</strong> (<em>Placeholder (tf)</em>) – yy component of stress tensor</p></li>
+<li><p><strong>sigma_xy</strong> (<em>Placeholder (tf)</em>) – xy component of stress tensor</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -670,10 +777,12 @@ Additionally, it couples the velocity fields with displacements.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>sigma_xx, sigma_yy, sigma_xy</strong> – contains the components of stress tensor</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Placeholder (tf)</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>sigma_xx</strong> (<em>Placeholder (tf)</em>) – xx component of stress tensor</p></li>
+<li><p><strong>sigma_yy</strong> (<em>Placeholder (tf)</em>) – yy component of stress tensor</p></li>
+<li><p><strong>sigma_xy</strong> (<em>Placeholder (tf)</em>) – xy component of stress tensor</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -690,10 +799,15 @@ Additionally, it couples the velocity fields with displacements.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz</strong> – contains the components of stress tensor in 3D</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tensor</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>sigma_xx_rate</strong> (<em>tensor</em>) – contains the xx components of stress rate tensor in 3D</p></li>
+<li><p><strong>sigma_yy_rate</strong> (<em>tensor</em>) – contains the yy components of stress rate tensor in 3D</p></li>
+<li><p><strong>sigma_zz_rate</strong> (<em>tensor</em>) – contains the zz components of stress rate tensor in 3D</p></li>
+<li><p><strong>sigma_xy_rate</strong> (<em>tensor</em>) – contains the xy components of stress rate tensor in 3D</p></li>
+<li><p><strong>sigma_yz_rate</strong> (<em>tensor</em>) – contains the yz components of stress rate tensor in 3D</p></li>
+<li><p><strong>sigma_xz_rate</strong> (<em>tensor</em>) – contains the xz components of stress rate tensor in 3D</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -713,10 +827,13 @@ Additionally, it couples the velocity fields with displacements.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>Tx, Ty, Tn, Tt</strong> – Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>any</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>Tx</strong> (<em>any</em>) – Traction components in cartesian x direction</p></li>
+<li><p><strong>Ty</strong> (<em>any</em>) – Traction components in cartesian y direction</p></li>
+<li><p><strong>Tn</strong> (<em>any</em>) – Traction components in polar n (normal) direction</p></li>
+<li><p><strong>Tt</strong> (<em>any</em>) – Traction components in polar t (tangential) direction</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -741,10 +858,15 @@ Additionally, it couples the velocity fields with displacements.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>Tx, Ty, Tz, Tn, Tt_1, Tt_2</strong> – Traction components in Cartesian (x, y, z) coordinates and in normal (n) and tangential directions (t_1, t_2)</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>any</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>Tx</strong> (<em>any</em>) – Traction components in cartesian x direction</p></li>
+<li><p><strong>Ty</strong> (<em>any</em>) – Traction components in cartesian y direction</p></li>
+<li><p><strong>Tz</strong> (<em>any</em>) – Traction components in cartesian z direction</p></li>
+<li><p><strong>Tn</strong> (<em>any</em>) – Traction components in polar n (normal) direction</p></li>
+<li><p><strong>Tt_1</strong> (<em>any</em>) – Traction components in polar t_1 (tangential) direction</p></li>
+<li><p><strong>Tt_2</strong> (<em>any</em>) – Traction components in polar t_2 (tangential) direction</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -804,7 +926,7 @@ Additionally, it couples the velocity fields with displacements.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>sigma_xx_n_x + sigma_xy_n_y</strong> – x component of the homogeneous Neumann BC</p>
+<dd class="field-even"><p><strong>Tx</strong> – x component of the homogeneous Neumann BC</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)">torch.Tensor</a> or <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/Tensor" title="(in TensorFlow v2.4)">tf.Tensor</a></p>
@@ -825,7 +947,7 @@ Additionally, it couples the velocity fields with displacements.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>sigma_yx_n_x + sigma_yy_n_y</strong> – y component of the homogeneous Neumann BC</p>
+<dd class="field-even"><p><strong>Ty</strong> – y component of the homogeneous Neumann BC</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)">torch.Tensor</a> or <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/Tensor" title="(in TensorFlow v2.4)">tf.Tensor</a></p>
@@ -846,7 +968,7 @@ Additionally, it couples the velocity fields with displacements.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>sigma_xx_n_x + sigma_xy_n_y</strong> – x component of the homogeneous Neumann BC</p>
+<dd class="field-even"><p><strong>Tx</strong> – x component of the homogeneous Neumann BC</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)">torch.Tensor</a> or <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/Tensor" title="(in TensorFlow v2.4)">tf.Tensor</a></p>
@@ -867,7 +989,7 @@ Additionally, it couples the velocity fields with displacements.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>sigma_yx_n_x + sigma_yy_n_y</strong> – y component of the homogeneous Neumann BC</p>
+<dd class="field-even"><p><strong>Ty</strong> – y component of the homogeneous Neumann BC</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)">torch.Tensor</a> or <a class="reference external" href="https://www.tensorflow.org/api_docs/python/tf/Tensor" title="(in TensorFlow v2.4)">tf.Tensor</a></p>
