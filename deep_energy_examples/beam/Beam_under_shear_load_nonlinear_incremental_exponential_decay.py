@@ -334,7 +334,7 @@ plt.tight_layout()
 fig2.savefig(f"{model_path}/{simulation_case}-{train_state.step}_edge_trajectory.png", dpi=300)
 
 # Output trajectory points
-np.savez(f"{model_path}/{simulation_case}_meshsize_{2/mesh_size:03.0f}.npz", x=trajectory_edge_points_sorted, y=trajectory_corners)
+np.savez(f"{model_path}/{simulation_case}_edge_trajectory_meshsize_{2/mesh_size:03.0f}.npz", x=trajectory_edge_points_sorted, y=trajectory_corners)
 np.savez(f"{model_path}/{simulation_case}_l2_errors.npz", x=rel_err_l2_disp, y=rel_err_l2_stress)
 
 time_dict["total"].append(time.time())
