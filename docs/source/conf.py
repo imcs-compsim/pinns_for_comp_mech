@@ -8,7 +8,7 @@
 
 project = 'CompSim-PINN'
 copyright = '2025, Institute for Mathematics and Computer-Based Simulation (IMCS)'
-author = 'Simon Völkl, Tarik Sahin, Daniel Wolff, Alexander Popp'
+author = 'Simon Völkl, Tarik Sahin, Daniel Wolff, Max von Danwitz, Alexander Popp'
 release = '2025.0.0'
 
 # -- General configuration ---------------------------------------------------
@@ -28,7 +28,9 @@ extensions = [
     "myst_parser",                # Markdown parser
 ]
 
-autosummary_generate = True       # auto-generate stub pages
+autosummary_generate = True             # auto-generate stub pages
+autosummary_generate_overwrite = True   # overwrite auo-generated files on new run
+autosummary_imported_members = True     # include objects re-exported from submodules
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
 

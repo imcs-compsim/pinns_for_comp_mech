@@ -43,7 +43,7 @@ dev = [
   "pytest-cov",
   "pytest-xdist",
   "sphinx",
-  myst_parser,
+  "myst-parser",
 ]
 tf = [
   "tensorflow",
