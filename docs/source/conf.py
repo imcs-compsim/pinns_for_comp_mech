@@ -29,7 +29,7 @@ extensions = [
 ]
 
 autosummary_generate = True             # auto-generate stub pages
-autosummary_generate_overwrite = True   # overwrite auo-generated files on new run
+autosummary_generate_overwrite = True   # overwrite auto-generated files on new run
 autosummary_imported_members = True     # include objects re-exported from submodules
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
