@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'CompSim-PINN'
+project = 'CompSim_PINNs'
 copyright = '2025, Institute for Mathematics and Computer-Based Simulation (IMCS)'
 author = 'Simon Völkl, Tarik Sahin, Daniel Wolff, Max von Danwitz, Alexander Popp'
 release = '2025.0.0'
