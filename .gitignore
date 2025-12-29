@@ -12,3 +12,5 @@
 *.synctex.gz
 *.run.xml
 *__pycache__
+# Documentation build folder
+docs/build/*
