@@ -216,9 +216,9 @@ def zero_complementarity_function_based_popp(x,y,X):
     '''
     Enforces KKT conditions using a complementarity function based on https://onlinelibrary.wiley.com/doi/abs/10.1002/nme.2614.
     This function is mathematically equal to combination of the following functions:
-        - positive_normal_gap_sign 
-        - negative_normal_traction_sign
-        - zero_complimentary
+    - positive_normal_gap_sign 
+    - negative_normal_traction_sign
+    - zero_complimentary
         
     Parameters
     ----------
@@ -244,9 +244,9 @@ def zero_complementarity_function_based_fischer_burmeister(x,y,X):
     '''
     Enforces KKT conditions using a complementarity function called Fischer-Burmeister based on ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf.
     This function is mathematically equal to combination of the following functions:
-        - positive_normal_gap_sign
-        - negative_normal_traction_sign
-        - zero_complimentary
+    - positive_normal_gap_sign
+    - negative_normal_traction_sign
+    - zero_complimentary
     
     Parameters
     ----------
@@ -393,9 +393,9 @@ def zero_complementarity_function_based_fischer_burmeister_3d(x,y,X):
     '''
     Enforces KKT conditions using a complementarity function called Fischer-Burmeister based on ref https://www.math.uwaterloo.ca/~ltuncel/publications/corr2007-17.pdf.
     This function is mathematically equal to combination of the following functions:
-        - positive_normal_gap_sign
-        - negative_normal_traction_sign
-        - zero_complimentary
+    - positive_normal_gap_sign
+    - negative_normal_traction_sign
+    - zero_complimentary
     
     Parameters
     ----------

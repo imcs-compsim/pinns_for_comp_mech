@@ -56,8 +56,12 @@ def elastic_strain_2d(x,y):
 
     Returns 
     -------
-    sigma_xx, sigma_yy, sigma_xy: Placeholder (tf)
-        contains the components of stress tensor 
+    sigma_xx : Placeholder (tf)
+        xx component of stress tensor
+    sigma_yy : Placeholder (tf)
+        yy component of stress tensor
+    sigma_xy : Placeholder (tf)
+        xy component of stress tensor
     '''
     eps_xx = dde.grad.jacobian(y, x, i=0, j=0)
     eps_yy = dde.grad.jacobian(y, x, i=1, j=1)
@@ -72,14 +76,14 @@ def problem_parameters():
 
     Returns
     -------
-        nu : Float
-            Poisson's ratio
-        lame: Float
-            Lame parameter
-        shear: Float
-            Shear modulus
-        e_modul: Float
-            Young's modulus
+    nu : float
+        Poisson's ratio
+    lame : float
+        Lame parameter
+    shear : float
+        Shear modulus
+    e_modul : float
+        Young's modulus
     '''
     e_modul = shear*(3*lame+2*shear)/(lame+shear)
     nu = lame/(2*(lame+shear))
@@ -100,8 +104,12 @@ def stress_plane_strain(x,y):
 
     Returns 
     -------
-    sigma_xx, sigma_yy, sigma_xy: Placeholder (tf)
-        contains the components of stress tensor 
+    sigma_xx : Placeholder (tf)
+        xx component of stress tensor
+    sigma_yy : Placeholder (tf)
+        yy component of stress tensor
+    sigma_xy : Placeholder (tf)
+        xy component of stress tensor
     '''
     eps_xx, eps_yy, eps_xy = elastic_strain_2d(x,y)
 
@@ -128,8 +136,12 @@ def stress_plane_stress(x,y):
 
     Returns 
     -------
-    sigma_xx, sigma_yy, sigma_xy: Placeholder (tf)
-        contains the components of stress tensor 
+    sigma_xx : Placeholder (tf)
+        xx component of stress tensor
+    sigma_yy : Placeholder (tf)
+        yy component of stress tensor
+    sigma_xy : Placeholder (tf)
+        xy component of stress tensor
     '''
     eps_xx, eps_yy, eps_xy = elastic_strain_2d(x,y)
 
@@ -143,20 +155,20 @@ def stress_plane_stress(x,y):
 
 def zero_neumman_plane_stress_x(x, y, X):
     '''
-    Calculates x component of the homogeneous Neumann BC
+    Calculates x component of the homogeneous Neumann BC.
     
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments (coordinates x and y)
-    y: tensor
+    y : torch.Tensor or tf.Tensor
         the network output (predicted displacement in x and y direction)
-    X: np.array
+    X : numpy.ndarray
         the input arguments as an array (coordinates x and y)
 
     Returns
     -------
-    sigma_xx_n_x + sigma_xy_n_y: tensor
+    Tx : torch.Tensor or tf.Tensor
         x component of the homogeneous Neumann BC
     '''
     
@@ -169,20 +181,20 @@ def zero_neumman_plane_stress_x(x, y, X):
 
 def zero_neumman_plane_stress_y(x, y, X):
     '''
-    Calculates y component of the homogeneous Neumann BC
+    Calculates y component of the homogeneous Neumann BC.
 
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments (coordinates x and y)
-    y: tensor
+    y : torch.Tensor or tf.Tensor
         the network output (predicted displacement in x and y direction)
-    X: np.array
+    X : numpy.ndarray
         the input arguments as an array (coordinates x and y)
 
     Returns
     -------
-    sigma_yx_n_x + sigma_yy_n_y: tensor
+    Ty : torch.Tensor or tf.Tensor
         y component of the homogeneous Neumann BC
     '''
 
@@ -195,20 +207,20 @@ def zero_neumman_plane_stress_y(x, y, X):
 
 def zero_neumman_plane_strain_x(x, y, X):
     '''
-    Calculates x component of the homogeneous Neumann BC
+    Calculates x component of the homogeneous Neumann BC.
     
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments (coordinates x and y)
-    y: tensor
+    y : torch.Tensor or tf.Tensor
         the network output (predicted displacement in x and y direction)
-    X: np.array
+    X : numpy.ndarray
         the input arguments as an array (coordinates x and y)
 
     Returns
     -------
-    sigma_xx_n_x + sigma_xy_n_y: tensor
+    Tx : torch.Tensor or tf.Tensor
         x component of the homogeneous Neumann BC
     '''
     
@@ -221,20 +233,20 @@ def zero_neumman_plane_strain_x(x, y, X):
 
 def zero_neumman_plane_strain_y(x, y, X):
     '''
-    Calculates y component of the homogeneous Neumann BC
+    Calculates y component of the homogeneous Neumann BC.
 
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments (coordinates x and y)
-    y: tensor
+    y : torch.Tensor or tf.Tensor
         the network output (predicted displacement in x and y direction)
-    X: np.array
+    X : numpy.ndarray
         the input arguments as an array (coordinates x and y)
 
     Returns
     -------
-    sigma_yx_n_x + sigma_yy_n_y: tensor
+    Ty : torch.Tensor or tf.Tensor
         y component of the homogeneous Neumann BC
     '''
 
@@ -251,41 +263,52 @@ def lin_iso_elasticity_plane_stress(x,y):
 
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments
-    y: tensor
+    y : torch.Tensor or tf.Tensor
         the network output
 
     Returns
     -------
-    term_x, term_y, term_xy: tensor
-        difference between predicted stresses and calculated stresses in X, Y and XY direction 
+    term_xx : torch.Tensor or tf.Tensor
+        difference between predicted stresses and calculated stresses for xx component
+    term_yy : torch.Tensor or tf.Tensor
+        difference between predicted stresses and calculated stresses for yy component
+    term_xy : torch.Tensor or tf.Tensor
+        difference between predicted stresses and calculated stresses for xy component
     '''
     
     sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
     
-    term_x = sigma_xx - y[:, 2:3]
-    term_y = sigma_yy - y[:, 3:4]
+    term_xx = sigma_xx - y[:, 2:3]
+    term_yy = sigma_yy - y[:, 3:4]
     term_xy = sigma_xy - y[:, 4:5]
     
-    return term_x, term_y, term_xy
+    return term_xx, term_yy, term_xy
 
 def pde_mixed_plane_stress(x,y):
     '''
-    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane stress
+    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane stress.
 
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments
-    y: tensor
+    y : torch.Tensor or tf.Tensor
         the network output
 
     Returns
     -------
-    momentum_x, momentum_y, term_x, term_y, term_xy: tensor
-        momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses
-        term_x, term_y, term_xy: difference between predicted stresses and calculated stresses in X, Y and XY direction
+    momentum_x : torch.Tensor or tf.Tensor
+        momentum terms in x based on derivatives of predicted stresses
+    momentum_y : torch.Tensor or tf.Tensor
+        momentum terms in y based on derivatives of predicted stresses
+    term_xx : torch.Tensor or tf.Tensor
+        difference between predicted stresses and calculated stresses for xx component
+    term_yy : torch.Tensor or tf.Tensor
+        difference between predicted stresses and calculated stresses for yy component
+    term_xy : torch.Tensor or tf.Tensor
+        difference between predicted stresses and calculated stresses for xy component
     '''
     sigma_xx_x = dde.grad.jacobian(y, x, i=2, j=0)
     sigma_yy_y = dde.grad.jacobian(y, x, i=3, j=1)
@@ -296,9 +319,9 @@ def pde_mixed_plane_stress(x,y):
     momentum_y = sigma_yy_y + sigma_xy_x
     
     # material law
-    term_x, term_y, term_xy = lin_iso_elasticity_plane_stress(x,y)
+    term_xx, term_yy, term_xy = lin_iso_elasticity_plane_stress(x,y)
 
-    return [momentum_x, momentum_y, term_x, term_y, term_xy]
+    return [momentum_x, momentum_y, term_xx, term_yy, term_xy]
 
 def lin_iso_elasticity_plane_strain(x,y):
     '''
@@ -306,41 +329,52 @@ def lin_iso_elasticity_plane_strain(x,y):
 
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments
-    y: tensor
+    y : torch.Tensor or tf.Tensor
         the network output
 
     Returns
     -------
-    term_x, term_y, term_xy: tensor
-        difference between predicted stresses and calculated stresses in X, Y and XY direction 
+    term_xx :torch.Tensor or tf.Tensor
+        difference between predicted stresses and calculated stresses for xx component
+    term_yy : torch.Tensor or tf.Tensor
+        difference between predicted stresses and calculated stresses for yy component
+    term_xy : torch.Tensor or tf.Tensor
+        difference between predicted stresses and calculated stresses for xy component
     '''
     
     sigma_xx, sigma_yy, sigma_xy = stress_plane_strain(x,y)
     
-    term_x = sigma_xx - y[:, 2:3]
-    term_y = sigma_yy - y[:, 3:4]
+    term_xx = sigma_xx - y[:, 2:3]
+    term_yy = sigma_yy - y[:, 3:4]
     term_xy = sigma_xy - y[:, 4:5]
     
-    return term_x, term_y, term_xy
+    return term_xx, term_yy, term_xy
 
 def pde_mixed_plane_strain(x,y):
     '''
-    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane strain
+    Calculates the momentum equation using predicted stresses and generates the terms for pde of the mixed-variable formulation in case of plane strain.
 
     Parameters
     ----------
-    x : tensor
+    x : torch.Tensor or tf.Tensor
         the input arguments
-    y: tensor
+    y : torch.Tensor or tf.Tensor
         the network output
 
     Returns
     -------
-    momentum_x, momentum_y, term_x, term_y, term_xy: tensor
-        momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses
-        term_x, term_y, term_xy: difference between predicted stresses and calculated stresses in X, Y and XY direction
+    momentum_x : torch.Tensor or tf.Tensor
+        momentum terms in x based on derivatives of predicted stresses
+    momentum_y : torch.Tensor or tf.Tensor
+        momentum terms in y based on derivatives of predicted stresses
+    term_xx : torch.Tensor or tf.Tensor
+        difference between predicted stresses and calculated stresses for xx component
+    term_yy : torch.Tensor or tf.Tensor
+        difference between predicted stresses and calculated stresses for yy component
+    term_xy : torch.Tensor or tf.Tensor
+        difference between predicted stresses and calculated stresses for xy component
     '''
     # governing equation
     sigma_xx_x = dde.grad.jacobian(y, x, i=2, j=0)
@@ -352,9 +386,9 @@ def pde_mixed_plane_strain(x,y):
     momentum_y = sigma_yy_y + sigma_xy_x
     
     # material law
-    term_x, term_y, term_xy = lin_iso_elasticity_plane_strain(x,y)
+    term_xx, term_yy, term_xy = lin_iso_elasticity_plane_strain(x,y)
 
-    return [momentum_x, momentum_y, term_x, term_y, term_xy]
+    return [momentum_x, momentum_y, term_xx, term_yy, term_xy]
 
 def stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond):
     '''
@@ -362,16 +396,27 @@ def stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond):
 
     Parameters
     -----------
-        sigma_xx (any): Stress component in x direction
-        sigma_yy (any): Stress component in y direction
-        sigma_xy (any): Stress component in xy direction (shear)
-        normals (vector): Normal vectors
-        cond (boolean): Dimensions of stresses and and normals have to match. Normals are calculated on the boundary, while stresses are calculated everywhere.
+    sigma_xx : any
+        Stress component in x direction
+    sigma_yy : any
+        Stress component in y direction
+    sigma_xy : any
+        Stress component in xy direction (shear)
+    normals : vector
+        Normal vectors
+    cond : boolean
+        Dimensions of stresses and and normals have to match. Normals are calculated on the boundary, while stresses are calculated everywhere.
 
     Returns
     -------
-        Tx, Ty, Tn, Tt: any
-            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
+    Tx : any
+        Traction components in cartesian x direction
+    Ty : any
+        Traction components in cartesian y direction
+    Tn : any
+        Traction components in polar n (normal) direction
+    Tt : any
+        Traction components in polar t (tangential) direction
     '''
     
     nx = normals[:,0:1]
@@ -396,17 +441,23 @@ def calculate_traction_mixed_formulation(x, y, X):
     
     Parameters
     -----------
-        x : tensor
-            Network input
-        y: tensor
-            Network output
-        X : np array
-            Network input as numpy array
+    x : torch.Tensor or tf.Tensor
+        Network input
+    y : torch.Tensor or tf.Tensor
+        Network output
+    X : numpy.ndarray
+        Network input as numpy array
 
     Returns
     -------
-        Tx, Ty, Tn, Tt: any
-            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
+    Tx : any
+        Traction components in cartesian x direction
+    Ty : any
+        Traction components in cartesian y direction
+    Tn : any
+        Traction components in polar n (normal) direction
+    Tt : any
+        Traction components in polar t (tangential) direction
     '''
 
     sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
@@ -423,17 +474,17 @@ def zero_neumann_x_mixed_formulation(x, y, X):
     
     Parameters
     -----------
-        x : tensor
-            Network input
-        y: tensor
-            Network output
-        X : np array
-            Network input as numpy array
+    x : torch.Tensor or tf.Tensor
+        Network input
+    y : torch.Tensor or tf.Tensor
+        Network output
+    X : numpy.ndarray
+        Network input as numpy array
 
     Returns
     -------
-        Tx: any
-            x component of traction vector
+    Tx: any
+        x component of traction vector
     '''
     
     
@@ -447,17 +498,17 @@ def zero_neumann_y_mixed_formulation(x, y, X):
     
     Parameters
     -----------
-        x : tensor
-            Network input
-        y: tensor
-            Network output
-        X : np array
-            Network input as numpy array
+    x : torch.Tensor or tf.Tensor
+        Network input
+    y : torch.Tensor or tf.Tensor
+        Network output
+    X : numpy.ndarray
+        Network input as numpy array
 
     Returns
     -------
-        Ty: any
-            y component of traction vector
+    Ty: any
+        y component of traction vector
     '''
     
     
@@ -480,8 +531,18 @@ def get_elastic_strain_3d(x,y):
 
     Returns 
     -------
-    eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz: tensor
-        contains the components of strain tensor in 3D
+    eps_xx : tensor
+        contains the xx components of strain tensor in 3D
+    eps_yy : tensor
+        contains the yy components of strain tensor in 3D
+    eps_zz : tensor
+        contains the zz components of strain tensor in 3D
+    eps_xy : tensor
+        contains the xy components of strain tensor in 3D
+    eps_yz : tensor
+        contains the yz components of strain tensor in 3D
+    eps_xz : tensor
+        contains the xz components of strain tensor in 3D
     '''
     # Normal strains
     eps_xx = dde.grad.jacobian(y, x, i=0, j=0)
@@ -508,8 +569,18 @@ def get_stress_tensor(x,y):
 
     Returns 
     -------
-    sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz: tensor
-        contains the components of stress tensor in 3D
+    sigma_xx : tensor
+        contains the xx components of stress tensor in 3D
+    sigma_yy : tensor
+        contains the yy components of stress tensor in 3D
+    sigma_zz : tensor
+        contains the zz components of stress tensor in 3D
+    sigma_xy : tensor
+        contains the xy components of stress tensor in 3D
+    sigma_yz : tensor
+        contains the yz components of stress tensor in 3D
+    sigma_xz : tensor
+        contains the xz components of stress tensor in 3D
     '''
     eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz = get_elastic_strain_3d(x,y)
 
@@ -541,8 +612,18 @@ def get_stress_coupling(x,y):
 
     Returns
     -------
-    term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor
-        difference between predicted stresses and calculated stresses in 3D
+    term_xx : tensor
+        difference between predicted stresses and calculated stresses in xx component in 3D
+    term_yy : tensor
+        difference between predicted stresses and calculated stresses in yy component in 3D
+    term_zz : tensor
+        difference between predicted stresses and calculated stresses in zz component in 3D
+    term_xy : tensor
+        difference between predicted stresses and calculated stresses in xy component in 3D
+    term_yz : tensor
+        difference between predicted stresses and calculated stresses in yz component in 3D
+    term_xz : tensor
+        difference between predicted stresses and calculated stresses in xz component in 3D
     '''
     
     sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz = get_stress_tensor(x,y)
@@ -569,9 +650,24 @@ def pde_mixed_3d(x, y):
 
     Returns
     -------
-    momentum_x, momentum_y, momentum_z, term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor
-        momentum_x, momentum_y, momentum_z: momentum terms based on derivatives of predicted stresses
-        term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: difference between predicted stresses and calculated stresses in X, Y, Z, XY, YZ, and XZ directions
+    momentum_x : tensor
+        momentum terms in x based on derivatives of predicted stresses
+    momentum_y : tensor
+        momentum terms in y based on derivatives of predicted stresses
+    momentum_z : tensor
+        momentum terms in z based on derivatives of predicted stresses
+    term_xx : tensor
+        difference between predicted stresses and calculated stresses in xx component in 3D
+    term_yy : tensor
+        difference between predicted stresses and calculated stresses in yy component in 3D
+    term_zz : tensor
+        difference between predicted stresses and calculated stresses in zz component in 3D
+    term_xy : tensor
+        difference between predicted stresses and calculated stresses in xy component in 3D
+    term_yz : tensor
+        difference between predicted stresses and calculated stresses in yz component in 3D
+    term_xz : tensor
+        difference between predicted stresses and calculated stresses in xz component in 3D
     '''
     # Stress derivatives
     sigma_xx_x = dde.grad.jacobian(y, x, i=3, j=0)
@@ -637,8 +733,18 @@ def stress_to_traction_3d(sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_xz, sigm
 
     Returns
     -------
-    Tx, Ty, Tz, Tn, Tt_1, Tt_2: any
-        Traction components in Cartesian (x, y, z) coordinates and in normal (n) and tangential directions (t_1, t_2)
+    Tx : any
+        Traction components in cartesian x direction
+    Ty : any
+        Traction components in cartesian y direction
+    Tz : any
+        Traction components in cartesian z direction
+    Tn : any
+        Traction components in polar n (normal) direction
+    Tt_1 : any
+        Traction components in polar t_1 (tangential) direction
+    Tt_2 : any
+        Traction components in polar t_2 (tangential) direction
     '''
     # normals 
     nx = normals[:,0:1]
@@ -675,17 +781,27 @@ def get_tractions_mixed_3d(x, y, X):
     
     Parameters
     -----------
-        x : tensor
-            Network input
-        y: tensor
-            Network output
-        X : np array
-            Network input as numpy array
+    x : torch.Tensor or tf.Tensor
+        Network input
+    y : torch.Tensor or tf.Tensor
+        Network output
+    X : numpy.ndarray
+        Network input as numpy array
 
     Returns
     -------
-        Tx, Ty, Tz, Tn, Tt_1, Tt_2: tensor
-            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
+    Tx : torch.Tensor or tf.Tensor
+        Traction components in cartesian x direction
+    Ty : torch.Tensor or tf.Tensor
+        Traction components in cartesian y direction
+    Tz : torch.Tensor or tf.Tensor
+        Traction components in cartesian z direction
+    Tn : torch.Tensor or tf.Tensor
+        Traction components in polar n (normal) direction
+    Tt_1 : torch.Tensor or tf.Tensor
+        Traction components in polar t_1 (tangential) direction
+    Tt_2 : torch.Tensor or tf.Tensor
+        Traction components in polar t_2 (tangential) direction
     '''    
     sigma_xx =  y[:, 3:4]
     sigma_yy =  y[:, 4:5]
@@ -706,20 +822,20 @@ def apply_zero_neumann_x_mixed_formulation(x, y, X):
     
     Parameters
     -----------
-        x : tensor
-            Network input
-        y: tensor
-            Network output
-        X : np array
-            Network input as numpy array
+    x : torch.Tensor or tf.Tensor
+        Network input
+    y : torch.Tensor or tf.Tensor
+        Network output
+    X : numpy.ndarray
+        Network input as numpy array
 
     Returns
     -------
-        Tx: tensor
-            x component of traction vector
+    Tx: torch.Tensor or tf.Tensor
+        x component of traction vector
     '''
     
-    Tx, Ty, Tz, Tn, Tt_1, Tt_2 = get_tractions_mixed_3d(x, y, X)
+    Tx, _, _, _, _, _ = get_tractions_mixed_3d(x, y, X)
 
     return Tx
 
@@ -729,20 +845,20 @@ def apply_zero_neumann_y_mixed_formulation(x, y, X):
     
     Parameters
     -----------
-        x : tensor
-            Network input
-        y: tensor
-            Network output
-        X : np array
-            Network input as numpy array
+    x : torch.Tensor or tf.Tensor
+        Network input
+    y : torch.Tensor or tf.Tensor
+        Network output
+    X : numpy.ndarray
+        Network input as numpy array
 
     Returns
     -------
-        Ty: tensor
-            y component of traction vector
+    Ty: torch.Tensor or tf.Tensor
+        y component of traction vector
     '''
     
-    Tx, Ty, Tz, Tn, Tt_1, Tt_2 = get_tractions_mixed_3d(x, y, X)
+    _, Ty, _, _, _, _ = get_tractions_mixed_3d(x, y, X)
 
     return Ty
 
@@ -752,20 +868,20 @@ def apply_zero_neumann_z_mixed_formulation(x, y, X):
     
     Parameters
     -----------
-        x : tensor
-            Network input
-        y: tensor
-            Network output
-        X : np array
-            Network input as numpy array
+    x : torch.Tensor or tf.Tensor
+        Network input
+    y : torch.Tensor or tf.Tensor
+        Network output
+    X : numpy.ndarray
+        Network input as numpy array
 
     Returns
     -------
-        Tz: tensor
-            z component of traction vector
+    Tz: torch.Tensor or tf.Tensor
+        z component of traction vector
     '''
     
-    Tx, Ty, Tz, Tn, Tt_1, Tt_2 = get_tractions_mixed_3d(x, y, X)
+    _, _, Tz, _, _, _ = get_tractions_mixed_3d(x, y, X)
 
     return Tz
 #################################################################################################################################################################################
@@ -778,17 +894,23 @@ def pde_mixed_plane_stress_time_dependent(x,y):
 
     Parameters
     ----------
-        x : Placeholder (tensor)
-            contains the placeholder for coordinates of input points and time: x, y, t
-        y : Placeholder (tensor)
-            contains the placeholder for network output: disp_x, disp_y, sigma_xx, sigma_yy, sigma_xy
+    x : Placeholder (tensor)
+        contains the placeholder for coordinates of input points and time: x, y, t
+    y : Placeholder (tensor)
+        contains the placeholder for network output: disp_x, disp_y, sigma_xx, sigma_yy, sigma_xy
 
     Returns
     -------
-        momentum_x, momentum_y, term_x, term_y, term_xy: tensor
-            momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses
-        term_x, term_y, term_xy: tensor
-            Difference between predicted stresses and calculated stresses in X, Y and XY direction in case of plane stress
+    momentum_x : tensor
+        momentum terms in x based on derivatives of predicted stresses
+    momentum_y : tensor
+        momentum terms in y based on derivatives of predicted stresses
+    term_xx : tensor
+        difference between predicted stresses and calculated stresses for xx component
+    term_yy : tensor
+        difference between predicted stresses and calculated stresses for yy component
+    term_xy : tensor
+        difference between predicted stresses and calculated stresses for xy component
     '''
     # get ddu_x/dt2
     u_x_tt = dde.grad.hessian(y, x, component=0, i=2, j=2) # component is u_x, tt is the third input which is time tt=>ij
@@ -809,9 +931,9 @@ def pde_mixed_plane_stress_time_dependent(x,y):
         momentum_y = sigma_yy_y + sigma_xy_x
     
     # material law
-    term_x, term_y, term_xy = lin_iso_elasticity_plane_stress(x,y)
+    term_xx, term_yy, term_xy = lin_iso_elasticity_plane_stress(x,y)
 
-    return [momentum_x, momentum_y, term_x, term_y, term_xy]
+    return [momentum_x, momentum_y, term_xx, term_yy, term_xy]
 
 def pde_mixed_plane_strain_time_dependent(x,y):
     '''
@@ -820,17 +942,23 @@ def pde_mixed_plane_strain_time_dependent(x,y):
 
     Parameters
     ----------
-        x : Placeholder (tensor)
-            contains the placeholder for coordinates of input points and time: x, y, t
-        y : Placeholder (tensor)
-            contains the placeholder for network output: c
+    x : Placeholder (tensor)
+        contains the placeholder for coordinates of input points and time: x, y, t
+    y : Placeholder (tensor)
+        contains the placeholder for network output: c
 
     Returns
     -------
-        momentum_x, momentum_y, term_x, term_y, term_xy : tensor
-            momentum_x, momentum_y: momentum terms based on derivatives of predicted stresses
-        term_x, term_y, term_xy : tensor
-            Difference between predicted stresses and calculated stresses in X, Y and XY direction in case of plane strain
+    momentum_x : tensor
+        momentum terms in x based on derivatives of predicted stresses
+    momentum_y : tensor
+        momentum terms in y based on derivatives of predicted stresses
+    term_xx : tensor
+        difference between predicted stresses and calculated stresses for xx component
+    term_yy : tensor
+        difference between predicted stresses and calculated stresses for yy component
+    term_xy : tensor
+        difference between predicted stresses and calculated stresses for xy component
     '''
     # get ddu_x/dt2
     u_x_tt = dde.grad.hessian(y, x, component=0, i=2, j=2) # component is u_x, tt is the third input which is time tt=>ij
@@ -852,9 +980,9 @@ def pde_mixed_plane_strain_time_dependent(x,y):
         momentum_y = sigma_yy_y + sigma_xy_x - rho*u_y_tt
     
     # material law
-    term_x, term_y, term_xy = lin_iso_elasticity_plane_strain(x,y)
+    term_xx, term_yy, term_xy = lin_iso_elasticity_plane_strain(x,y)
 
-    return [momentum_x, momentum_y, term_x, term_y, term_xy]
+    return [momentum_x, momentum_y, term_xx, term_yy, term_xy]
 
 def get_tractions_mixed_2d_time(x, y, X):
     '''
@@ -862,17 +990,23 @@ def get_tractions_mixed_2d_time(x, y, X):
     
     Parameters
     ----------
-        x : Placeholder (tensor)
-            contains the placeholder for coordinates of input points and time: x, y, t
-        y : Placeholder (tensor)
-            contains the placeholder for network output: disp_x, disp_y, sigma_xx, sigma_yy, sigma_xy
-        X : np array
-            Network input as numpy array (x,y,t)
+    x : Placeholder (tensor)
+        contains the placeholder for coordinates of input points and time: x, y, t
+    y : Placeholder (tensor)
+        contains the placeholder for network output: disp_x, disp_y, sigma_xx, sigma_yy, sigma_xy
+    X : numpy.ndarray
+        Network input as numpy array (x,y,t)
 
     Returns
     -------
-        Tx, Ty, Tn, Tt: tensor
-            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
+    Tx : any
+        Traction components in cartesian x direction
+    Ty : any
+        Traction components in cartesian y direction
+    Tn : any
+        Traction components in polar n (normal) direction
+    Tt : any
+        Traction components in polar t (tangential) direction
     '''    
     sigma_xx =  y[:, 2:3]
     sigma_yy =  y[:, 3:4]
@@ -890,17 +1024,23 @@ def get_tractions_mixed_2d_spacetime(x, y, X):
     Calculates traction components in the mixed formulation. Note that this method works only if space-time domain (dde.geometry.GeometryXTime) is generated.
     
     ----------
-        x : Placeholder (tensor)
-            contains the placeholder for coordinates of input points and time: x, y, t
-        y : Placeholder (tensor)
-            contains the placeholder for network output: disp_x, disp_y, sigma_xx, sigma_yy, sigma_xy
-        X : np array
-            Network input as numpy array (x,y,t)
+    x : Placeholder (tensor)
+        contains the placeholder for coordinates of input points and time: x, y, t
+    y : Placeholder (tensor)
+        contains the placeholder for network output: disp_x, disp_y, sigma_xx, sigma_yy, sigma_xy
+    X : numpy.ndarray
+        Network input as numpy array (x,y,t)
 
     Returns
     -------
-        Tx, Ty, Tn, Tt: any
-            Traction components in cartesian (x,y) and polar coordinates (n (normal) and t (tangential))
+    Tx : any
+        Traction components in cartesian x direction
+    Ty : any
+        Traction components in cartesian y direction
+    Tn : any
+        Traction components in polar n (normal) direction
+    Tt : any
+        Traction components in polar t (tangential) direction
     '''
 
     sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5] 
@@ -924,8 +1064,12 @@ def strain_rate_2d(x,y):
 
     Returns 
     -------
-    sigma_xx, sigma_yy, sigma_xy: Placeholder (tf)
-        contains the components of stress tensor 
+    sigma_xx : Placeholder (tf)
+        xx component of stress tensor
+    sigma_yy : Placeholder (tf)
+        yy component of stress tensor
+    sigma_xy : Placeholder (tf)
+        xy component of stress tensor
     '''
     eps_xx_rate = dde.grad.jacobian(y, x, i=5, j=0)
     eps_yy_rate = dde.grad.jacobian(y, x, i=6, j=1)
@@ -946,8 +1090,12 @@ def stress_rate_plane_strain(x,y):
 
     Returns 
     -------
-    sigma_xx, sigma_yy, sigma_xy: Placeholder (tf)
-        contains the components of stress tensor 
+    sigma_xx : Placeholder (tf)
+        xx component of stress tensor
+    sigma_yy : Placeholder (tf)
+        yy component of stress tensor
+    sigma_xy : Placeholder (tf)
+        xy component of stress tensor
     '''
     # get the strain rates for plane strain
     eps_xx_rate, eps_yy_rate, eps_xy_rate = strain_rate_2d(x,y)
@@ -974,8 +1122,10 @@ def get_plane_strain_stress_rate_coupling(x,y):
 
     Returns
     -------
-    term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor
-        difference between predicted stresses and calculated stresses in 3D
+    term_x_velocity : tensor
+        difference between predicted velocity and calulated velocity in x direction
+    term_y_velocity : tensor
+        difference between predicted velocity and calulated velocity in y direction
     '''
     # get stress rates from velocity fields
     sigma_xx_t_v, sigma_yy_t_v, sigma_xy_t_v = stress_rate_plane_strain(x,y)
@@ -984,11 +1134,11 @@ def get_plane_strain_stress_rate_coupling(x,y):
     sigma_yy_t_s = dde.grad.jacobian(y, x, i=3, j=2)
     sigma_xy_t_s = dde.grad.jacobian(y, x, i=4, j=2)
     # couple the stress rates
-    term_x_rate = sigma_xx_t_v - sigma_xx_t_s
-    term_y_rate = sigma_yy_t_v - sigma_yy_t_s
+    term_xx_rate = sigma_xx_t_v - sigma_xx_t_s
+    term_yy_rate = sigma_yy_t_v - sigma_yy_t_s
     term_xy_rate = sigma_xy_t_v - sigma_xy_t_s
     
-    return term_x_rate, term_y_rate, term_xy_rate
+    return term_xx_rate, term_yy_rate, term_xy_rate
 
 def get_velocity_coupling_2d(x,y):
     # coupling of displacement and velocities
@@ -1009,17 +1159,33 @@ def pde_mixed_velocity_plane_strain_time_dependent(x,y):
 
     Parameters
     ----------
-        x : Placeholder (tensor)
-            contains the placeholder for coordinates of input points and time: x, y, t
-        y : Placeholder (tensor)
-            contains the placeholder for network output: disp_x, disp_y, sigma_xx, sigma_yy, sigma_xy, velocity_x, velocity_y
+    x : Placeholder (tensor)
+        contains the placeholder for coordinates of input points and time: x, y, t
+    y : Placeholder (tensor)
+        contains the placeholder for network output: disp_x, disp_y, sigma_xx, sigma_yy, sigma_xy, velocity_x, velocity_y
 
     Returns
     -------
-        momentum_x, momentum_y : tensor
-            momentum terms based on derivatives of predicted stresses
-        term_x, term_y, term_xy : tensor
-            Difference between predicted stresses and calculated stresses in X, Y and XY direction in case of plane strain
+    momentum_x : tensor
+        momentum terms in x based on derivatives of predicted stresses
+    momentum_y : tensor
+        momentum terms in y based on derivatives of predicted stresses
+    term_xx_rate : tensor
+        difference between predicted stress rates and calculated stress rates in xx component
+    term_yy_rate : tensor
+        difference between predicted stress rates and calculated stress rates in yy component
+    term_xy_rate : tensor
+        difference between predicted stress rates and calculated stress rates in xy component
+    term_x_velocity : tensor
+        difference between predicted velocity and calulated velocity in x direction
+    term_y_velocity : tensor
+        difference between predicted velocity and calulated velocity in y direction
+    term_xx : tensor
+        difference between predicted stresses and calculated stresses in xx component
+    term_yy : tensor
+        difference between predicted stresses and calculated stresses in yy component
+    term_xy : tensor
+        difference between predicted stresses and calculated stresses in xy component
     '''
     # get stress derivatives
     sigma_xx_x = dde.grad.jacobian(y, x, i=2, j=0)
@@ -1041,15 +1207,15 @@ def pde_mixed_velocity_plane_strain_time_dependent(x,y):
         momentum_y = sigma_yy_y + sigma_xy_x - rho*v_y_t
     
    # Coupling of stress rates
-    term_x_rate, term_y_rate, term_xy_rate = get_plane_strain_stress_rate_coupling(x, y)
+    term_xx_rate, term_yy_rate, term_xy_rate = get_plane_strain_stress_rate_coupling(x, y)
     
     # Coupling of velocities
     term_x_velocity, term_y_velocity = get_velocity_coupling_2d(x,y)
     
     # material law
-    term_x, term_y, term_xy = lin_iso_elasticity_plane_strain(x,y)
+    term_xx, term_yy, term_xy = lin_iso_elasticity_plane_strain(x,y)
 
-    return [momentum_x, momentum_y, term_x_rate, term_y_rate, term_xy_rate, term_x_velocity, term_y_velocity, term_x, term_y, term_xy ]
+    return [momentum_x, momentum_y, term_xx_rate, term_yy_rate, term_xy_rate, term_x_velocity, term_y_velocity, term_xx, term_yy, term_xy]
 
 #################################################################################################################################################################################
 # Equations for 3D elastodynamics
@@ -1067,9 +1233,24 @@ def pde_mixed_3d_time(x, y):
 
     Returns
     -------
-    momentum_x, momentum_y, momentum_z, term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor
-        momentum_x, momentum_y, momentum_z: momentum terms based on derivatives of predicted stresses
-        term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: difference between predicted stresses and calculated stresses in X, Y, Z, XY, YZ, and XZ directions
+    momentum_x : tensor
+        momentum terms in x based on derivatives of predicted stresses
+    momentum_y : tensor
+        momentum terms in y based on derivatives of predicted stresses
+    momentum_z : tensor
+        momentum terms in z based on derivatives of predicted stresses
+    term_xx : tensor
+        difference between predicted stresses and calculated stresses in xx component in 3D
+    term_yy : tensor
+        difference between predicted stresses and calculated stresses in yy component in 3D
+    term_zz : tensor
+        difference between predicted stresses and calculated stresses in zz component in 3D
+    term_xy : tensor
+        difference between predicted stresses and calculated stresses in xy component in 3D
+    term_yz : tensor
+        difference between predicted stresses and calculated stresses in yz component in 3D
+    term_xz : tensor
+        difference between predicted stresses and calculated stresses in xz component in 3D
     '''
     # Stress derivatives
     sigma_xx_x = dde.grad.jacobian(y, x, i=3, j=0)
@@ -1126,17 +1307,27 @@ def get_tractions_mixed_3d_spacetime(x, y, X):
     
     Parameters
     ----------
-        x : Placeholder (tensor)
-            contains the placeholder for coordinates of input points an time: x, y, z, t
-        y : Placeholder (tensor)
-            contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz
-        X : np array
-            Network input as numpy array (x,y,z,t)
+    x : Placeholder (tensor)
+        contains the placeholder for coordinates of input points an time: x, y, z, t
+    y : Placeholder (tensor)
+        contains the placeholder for network output: disp_x, disp_y, disp_z, sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz
+    X : numpy.ndarray
+        Network input as numpy array (x,y,z,t)
 
     Returns
     -------
-        Tx, Ty, Tz, Tn, Tt_1, Tt_2: tensor
-            Traction components in cartesian (x,y,z) and polar coordinates (n (normal), t_1 (tangential 1), t_2 (tangential 2))
+    Tx : tensor
+        Traction components in cartesian x direction
+    Ty : tensor
+        Traction components in cartesian y direction
+    Tz : tensor
+        Traction components in cartesian z direction
+    Tn : tensor
+        Traction components in polar n (normal) direction
+    Tt_1 : tensor
+        Traction components in polar t_1 (tangential) direction
+    Tt_2 : tensor
+        Traction components in polar t_2 (tangential) direction
     '''    
     sigma_xx =  y[:, 3:4]
     sigma_yy =  y[:, 4:5]
@@ -1167,8 +1358,18 @@ def elastic_strain_rate_3d(x,y):
 
     Returns 
     -------
-    eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz: tensor
-        contains the components of strain tensor in 3D
+    eps_xx_rate : tensor
+        contains the xx components of strain rate tensor in 3D
+    eps_yy_rate : tensor
+        contains the yy components of strain rate tensor in 3D
+    eps_zz_rate : tensor
+        contains the zz components of strain rate tensor in 3D
+    eps_xy_rate : tensor
+        contains the xy components of strain rate tensor in 3D
+    eps_yz_rate : tensor
+        contains the yz components of strain rate tensor in 3D
+    eps_xz_rate : tensor
+        contains the xz components of strain rate tensor in 3D
     '''
     # Normal strain rates
     eps_xx_rate = dde.grad.jacobian(y, x, i=9, j=0)
@@ -1195,8 +1396,18 @@ def stress_rate_tensor_3d(x,y):
 
     Returns 
     -------
-    sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz: tensor
-        contains the components of stress tensor in 3D
+    sigma_xx_rate : tensor
+        contains the xx components of stress rate tensor in 3D
+    sigma_yy_rate : tensor
+        contains the yy components of stress rate tensor in 3D
+    sigma_zz_rate : tensor
+        contains the zz components of stress rate tensor in 3D
+    sigma_xy_rate : tensor
+        contains the xy components of stress rate tensor in 3D
+    sigma_yz_rate : tensor
+        contains the yz components of stress rate tensor in 3D
+    sigma_xz_rate : tensor
+        contains the xz components of stress rate tensor in 3D
     '''
     eps_xx_rate, eps_yy_rate, eps_zz_rate, eps_xy_rate, eps_yz_rate, eps_xz_rate = elastic_strain_rate_3d(x,y)
 
@@ -1228,8 +1439,18 @@ def get_stress_rate_coupling_3d(x,y):
 
     Returns
     -------
-    term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor
-        difference between predicted stresses and calculated stresses in 3D
+    term_xx_rate : tensor
+        difference between predicted stress rates and calculated stress rates in xx component
+    term_yy_rate : tensor
+        difference between predicted stress rates and calculated stress rates in yy component
+    term_zz_rate : tensor
+        difference between predicted stress rates and calculated stress rates in zz component
+    term_xy_rate : tensor
+        difference between predicted stress rates and calculated stress rates in xy component
+    term_yz_rate : tensor
+        difference between predicted stress rates and calculated stress rates in yz component
+    term_xz_rate : tensor
+        difference between predicted stress rates and calculated stress rates in xz component
     '''
     # get the stress rate from velocity fields
     sigma_xx_rate_v, sigma_yy_rate_v, sigma_zz_rate_v, sigma_xy_rate_v, sigma_yz_rate_v, sigma_xz_rate_v = stress_rate_tensor_3d(x,y)
@@ -1280,9 +1501,42 @@ def pde_mixed_velocity_3d_time(x, y):
 
     Returns
     -------
-    momentum_x, momentum_y, momentum_z, term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: tensor
-        momentum_x, momentum_y, momentum_z: momentum terms based on derivatives of predicted stresses
-        term_xx, term_yy, term_zz, term_xy, term_yz, term_xz: difference between predicted stresses and calculated stresses in X, Y, Z, XY, YZ, and XZ directions
+    momentum_x : tensor
+        momentum terms in x based on derivatives of predicted stresses
+    momentum_y : tensor
+        momentum terms in y based on derivatives of predicted stresses
+    momentum_z : tensor
+        momentum terms in z based on derivatives of predicted stresses
+    term_xx_rate : tensor
+        difference between predicted stress rates and calculated stress rates in xx component
+    term_yy_rate : tensor
+        difference between predicted stress rates and calculated stress rates in yy component
+    term_zz_rate : tensor
+        difference between predicted stress rates and calculated stress rates in zz component
+    term_xy_rate : tensor
+        difference between predicted stress rates and calculated stress rates in xy component
+    term_yz_rate : tensor
+        difference between predicted stress rates and calculated stress rates in yz component
+    term_xz_rate : tensor
+        difference between predicted stress rates and calculated stress rates in xz component
+    term_x_velocity : tensor
+        difference between predicted velocity and calulated velocity in x direction
+    term_y_velocity : tensor
+        difference between predicted velocity and calulated velocity in y direction
+    term_z_velocity : tensor
+        difference between predicted velocity and calulated velocity in z direction
+    term_xx : tensor
+        difference between predicted stresses and calculated stresses in xx component
+    term_yy : tensor
+        difference between predicted stresses and calculated stresses in yy component
+    term_zz : tensor
+        difference between predicted stresses and calculated stresses in zz component
+    term_xy : tensor
+        difference between predicted stresses and calculated stresses in xy component
+    term_yz : tensor
+        difference between predicted stresses and calculated stresses in yz component
+    term_xz : tensor
+        difference between predicted stresses and calculated stresses in xz component
     '''
     # Stress derivatives
     sigma_xx_x = dde.grad.jacobian(y, x, i=3, j=0)

@@ -1,3 +1,6 @@
+# weird MacOS files
+*.DS_Store
+
 # latex generated files
 *.log
 *.lof
@@ -11,4 +14,11 @@
 *.toc
 *.synctex.gz
 *.run.xml
+
+# python files
 *__pycache__
+*.pyc
+
+# Sphinx build files
+docs/build/*
+docs/source/api/generated/*
