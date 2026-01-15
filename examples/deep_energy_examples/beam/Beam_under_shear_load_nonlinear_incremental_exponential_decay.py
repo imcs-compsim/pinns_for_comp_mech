@@ -20,13 +20,13 @@ if torch.cuda.is_available():
 
 Incremental bending beam test for EBE-PINNs vs. FEM convergence study.
 '''
-from utils.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-from utils.geometry.gmsh_models import Block_2D_square
-from utils.hyperelasticity import hyperelasticity_utils
-from utils.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_2d, compute_elastic_properties, cauchy_stress_2D
-from utils.deep_energy.deep_pde import DeepEnergyPDE
-from utils.vpinns.quad_rule import GaussQuadratureRule
-from utils.postprocess.custom_callbacks import LossPlateauStopping, WeightsBiasPlateauStopping
+from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
+from compsim_pinns.geometry.gmsh_models import Block_2D_square
+from compsim_pinns.hyperelasticity import hyperelasticity_utils
+from compsim_pinns.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_2d, compute_elastic_properties, cauchy_stress_2D
+from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
+from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
+from compsim_pinns.postprocess.custom_callbacks import LossPlateauStopping, WeightsBiasPlateauStopping
 
 time_dict = {"meshing":[],
              "element_information":[],
