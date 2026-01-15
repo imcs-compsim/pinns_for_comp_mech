@@ -92,8 +92,108 @@ class SaveModelVTU(Callback):
 
             unstructuredGridToVTK(self.filename +"_"+ str(current_iteration), x, y, z, dol_triangles.flatten(), offset,
                                 cell_types, pointData = pointData)     
-            
 
-      
+class LossPlateauStopping(Callback):
+    """
+    Stop training if the training loss does not change significantly
+    within the last `patience` iterations.
+    """
 
+    def __init__(self, min_delta=1e-3, patience=1000, monitor="loss_train", start_from_iteration=0):
+        super().__init__()
+        self.monitor = monitor
+        self.patience = patience
+        self.min_delta = min_delta
+        self.last_loss = np.inf
+        self.wait = 0
+        self.stopped_iteration = 0
+        self.start_from_iteration = start_from_iteration
 
+    def on_train_begin(self):
+        self.wait = 0
+        self.stopped_iteration = 0
+
+    def on_epoch_end(self):
+        if self.model.train_state.iteration < self.start_from_iteration:
+            return
+        current = self.get_monitor_value()
+        if abs((self.last_loss - current)/current) < self.min_delta:
+            self.wait += 1
+            if self.wait >= self.patience:
+                self.stopped_iteration = self.model.train_state.iteration
+                self.model.stop_training = True
+        else:
+            self.wait = 0
+        self.last_loss = current
+
+    def on_train_end(self):
+        if self.stopped_iteration > 0:
+            print(f"Early stopping at iteration {self.stopped_iteration} as relative change of {self.monitor} was below {self.min_delta:.1E} for at least {self.patience} iterations.")
+
+    def get_monitor_value(self):
+        if self.monitor == "loss_train":
+            result = sum(self.model.train_state.loss_train)
+        elif self.monitor == "loss_test":
+            result = sum(self.model.train_state.loss_test)
+        else:
+            raise ValueError("The specified monitor function is incorrect.")
+
+        return result
+
+class WeightsBiasPlateauStopping(Callback):
+    """
+    Stop training if the network weights and bias do not change significantly
+    within the last `patience` iterations.
+    """
+
+    def __init__(self, min_delta=1e-2, patience=1000, norm_choice="fro", start_from_iteration=0):
+        super().__init__()
+        self.norm_choice = norm_choice
+        self.patience = patience
+        self.min_delta = min_delta
+        self.norm_list = []
+        self.wait = 0
+        self.stopped_iteration = 0
+        self.start_from_iteration = start_from_iteration
+        if norm_choice == "fro":
+            self.order = (2,"fro")
+        elif norm_choice == "l1":
+            self.order = (1,1)
+        elif norm_choice == "l2":
+            self.order = (2,2)
+        elif norm_choice == "linf":
+            self.order = (float("inf"),float("inf"))
+        else:
+            raise ValueError("The specified norm is not implemented or correct.")
+
+    def on_train_begin(self):
+        self.wait = 0
+        self.stopped_iteration = 0
+
+    def on_epoch_end(self):
+        if self.model.train_state.iteration < self.start_from_iteration:
+            return
+        self.norm_list.append(self.get_norm_value())
+        if len(self.norm_list) > self.patience:
+            self.norm_list.pop(0)
+        if abs((max(self.norm_list) - min(self.norm_list)) * len(self.norm_list)/ sum(self.norm_list)) < self.min_delta:
+            self.wait += 1
+            if self.wait >= self.patience:
+                self.stopped_iteration = self.model.train_state.iteration
+                self.model.stop_training = True
+        else:
+            self.wait = 0
+
+    def on_train_end(self):
+        if self.stopped_iteration > 0:
+            print(f"Early stopping at iteration {self.stopped_iteration} as relative change of {self.norm_choice} norm was below {self.min_delta:.1E} for at least {self.patience} iterations.")
+
+    def get_norm_value(self):
+        device = next(self.model.net.parameters()).device
+        result = torch.tensor(0.0, device=device)
+        for name, param in self.model.net.named_parameters():
+            if "bias" in name:
+                result += torch.linalg.norm(param, ord=self.order[0])
+            elif "weight" in name:
+                result += torch.linalg.norm(param, ord=self.order[1])
+        return float(result)
