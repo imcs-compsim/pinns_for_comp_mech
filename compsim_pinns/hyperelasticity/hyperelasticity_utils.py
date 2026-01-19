@@ -281,6 +281,25 @@ def cauchy_stress_2D(x, y):
 
     return T_xx, T_yy, T_xy, T_yx
 
+def cauchy_stress_2D_mixed_formulation(x, y):
+    # cauchy stresses in 2D for mixed formulation
+    f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y[:,0:2])
+
+    p_xx = y[:,2:3]
+    p_xy = y[:,3:4]
+    p_yx = y[:,4:5]
+    p_yy = y[:,5:6]
+
+    f_det = matrix_determinant_2D(f_xx, f_yy, f_xy, f_yx)
+
+    # σ = (1/J) * P * F^T
+    T_xx = (1 / f_det) * (p_xx * f_xx + p_xy * f_xy)
+    T_xy = (1 / f_det) * (p_xx * f_yx + p_xy * f_yy)
+    T_yx = (1 / f_det) * (p_yx * f_xx + p_yy * f_xy)
+    T_yy = (1 / f_det) * (p_yx * f_yx + p_yy * f_yy)
+
+    return T_xx, T_yy, T_xy, T_yx
+
 def green_lagrange_strain_2D(x, y):
     # Compute components of F
     f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y)

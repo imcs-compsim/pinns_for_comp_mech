@@ -347,7 +347,7 @@ dde.saveplot(
 )
 
 fig1, ax1 = plt.subplots(figsize=(10,8))
-ax1.plot(losshistory.step, [sum(l) for l in losshistory.loss_train], color="b", lw=2, label="Internal energy", marker="x")
+ax1.plot(losshistory.steps, [sum(l) for l in losshistory.loss_train], color="b", lw=2, label="Internal energy", marker="x")
 ax1.set_xlabel("Iterations", size=17)
 ax1.set_ylabel("Energy", size=17)
 ax1.set_yscale("log")
