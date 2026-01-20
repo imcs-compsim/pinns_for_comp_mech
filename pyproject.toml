@@ -68,5 +68,11 @@ packages = [
 [tool.pytest.ini_options]
 addopts = "-ra -v"
 testpaths = [
-    "tests/integration_tests/beams"
+    "tests/integration_tests/beams",
+    "tests/unit_tests/",
 ]
+markers = [
+    "unit_tests: marks tests as unit tests",
+    "integration_tests: marks tests as integration tests",
+]
+    
