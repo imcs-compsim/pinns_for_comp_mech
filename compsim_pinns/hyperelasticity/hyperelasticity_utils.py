@@ -96,7 +96,7 @@ def bkd_log(x):
     Returns
     -------
     log : torch.Tensor or tf.Tensor
-        logarithm of input tensor
+        component-wise logarithm of input tensor
     '''
 
     backend_name = get_preferred_backend()
@@ -133,7 +133,8 @@ def matrix_determinant_2D(a_11, a_22, a_12, a_21):
 
 def matrix_inverse_2D(a_11, a_22, a_12, a_21):
     '''
-    Calculates the inverse of a 2x2 matrix while avoiding it is singular. 
+    Calculates the inverse of a 2x2 matrix. 
+    If the matrix is singular, a ``ValueError`` will be raised. 
 
     Parameters
     ----------
@@ -145,6 +146,11 @@ def matrix_inverse_2D(a_11, a_22, a_12, a_21):
         entry of the matrix at position (1,2)
     a_21 : torch.Tensor or tf.Tensor
         entry of the matrix at position (2,1)
+
+    Raises
+    ------
+    ValueError
+        If the matrix is singular.
 
     Returns
     -------
@@ -282,8 +288,16 @@ def matrix_inverse_3D(a11, a12, a13,
 
 
 def deformation_gradient_2D(x, y):
-    '''
+    r'''
     Calculates the deformation gradient in a 2D continuum. 
+    
+    The deformation gradient in 2D is defined as 
+
+    .. math::
+        
+        \mathbf{F}=\frac{\partial \mathbf{x}}{\partial \mathbf{X}} - \mathbf{I} 
+        = \begin{pmatrix} \tfrac{\partial x_1}{\partial X_1} - 1 & \tfrac{\partial x_1}{\partial X_2} \\ 
+        \tfrac{\partial x_2}{\partial X_1} & \tfrac{\partial x_2}{\partial X_2} - 1 \end{pmatrix}
 
     Parameters
     ----------
@@ -312,8 +326,17 @@ def deformation_gradient_2D(x, y):
     return f_xx, f_yy, f_xy, f_yx
 
 def deformation_gradient_3D(x, y):
-    '''
+    r'''
     Calculates the deformation gradient in a 3D continuum. 
+    
+    The deformation gradient in 3D is defined as 
+
+    .. math::
+        
+        \mathbf{F}=\frac{\partial \mathbf{x}}{\partial \mathbf{X}} - \mathbf{I} 
+        = \begin{pmatrix} \tfrac{\partial x_1}{\partial X_1} - 1 & \tfrac{\partial x_1}{\partial X_2} & \tfrac{\partial x_1}{\partial X_3} \\ 
+        \tfrac{\partial x_2}{\partial X_1} & \tfrac{\partial x_2}{\partial X_2} - 1 & \tfrac{\partial x_2}{\partial X_3} \\
+        \tfrac{\partial x_3}{\partial X_1} & \tfrac{\partial x_3}{\partial X_2} & \tfrac{\partial x_3}{\partial X_3} - 1 \end{pmatrix}
 
     Parameters
     ----------
@@ -362,8 +385,14 @@ def deformation_gradient_3D(x, y):
     return f_xx, f_yy, f_zz, f_xy, f_yx, f_xz, f_zx, f_yz, f_zy
 
 def strain_energy_neo_hookean_2d(x, y):
-    '''
+    r'''
     Calculates the strain energy density of a Neo-Hookean material in a 2D continuum. 
+
+    The strain energy density functional is given by
+
+    .. math::
+
+        W =  \tfrac{\mu}{2} (\mathbb{I}_1(\mathbf{C}) - 3) - \mu \log{\mathrm {det}(\mathbf {F})} + \tfrac{\lambda}{2} \log{\mathrm {det}(\mathbf {F})}^2
 
     Parameters
     ----------
@@ -401,8 +430,14 @@ def strain_energy_neo_hookean_2d(x, y):
     return W
 
 def strain_energy_neo_hookean_3d(x, y):
-    '''
+    r'''
     Calculates the strain energy density of a Neo-Hookean material in a 3D continuum. 
+
+    The strain energy density functional is given by
+
+    .. math::
+
+        W =  \tfrac{\mu}{2} (\mathbb{I}_1(\mathbf{C}) - 3) - \mu \log{\mathrm {det}(\mathbf {F})} + \tfrac{\lambda}{2} \log{\mathrm {det}(\mathbf {F})}^2
 
     Parameters
     ----------
@@ -439,8 +474,14 @@ def strain_energy_neo_hookean_3d(x, y):
     return W
 
 def second_piola_stress_tensor_2D(x, y):
-    '''
+    r'''
     Calculates the second Piola-Kirchhoff stress of a Neo-Hookean material in a 2D continuum. 
+
+    The second Piola-Kirchhoff stress tensor of a Neo-Hookean material is given by
+
+    .. math::
+
+        \mathbf{S} = \mu (\mathbf{I}-\mathbf{C}^{-1}) + \lambda \log{\mathrm{det}(\mathbf{F})} \mathbf{C}^{-1}
 
     Parameters
     ----------
@@ -489,8 +530,14 @@ def second_piola_stress_tensor_2D(x, y):
 
 
 def first_piola_stress_tensor_2D(x, y):
-    '''
+    r'''
     Calculates the first Piola-Kirchhoff stress of a Neo-Hookean material in a 2D continuum. 
+
+    The first Piola-Kirchhoff stress tensor can be defined in terms of the second Piola-Kirchhoff stress as
+
+    .. math::
+
+        \mathbf{P} = \mathbf{F} \cdot \mathbf{S}
 
     Parameters
     ----------
@@ -524,8 +571,14 @@ def first_piola_stress_tensor_2D(x, y):
 
 
 def cauchy_stress_2D(x, y):
-    '''
-    Calculates the cauchy stress of a Neo-Hookean material in a 2D continuum. 
+    r'''
+    Calculates the Cauchy stress of a Neo-Hookean material in a 2D continuum. 
+
+    The Cauchy stress tensor can be defined in terms of the first Piola-Kirchhoff stress as
+
+    .. math::
+
+        \mathbf{T} = \frac{1}{\mathrm{det}(\mathbf{F})} \mathbf{P} \cdot \mathbf{F}^\top
 
     Parameters
     ----------
@@ -560,8 +613,14 @@ def cauchy_stress_2D(x, y):
     return T_xx, T_yy, T_xy, T_yx
 
 def green_lagrange_strain_2D(x, y):
-    '''
+    r'''
     Calculates the Green-Lagrange strains in a 2D continuum. 
+
+    The Green-Lagrange strain is defined as
+
+    .. math::
+
+        \mathbf{E} = \tfrac{1}{2}(\mathbf{C} - \mathbf{I})
 
     Parameters
     ----------
@@ -596,8 +655,14 @@ def green_lagrange_strain_2D(x, y):
     return e_xx, e_yy, e_xy
 
 def second_piola_stress_tensor_3D(x, y):
-    '''
-    Calculates the second Piola-Kirchhoff stress of a Neo-Hookean material in a 3D continuum. 
+    r'''
+    Calculates the second Piola-Kirchhoff stress of a Neo-Hookean material in a 2D continuum. 
+
+    The second Piola-Kirchhoff stress tensor of a Neo-Hookean material is given by
+
+    .. math::
+
+        \mathbf{S} = \mu (\mathbf{I}-\mathbf{C}^{-1}) + \lambda \log{\mathrm{det}(\mathbf{F})} \mathbf{C}^{-1}
 
     Parameters
     ----------
@@ -667,8 +732,14 @@ def second_piola_stress_tensor_3D(x, y):
     return s_xx, s_yy, s_zz, s_xy, s_yx, s_xz, s_zx, s_yz, s_zy
 
 def first_piola_stress_tensor_3D(x, y):
-    '''
+    r'''
     Calculates the first Piola-Kirchhoff stress of a Neo-Hookean material in a 3D continuum. 
+
+    The first Piola-Kirchhoff stress tensor can be defined in terms of the second Piola-Kirchhoff stress as
+
+    .. math::
+
+        \mathbf{P} = \mathbf{F} \cdot \mathbf{S}
 
     Parameters
     ----------
@@ -718,8 +789,14 @@ def first_piola_stress_tensor_3D(x, y):
     return p_xx, p_yy, p_zz, p_xy, p_yx, p_xz, p_zx, p_yz, p_zy
 
 def cauchy_stress_3D(x, y):
-    '''
-    Calculates the cauchy stress of a Neo-Hookean material in a 3D continuum. 
+    r'''
+    Calculates the Cauchy stress of a Neo-Hookean material in a 3D continuum. 
+
+    The Cauchy stress tensor can be defined in terms of the first Piola-Kirchhoff stress as
+
+    .. math::
+
+        \mathbf{T} = \frac{1}{\mathrm{det}(\mathbf{F})} \mathbf{P} \cdot \mathbf{F}^\top
 
     Parameters
     ----------
@@ -773,8 +850,14 @@ def cauchy_stress_3D(x, y):
     return T_xx, T_yy, T_zz, T_xy, T_yx, T_xz, T_zx, T_yz, T_zy
 
 def green_lagrange_strain_3D(x, y):
-    '''
+    r'''
     Calculates the Green-Lagrange strains in a 3D continuum. 
+
+    The Green-Lagrange strain is defined as
+
+    .. math::
+
+        \mathbf{E} = \tfrac{1}{2}(\mathbf{C} - \mathbf{I})
 
     Parameters
     ----------
