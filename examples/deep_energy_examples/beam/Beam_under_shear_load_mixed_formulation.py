@@ -66,7 +66,7 @@ def boundary_right(x):
 boundary_selection_map = [{"boundary_function" : boundary_right, "tag" : "boundary_right"}]
 
 revert_curve_list = []
-revert_normal_dir_list = [1,2,1,1]
+revert_normal_dir_list = [2,2,1,2] # all in x-direction: [2,2,1,2]
 
 geom = GmshGeometryElementDeepEnergy(
                            gmsh_model,
@@ -156,10 +156,9 @@ def output_transform(x, y):
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
 
-    # return bkd.concat([x_loc/e_modul * u , x_loc/e_modul * v, (20 - x_loc) * P_xx, (1 - y_loc) * (1 + y_loc) * P_xy, -shear_load + (20 - x_loc) * P_yx, (1 - y_loc) * (1 + y_loc) * P_yy], axis=1)
     return bkd.concat([x_loc/l_beam * h_beam * u , x_loc/l_beam * h_beam * v, (l_beam - x_loc) / l_beam * e_modul * P_xx, 2 / h_beam * (h_beam/2 - y_loc) * 2 / h_beam * (h_beam/2 + y_loc) * e_modul * P_xy, -shear_load + (l_beam - x_loc) / l_beam * e_modul * P_yx, 2 / h_beam * (h_beam/2 - y_loc) * 2 / h_beam * (h_beam/2 + y_loc) * e_modul * P_yy], axis=1)
 
-# 2 inputs, 5 outputs for 2D: u_x, u_y, P_xx, P_xy, P_yx, P_yy
+# 2 inputs, 6 outputs for 2D: u_x, u_y, P_xx, P_xy, P_yx, P_yy
 layer_size = [2] + [50] * 5 + [6]
 activation = "tanh"
 initializer = "Glorot uniform"
