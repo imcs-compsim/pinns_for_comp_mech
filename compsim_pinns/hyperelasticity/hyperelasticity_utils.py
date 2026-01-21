@@ -245,6 +245,11 @@ def matrix_inverse_3D(a11, a12, a13,
         entry of the matrix at position (3,2)
     a33 : torch.Tensor or tf.Tensor
         entry of the matrix at position (3,3)
+        
+    Raises
+    ------
+    ValueError
+        If the matrix is singular.
 
     Returns
     -------
@@ -271,6 +276,10 @@ def matrix_inverse_3D(a11, a12, a13,
     det = (a11 * (a22 * a33 - a23 * a32)
          - a12 * (a21 * a33 - a23 * a31)
          + a13 * (a21 * a32 - a22 * a31))
+    
+    # Check if the determinant is zero
+    if det == 0:
+        raise ValueError("The matrix is singular and does not have an inverse.")
 
     inv11 = (a22 * a33 - a23 * a32) / det
     inv12 = (a13 * a32 - a12 * a33) / det
@@ -295,9 +304,9 @@ def deformation_gradient_2D(x, y):
 
     .. math::
         
-        \mathbf{F}=\frac{\partial \mathbf{x}}{\partial \mathbf{X}} - \mathbf{I} 
-        = \begin{pmatrix} \tfrac{\partial x_1}{\partial X_1} - 1 & \tfrac{\partial x_1}{\partial X_2} \\ 
-        \tfrac{\partial x_2}{\partial X_1} & \tfrac{\partial x_2}{\partial X_2} - 1 \end{pmatrix}
+        \mathbf{F}=\frac{\partial \mathbf{u}}{\partial \mathbf{X}} + \mathbf{I} 
+        = \begin{pmatrix} \tfrac{\partial u_1}{\partial X_1} + 1 & \tfrac{\partial u_1}{\partial X_2} \\ 
+        \tfrac{\partial u_2}{\partial X_1} & \tfrac{\partial u_2}{\partial X_2} + 1 \end{pmatrix}
 
     Parameters
     ----------
@@ -333,10 +342,10 @@ def deformation_gradient_3D(x, y):
 
     .. math::
         
-        \mathbf{F}=\frac{\partial \mathbf{x}}{\partial \mathbf{X}} - \mathbf{I} 
-        = \begin{pmatrix} \tfrac{\partial x_1}{\partial X_1} - 1 & \tfrac{\partial x_1}{\partial X_2} & \tfrac{\partial x_1}{\partial X_3} \\ 
-        \tfrac{\partial x_2}{\partial X_1} & \tfrac{\partial x_2}{\partial X_2} - 1 & \tfrac{\partial x_2}{\partial X_3} \\
-        \tfrac{\partial x_3}{\partial X_1} & \tfrac{\partial x_3}{\partial X_2} & \tfrac{\partial x_3}{\partial X_3} - 1 \end{pmatrix}
+        \mathbf{F}=\frac{\partial \mathbf{u}}{\partial \mathbf{X}} + \mathbf{I} 
+        = \begin{pmatrix} \tfrac{\partial u_1}{\partial X_1} + 1 & \tfrac{\partial u_1}{\partial X_2} & \tfrac{\partial u_1}{\partial X_3} \\ 
+        \tfrac{\partial u_2}{\partial X_1} & \tfrac{\partial u_2}{\partial X_2} + 1 & \tfrac{\partial u_2}{\partial X_3} \\
+        \tfrac{\partial u_3}{\partial X_1} & \tfrac{\partial u_3}{\partial X_2} & \tfrac{\partial u_3}{\partial X_3} + 1 \end{pmatrix}
 
     Parameters
     ----------
@@ -392,7 +401,7 @@ def strain_energy_neo_hookean_2d(x, y):
 
     .. math::
 
-        W =  \tfrac{\mu}{2} (\mathbb{I}_1(\mathbf{C}) - 3) - \mu \log{\mathrm {det}(\mathbf {F})} + \tfrac{\lambda}{2} \log{\mathrm {det}(\mathbf {F})}^2
+        W =  \tfrac{\mu}{2} (\mathbb{I}_1(\mathbf{C}) - 2) - \mu \log{\mathrm {det}(\mathbf {F})} + \tfrac{\lambda}{2} \log{\mathrm {det}(\mathbf {F})}^2
 
     Parameters
     ----------
