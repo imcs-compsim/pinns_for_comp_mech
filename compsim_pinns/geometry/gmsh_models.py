@@ -689,7 +689,7 @@ class SphereEighthHertzian(object):
         occ = model.occ
 
         # Full sphere
-        sphere = occ.addSphere(self.center[0], self.center[0], self.center[0], self.radius)
+        sphere = occ.addSphere(self.center[0], self.center[1], self.center[2], self.radius)
 
         # Box to cut 1/8 (positive x, y, z)
         box = occ.addBox(0, 0, 0, self.radius, -self.radius, self.radius)
@@ -708,9 +708,9 @@ class SphereEighthHertzian(object):
         gmsh.model.mesh.field.add("Threshold", 2)
         gmsh.model.mesh.field.setNumber(2, "InField", 1)
         gmsh.model.mesh.field.setNumber(2, "SizeMin", 0.03 * self.radius)
-        gmsh.model.mesh.field.setNumber(2, "SizeMax", 0.1 * self.radius)
-        gmsh.model.mesh.field.setNumber(2, "DistMin", 0.4 * self.radius)
-        gmsh.model.mesh.field.setNumber(2, "DistMax", 0.9 * self.radius)
+        gmsh.model.mesh.field.setNumber(2, "SizeMax", 0.1  * self.radius)
+        gmsh.model.mesh.field.setNumber(2, "DistMin", 0.4  * self.radius)
+        gmsh.model.mesh.field.setNumber(2, "DistMax", 0.9  * self.radius)
 
         gmsh.model.mesh.field.add("Distance", 3)
         gmsh.model.mesh.field.setNumbers(3, "CurvesList", [1])
@@ -727,6 +727,48 @@ class SphereEighthHertzian(object):
         gmsh.model.mesh.field.setNumbers(5, "FieldsList", [2, 4])
 
         gmsh.model.mesh.field.setAsBackgroundMesh(5)
+
+        # Generate 3D mesh
+        gmsh.model.mesh.generate(3)
+
+        if visualize_mesh:
+            gmsh.fltk.run()
+
+        return gmsh.model
+
+class SphereHalfHertzian(object):
+    def __init__(self, radius=1.0, center=[0,0,0]):
+        self.radius = radius
+        self.center = center
+
+    def generateGmshModel(self, visualize_mesh=False):
+        gmsh.initialize()
+        gmsh.model.add("HalfSphere")
+
+        model = gmsh.model
+        occ = model.occ
+
+        # Half sphere
+        sphere = occ.addSphere(self.center[0], self.center[1], self.center[2], self.radius, angle1=0, angle2=np.pi/2, angle3=2*np.pi)
+        # Rotate it properly
+        occ.rotate([(3, sphere)], self.center[0], self.center[1], self.center[2], 1, 0, 0, np.pi/2)
+
+        # Synchronize CAD
+        occ.synchronize()
+
+        # Define mesh size field: Distance to sharp corner (origin)
+        gmsh.model.mesh.field.add("Distance", 1)
+        gmsh.model.mesh.field.setNumbers(1, "NodesList", [1])  # Node 1 = contact point
+        gmsh.model.mesh.field.setNumber(1, "Sampling", 100)
+
+        gmsh.model.mesh.field.add("Threshold", 2)
+        gmsh.model.mesh.field.setNumber(2, "InField", 1)
+        gmsh.model.mesh.field.setNumber(2, "SizeMin", 0.03 * self.radius)
+        gmsh.model.mesh.field.setNumber(2, "SizeMax", 0.1  * self.radius)
+        gmsh.model.mesh.field.setNumber(2, "DistMin", 0.4  * self.radius)
+        gmsh.model.mesh.field.setNumber(2, "DistMax", 0.9  * self.radius)
+
+        gmsh.model.mesh.field.setAsBackgroundMesh(2)
 
         # Generate 3D mesh
         gmsh.model.mesh.generate(3)
