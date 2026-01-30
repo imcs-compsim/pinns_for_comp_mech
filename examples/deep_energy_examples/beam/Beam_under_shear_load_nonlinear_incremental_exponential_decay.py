@@ -66,7 +66,7 @@ def boundary_right(x):
 boundary_selection_map = [{"boundary_function" : boundary_right, "tag" : "boundary_right"}]
 
 revert_curve_list = []
-revert_normal_dir_list = [1,2,1,1]
+revert_normal_dir_list = [2,2,1,2]
 
 geom = GmshGeometryElementDeepEnergy(
                            gmsh_model,
@@ -148,7 +148,7 @@ model = dde.Model(data, net)
 
 # Model parameters
 # The applied pressure 
-steps = 10
+steps = 10 # try also 20, 40
 max_shear_load = 1e-2
 model_path = str(Path(__file__).parent)
 simulation_case = f"Beam_under_shear_load_nonlinear_incremental_exponential_decay"
@@ -225,9 +225,9 @@ for i in range(steps):
     grid.point_data["pred_cauchy_stress"] = np.column_stack((cauchy_stress_pred[:, 0], cauchy_stress_pred[:, 1], np.zeros((n_points, 1)), cauchy_stress_pred[:, 2], np.zeros((n_points, 1)), np.zeros((n_points, 1))))
 
     ## Compare with FEM reference
-    if int(round(shear_load * 1000)) in set(range(1, 11)):
+    if any(abs(shear_load * 1000 - i) <= 1e-12 for i in range(1, 11)):
         fem_path = str(Path(__file__).parent.parent)
-        fem_reference = pv.read(fem_path+f"/fem_reference/fem_reference_2d_bending_beam_{int(i+1):02}.vtu")
+        fem_reference = pv.read(fem_path+f"/fem_reference/fem_reference_2d_bending_beam_{int(round(shear_load * 1E3)):02}.vtu")
         points_fem = fem_reference.points
         displacement_fem = fem_reference.point_data["displacement"]
         cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
@@ -265,7 +265,7 @@ for i in range(steps):
         fem_reference.point_data["absolute_cauchy_stress_error"] = abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem)
         fem_reference.point_data["relative_displacement_error"] = np.divide(np.abs(displacement_pred_on_fem_mesh - displacement_fem), np.abs(displacement_fem), out=np.zeros_like(displacement_fem, dtype=float), where=displacement_fem!=0)
         fem_reference.point_data["relative_cauchy_stress_error"] = np.divide(np.abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem), np.abs(cauchy_stress_fem), out=np.zeros_like(cauchy_stress_fem, dtype=float), where=cauchy_stress_fem!=0)
-        file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_fem_compare_{int(i+1):02}")
+        file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_fem_compare_{int(round(shear_load * 1E3)):02}")
         fem_reference.save(f"{file_path_fem_compare}.vtu")
 
     # Predict shape of the beam in each time step
