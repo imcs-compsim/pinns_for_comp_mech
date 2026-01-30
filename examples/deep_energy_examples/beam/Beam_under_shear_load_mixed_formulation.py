@@ -123,9 +123,10 @@ def potential_energy(X,
     consistency_domain = global_element_weights_t[:,0:1]*global_element_weights_t[:,1:2]*(residuum_firstpiolafirstpiola[beg_pde:beg_boundary])*jacobian_t
     consistency_boundary = global_weights_boundary_t*(residuum_firstpiolafirstpiola[beg_boundary:])*jacobian_boundary_t
     consistency = bkd.concat([consistency_domain, consistency_boundary], axis=0)
-    # _, _, T_xy, T_yx = cauchy_stress_2D_mixed_formulation(inputs, outputs)
-    # symmetry = (T_xy - T_yx) ** 2
-    return [internal_energy, -external_work, consistency]#, symmetry]
+    _, _, T_xy, T_yx = cauchy_stress_2D_mixed_formulation(inputs, outputs)
+    symmetry = (T_xy - T_yx) ** 2
+    divergence = (dde.grad.jacobian(outputs, inputs, i=2, j=0) + dde.grad.jacobian(outputs, inputs, i=3, j=1)) ** 2 + (dde.grad.jacobian(outputs, inputs, i=4, j=0) + dde.grad.jacobian(outputs, inputs, i=5, j=1)) ** 2
+    return [internal_energy, -external_work, consistency, symmetry, divergence]
 
 n_dummy = 1
 data = DeepEnergyPDE(
@@ -175,12 +176,12 @@ max_shear_load = 1e-2
 model_path = str(Path(__file__).parent)
 simulation_case = f"Beam_under_shear_load_mixed_formulation"
 learning_rate_adam = 1E-3
-# learning_rate_total_decay = 1E-3
-adam_iterations = 7500
-# exponential_decay = learning_rate_total_decay ** (1 / 5000)
+learning_rate_total_decay = 1E-1
+adam_iterations = 50000
+exponential_decay = learning_rate_total_decay ** (1 / 5000)
 lbfgs_iterations = 0
-# earlystopping = True
-# earlystopping_choice = "weightsbiases" # "loss" or "weightsbiases"
+earlystopping = True
+earlystopping_choice = "weightsbiases" # "loss" or "weightsbiases"
 time_dict["setup"].append(time.time())
 # # plot the different shapes over load steps
 # shape_points_x = int((coords_upper_right_corner[0]-coords_lower_left_corner[0]) / mesh_size)
@@ -201,28 +202,29 @@ rel_err_l2_disp = []
 rel_err_l2_stress = []
 l2_iteration = []
 
-# if earlystopping:
-#     if earlystopping_choice == "loss":
-#         early = LossPlateauStopping(patience=500, min_delta=1e-5)
-#     elif earlystopping_choice == "weightsbiases":
-#         early = WeightsBiasPlateauStopping(patience=500, min_delta=1e-4, norm_choice="fro")
-#     else:
-#         raise ValueError("The specified stopping choice is not implemented or correct.")
+if earlystopping:
+    if earlystopping_choice == "loss":
+        early = LossPlateauStopping(patience=500, min_delta=1e-5)
+    elif earlystopping_choice == "weightsbiases":
+        early = WeightsBiasPlateauStopping(patience=500, min_delta=1e-5, norm_choice="fro")
+    else:
+        raise ValueError("The specified stopping choice is not implemented or correct.")
 
 # Weights
-residuum_penalty = 1E-4
-symmetry_penalty = 1E-5
-loss_weights = [1,1,residuum_penalty]#,symmetry_penalty] # internal_energy, external_energy, residuum_penalty, symmetry_penalty
+residuum_penalty = 1E-3
+symmetry_penalty = 1E-4
+divergence_penalty = 1E-5
+loss_weights = [1,1,residuum_penalty,symmetry_penalty,divergence_penalty] # internal_energy, external_energy, residuum_penalty, symmetry_penalty
 
 # Incremental loop
 for i in range(steps):
     shear_load = max_shear_load/steps*(i+1)
     print(f"\nTraining for a shear load of {shear_load}.\n")
     time_dict["simulation_compiling_adam"].append(time.time())
-    model.compile("adam", loss_weights=loss_weights, lr=learning_rate_adam)#, decay=("exponential", exponential_decay))
+    model.compile("adam", loss_weights=loss_weights, lr=learning_rate_adam, decay=("exponential", exponential_decay))
     time_dict["simulation_compiling_adam"].append(time.time())
     time_dict["simulation_training_adam"].append(time.time())
-    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100)#, callbacks=[early for _ in [1] if earlystopping])
+    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100, callbacks=[early for _ in [1] if earlystopping])
     time_dict["simulation_training_adam"].append(time.time())
 
     if lbfgs_iterations>0:
