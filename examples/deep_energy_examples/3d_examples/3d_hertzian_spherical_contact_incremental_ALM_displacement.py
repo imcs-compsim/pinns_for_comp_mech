@@ -20,6 +20,7 @@ if torch.cuda.is_available():
 @author: svoelkl
 
 Contact example eighthsphere, done with an incremental approach.
+Additionally for enforcing the contact conditions a ALM type approachs is deployed.
 '''
 
 from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
@@ -89,7 +90,8 @@ geom = GmshGeometryElementDeepEnergy(
                            coord_quadrature_boundary=coord_quadrature_boundary,
                            boundary_dim=boundary_dimension,
                            weight_quadrature_boundary=weight_quadrature_boundary,
-                           boundary_selection_map=boundary_selection_map)
+                           boundary_selection_map=boundary_selection_map,
+                           lagrange_method=True)
 time_dict["element_information"].append(time.time())
 time_dict["setup"].append(time.time())
 
@@ -118,7 +120,8 @@ def potential_energy(X,
                      mapped_normal_boundary_t, 
                      jacobian_boundary_t, 
                      global_weights_boundary_t,
-                     boundary_selection_tag):
+                     boundary_selection_tag,
+                     lagrange_multipliers):
     
     internal_energy_density = strain_energy_neo_hookean_3d(inputs, outputs)
     
@@ -128,11 +131,12 @@ def potential_energy(X,
     cond = boundary_selection_tag["on_boundary_circle_contact"]
     
     gap_n = calculate_gap_in_normal_direction_deep_energy(inputs[beg_boundary:], outputs[beg_boundary:], X, mapped_normal_boundary_t, cond)
-    eta=3e4
-    contact_force_density = 1/2*eta*bkd.relu(-gap_n)*bkd.relu(-gap_n)
+    epsilon=1e4
+    contact_force_density = 1/(2*epsilon)*bkd.relu(lagrange_multipliers[cond] - epsilon * gap_n) ** 2 - lagrange_multipliers[cond] ** 2
+    lagrange_multipliers[cond] = bkd.relu(lagrange_multipliers[cond] - epsilon * gap_n)
     contact_work = global_weights_boundary_t[cond]*(contact_force_density)*jacobian_boundary_t[cond]
     
-    return [internal_energy, contact_work]
+    return ([internal_energy, contact_work], lagrange_multipliers)
 
 n_dummy = 1
 data = DeepEnergyPDE(
@@ -178,7 +182,7 @@ model = dde.Model(data, net)
 steps = 10
 max_displacement_bc = 0.2
 model_path = str(Path(__file__).parent)
-simulation_case = f"3d_hertzian_spherical_contact_incremental_displacement"
+simulation_case = f"3d_hertzian_spherical_contact_incremental_ALM_displacement"
 learning_rate_adam = 1E-3
 learning_rate_total_decay = 1E-3
 adam_iterations = 50000
