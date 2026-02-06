@@ -128,7 +128,7 @@ def potential_energy(X,
     cond = boundary_selection_tag["on_boundary_circle_contact"]
     
     gap_n = calculate_gap_in_normal_direction_deep_energy(inputs[beg_boundary:], outputs[beg_boundary:], X, mapped_normal_boundary_t, cond)
-    eta=3e4
+    eta=1e4
     contact_force_density = 1/2*eta*bkd.relu(-gap_n)*bkd.relu(-gap_n)
     contact_work = global_weights_boundary_t[cond]*(contact_force_density)*jacobian_boundary_t[cond]
     
@@ -175,7 +175,7 @@ loss_weights=None
 model = dde.Model(data, net)
 
 # Model parameters 
-steps = 10
+steps = 25
 max_displacement_bc = 0.2
 model_path = str(Path(__file__).parent)
 simulation_case = f"3d_hertzian_spherical_contact_incremental_displacement"
@@ -187,6 +187,7 @@ lbfgs_iterations = 0
 rel_err_l2_disp = []
 rel_err_l2_stress = []
 l2_iteration = []
+violations = np.empty((steps,5))
 relaxation_adam_iterations = 0 # just to not get any errors when not using it (undefined variable in naming)
 relaxation = False
 earlystopping = True
@@ -249,10 +250,18 @@ for i in range(steps):
     grid.point_data["pred_displacement"] = displacement_pred
     grid.point_data["pred_cauchy_stress"] = cauchy_stress_pred
 
+    # Return violations of non-penetration condition (only in y)
+    displaced_X_y = points[:,1:2] + output[:,1:2]
+    displaced_X_y_violated = displaced_X_y[displaced_X_y < -1] - projection_plane["y"]
+    violations[i,:]= [displaced_X_y_violated.size, -displaced_X_y_violated.mean(), displaced_X_y_violated.std(), -displaced_X_y_violated.min(), -displaced_X_y_violated.max()]
+    print(f"The non-penetration condition is violated at {violations[i,0]:.0f} points.")
+    print(f"It is violated with a mean of {violations[i,1]:.3e} with a standard deviation of {violations[i,2]:.3e}.")
+    print(f"The maximal violation is {violations[i,3]:.3e}, the minimal is {violations[i,4]:.3e}.\n")
+
     ## Compare with FEM reference
-    if (displacement_bc > max_displacement_bc):
+    if (displacement_bc <= max_displacement_bc) and (min(displacement_bc % 0.008, 0.008 - displacement_bc % 0.008) < 1E-12):
         fem_path = str(Path(__file__).parent.parent)
-        fem_reference = pv.read(fem_path+f"/fem_reference/3d_sphere_contact_fem_reference_{int((displacement_bc * 100)):002}.vtu")
+        fem_reference = pv.read(fem_path+f"/fem_reference/3d_sphere_contact_displacement_fem_reference_{int(displacement_bc * 1000):04}.vtu")
         points_fem = fem_reference.points
         displacement_fem = fem_reference.point_data["displacement"]
         cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
@@ -292,11 +301,12 @@ for i in range(steps):
         fem_reference.point_data["absolute_cauchy_stress_error"] = abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem)
         fem_reference.point_data["relative_displacement_error"] = np.divide(np.abs(displacement_pred_on_fem_mesh - displacement_fem), np.abs(displacement_fem), out=np.zeros_like(displacement_fem, dtype=float), where=displacement_fem!=0)
         fem_reference.point_data["relative_cauchy_stress_error"] = np.divide(np.abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem), np.abs(cauchy_stress_fem), out=np.zeros_like(cauchy_stress_fem, dtype=float), where=cauchy_stress_fem!=0)
-        file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_fem_compare_{int(displacement_bc * 100):03}")
+        file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_fem_compare_{int(displacement_bc * 1000):04}")
         fem_reference.save(f"{file_path_fem_compare}.vtu")
 
-    file_path = os.path.join(model_path, f"{simulation_case}_{int(displacement_bc * 100):03}")
+    file_path = os.path.join(model_path, f"{simulation_case}_{int(displacement_bc * 1000):04}")
     grid.save(f"{file_path}.vtu")
+    np.save(f"{model_path}/{simulation_case}_violations", violations)
     time_dict["simulation_prediction"].append(time.time())
 
 model.save(f"{model_path}/{simulation_case}")
