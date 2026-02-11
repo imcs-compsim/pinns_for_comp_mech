@@ -4,7 +4,7 @@ default_language_version:
     python: python3.12
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-added-large-files
         args: ['--maxkb=1024']
@@ -47,13 +47,13 @@ repos:
         args: [--fail-under=100, --ignore-init-module, --style=google, -vv]
         exclude: ^website/
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.16.1
+    rev: v1.19.1
     hooks:
       - id: mypy
         name: Run mypy (static type checker for python)
         args: ["--install-types", "--non-interactive", "--ignore-missing-imports", "--follow-imports=silent"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.2
+    rev: v0.15.0
     hooks:
       - id: ruff # linter
         name: Run ruff (linter for Python)
@@ -61,13 +61,19 @@ repos:
       - id: ruff-format # formatter
         name: Run ruff (formatter for Python)
   - repo: https://github.com/crate-ci/typos
-    rev: v1.34.0
+    rev: v1.43.4
     hooks:
       - id: typos
         name: Run typo checker
   - repo: https://github.com/google/yamlfmt
-    rev: v0.17.2
+    rev: v0.21.0
     hooks:
       - id: yamlfmt
         name: Run yamlfmt
         args: ["-formatter", "retain_line_breaks_single=true", "trim_trailing_whitespace=true"]
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.3.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [--verbose]
