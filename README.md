@@ -95,6 +95,18 @@ $ pytest
 
 ---
 
+## Pre-commit hooks
+
+This repo uses `pre-commit` to enforce formatting, linting, type checks, and commit message conventions. 
+
+Install the git hooks:
+```bash
+$ pre-commit install
+$ pre-commit install --hook-type commit-msg
+```
+
+---
+
 ## Cluster setup
 For cluster, we should use `conda` since we had issues in terms of package installation particularly the package `gmsh`.  Enable pinn repo to run on cluster:
 
@@ -155,10 +167,10 @@ docker run -it imcs-pinn conda run -n compsim_pinns python examples/elasticity_3
 
 ## Citing 'compsim_pinns'
 
-Whenever you use or mention 'compsim_pinns' in some sort of scientific document/publication/presentation, please cite the following publications. They are publicly avaliable at [AMSES](https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3) and [ArXiv](https://arxiv.org/abs/2412.09022).
+Whenever you use or mention 'compsim_pinns' in some sort of scientific document/publication/presentation, please cite the following publications. They are publicly avaliable at [AMSES](https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3) and [Springer Nature](https://link.springer.com/chapter/10.1007/978-3-031-93213-7_33).
 
 ```
-@article{sahin2024,
+@article{Sahin2024,
   title = {Solving Forward and Inverse Problems of Contact Mechanics Using Physics-Informed Neural Networks},
   author = {Sahin, Tarik and Von Danwitz, Max and Popp, Alexander},
   year = {2024},
@@ -171,11 +183,17 @@ Whenever you use or mention 'compsim_pinns' in some sort of scientific document/
   date = {2024-05-08}
 }
 
-@article{Sahin2024b,
-  title={Physics-Informed Neural Networks for Solving Contact Problems in Three Dimensions},
-  author={Sahin, Tarik and Wolff, Daniel and Popp, Alexander},
-  journal={arXiv preprint arXiv:2412.09022},
-  year={2024}
+@incollection{Sahin2025,
+  title = {Physics-Informed Neural Networks for Solving Contact Problems in Three Dimensions},
+  booktitle = {Advances and Challenges in Computational Mechanics},
+  author = {Sahin, Tarik and Wolff, Daniel and Popp, Alexander},
+  editor = {Graf, Wolfgang and Fleischhauer, Robert and Storm, Johannes and Wollny, Ines},
+  date = {2025},
+  pages = {419--431},
+  publisher = {Springer Nature Switzerland},
+  location = {Cham},
+  doi = {10.1007/978-3-031-93213-7_33},
+  isbn = {978-3-031-93212-0 978-3-031-93213-7}
 }
 ```
 
