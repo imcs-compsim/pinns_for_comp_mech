@@ -1,4 +1,4 @@
-name: pre-commit (changed files)
+name: code-checks (changed files)
 
 on:
   pull_request:

@@ -39,6 +39,13 @@ repos:
         name: Check that test files are named correctly
       - id: trailing-whitespace
         name: Check for trailing whitespaces and trims them
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.0
+    hooks:
+      - id: bandit
+        name: Run bandit (security linter for python)
+        args: ["--configfile", "pyproject.toml", "--exclude", "tests/*"]
+        additional_dependencies: ["bandit[toml]"]
   - repo: https://github.com/econchick/interrogate
     rev: 1.7.0
     hooks:
