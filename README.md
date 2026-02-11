@@ -105,11 +105,6 @@ $ pre-commit install
 $ pre-commit install --hook-type commit-msg
 ```
 
-Run hooks on the entire repository (first-time setup)
-```bash
-$ pre-commit run --all-files
-```
-
 ---
 
 ## Cluster setup
