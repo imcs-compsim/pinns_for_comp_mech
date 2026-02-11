@@ -95,6 +95,23 @@ $ pytest
 
 ---
 
+## Pre-commit hooks
+
+This repo uses `pre-commit` to enforce formatting, linting, type checks, and commit message conventions. 
+
+Install the git hooks:
+```bash
+$ pre-commit install
+$ pre-commit install --hook-type commit-msg
+```
+
+Run hooks on the entire repository (first-time setup)
+```bash
+$ pre-commit run --all-files
+```
+
+---
+
 ## Cluster setup
 For cluster, we should use `conda` since we had issues in terms of package installation particularly the package `gmsh`.  Enable pinn repo to run on cluster:
 
