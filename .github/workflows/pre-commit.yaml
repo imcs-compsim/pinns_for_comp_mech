@@ -1,0 +1,58 @@
+name: pre-commit (changed files)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # needed to compute diffs against base
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Find changed files in the PR
+        id: changed
+        run: |
+          # fetch base ref (already available via checkout, but fetch explicitly to be safe)
+          git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=1 || true
+
+          # List files changed between the PR branch and the base branch
+          FILES=$(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}...HEAD" || true)
+
+          # Optionally filter out deleted files (pre-commit expects existing files)
+          # keep only files that still exist
+          EXISTING_FILES=""
+          for f in $FILES; do
+            if [ -f "$f" ]; then
+              EXISTING_FILES="$EXISTING_FILES $f"
+            fi
+          done
+
+          # Trim leading spaces and emit
+          EXISTING_FILES="$(echo $EXISTING_FILES | xargs)"
+          echo "changed_files=$EXISTING_FILES" >> "$GITHUB_OUTPUT"
+
+      - name: Run pre-commit on changed files
+        if: steps.changed.outputs.changed_files != ''
+        run: |
+          echo "Running pre-commit on: ${{ steps.changed.outputs.changed_files }}"
+
+          # Install pre-commit (you can pin a specific version if you want)
+          python -m pip install --upgrade pip
+          pip install pre-commit
+
+          # Run hooks on the changed files. If any hook fails, exit with non-zero (CI will fail).
+          pre-commit run --files ${{ steps.changed.outputs.changed_files }} || exit 1
+
+      - name: Skip pre-commit (no changed files)
+        if: steps.changed.outputs.changed_files == ''
+        run: |
+          echo "No changed files to check."
