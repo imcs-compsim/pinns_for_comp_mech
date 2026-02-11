@@ -172,7 +172,7 @@ docker run -it imcs-pinn conda run -n compsim_pinns python examples/elasticity_3
 
 ## Citing 'compsim_pinns'
 
-Whenever you use or mention 'compsim_pinns' in some sort of scientific document/publication/presentation, please cite the following publications. They are publicly avaliable at [AMSES](https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3) and [ArXiv](https://arxiv.org/abs/2412.09022).
+Whenever you use or mention 'compsim_pinns' in some sort of scientific document/publication/presentation, please cite the following publications. They are publicly avaliable at [AMSES](https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3) and [Springer Nature](https://link.springer.com/chapter/10.1007/978-3-031-93213-7_33).
 
 ```
 @article{Sahin2024,
