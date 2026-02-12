@@ -17,7 +17,8 @@ spacetime_domain = None
 
 
 def momentum_2d(x, y):
-    """Calculates the strong form residual of the momentum equations in 2D.
+    """
+    Calculates the strong form residual of the momentum equations in 2D.
 
     Plane strain conditions are assumed.
 
@@ -50,7 +51,8 @@ def momentum_2d(x, y):
 
 
 def momentum_2d_plane_stress(x, y):
-    """Calculates the strong form residual of the momentum equations in 2D.
+    """
+    Calculates the strong form residual of the momentum equations in 2D.
 
     Plane stress conditions are assumed.
 
@@ -1269,7 +1271,8 @@ def get_plane_strain_stress_rate_coupling(x, y):
 
 
 def get_velocity_coupling_2d(x, y):
-    """Computes the consistency coupling terms for velocities in instationary problems in 2D.
+    """
+    Computes the consistency coupling terms for velocities in instationary problems in 2D.
 
     In instationary problems it might make sense to not only predict
     displacements but also velocities. However, in that case, since both fields
@@ -1708,7 +1711,8 @@ def get_stress_rate_coupling_3d(x, y):
 
 
 def get_velocity_coupling_3d(x, y):
-    """Computes the consistency coupling terms for velocities in instationary problems.
+    """
+    Computes the consistency coupling terms for velocities in instationary problems.
 
     In instationary problems it might make sense to not only predict
     displacements but also velocities. However, in that case, since both fields
