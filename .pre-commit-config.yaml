@@ -1,7 +1,7 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 default_language_version:
-    python: python3.12
+  python: python3.12
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -35,10 +35,17 @@ repos:
         exclude: '^LICENSE$'
       - id: no-commit-to-branch
         name: Check to not commit to main
-      - id: tests-should-end-in-test
+      - id: name-tests-test
         name: Check that test files are named correctly
       - id: trailing-whitespace
         name: Check for trailing whitespaces and trims them
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.0
+    hooks:
+      - id: bandit
+        name: Run bandit (security linter for python)
+        args: ["--configfile", "pyproject.toml", "--exclude", "tests/*"]
+        additional_dependencies: ["bandit[toml]"]
   - repo: https://github.com/econchick/interrogate
     rev: 1.7.0
     hooks:
