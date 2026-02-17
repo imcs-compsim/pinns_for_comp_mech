@@ -57,9 +57,9 @@ time_dict["meshing"].append(time.time())
 length = 4
 height = 1
 width = 1
-seed_l = 40
-seed_h = 10
-seed_w = 10
+seed_l = 41 # number of nodes along x
+seed_h = 11 # number of nodes along y
+seed_w = 11 # number of nodes along z
 refinement = 1
 origin = [0, -0.5, -0.5]
 
@@ -213,7 +213,7 @@ loss_weights=None
 model = dde.Model(data, net)
 
 # Model parameters 
-steps = 10
+steps = 50
 torsion_angle = 150
 model_path = str(Path(__file__).parent)
 simulation_case = f"3d_block_torsion_nonlinear_displacement_incremental_exponential_decay"
