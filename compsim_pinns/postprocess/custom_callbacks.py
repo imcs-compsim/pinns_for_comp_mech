@@ -197,3 +197,18 @@ class WeightsBiasPlateauStopping(Callback):
             elif "weight" in name:
                 result += torch.linalg.norm(param, ord=self.order[1])
         return float(result)
+    
+class ResetLagrangeParameters(Callback):
+    """
+    Reset the lagrange parameters at the beginning of a new iteration.
+    This is necessary, as the lagrange parameters are only initialiazed as zero with the geometry creation.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def on_train_begin(self):
+        if not self.model.data.geom.lagrange_method:
+            raise ValueError("You are requesting a reset of lagrange parameters even though you are not using a lagrange method.")
+        self.model.data.geom.lagrange_parameter = np.zeros_like(self.model.data.geom.lagrange_parameter)
+        print(f"Resetting lagrange parameters.")

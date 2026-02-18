@@ -6,7 +6,7 @@ from deepxde import backend as bkd
 from pathlib import Path
 import pyvista as pv
 import time
-from compsim_pinns.postprocess.custom_callbacks import LossPlateauStopping, WeightsBiasPlateauStopping
+from compsim_pinns.postprocess.custom_callbacks import LossPlateauStopping, WeightsBiasPlateauStopping, ResetLagrangeParameters
 
 dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 
@@ -210,6 +210,8 @@ if relaxation:
     losshistory, train_state = model.train(iterations=relaxation_adam_iterations, display_every=100)
     time_dict["relaxation_training"].append(time.time())
 
+reset_lagrange = ResetLagrangeParameters()
+train_callbacks = [reset_lagrange]
 if earlystopping:
     if earlystopping_choice == "loss":
         early = LossPlateauStopping(patience=500, min_delta=1e-5)
@@ -217,6 +219,7 @@ if earlystopping:
         early = WeightsBiasPlateauStopping(patience=500, min_delta=1e-4, norm_choice="fro")
     else:
         raise ValueError("The specified stopping choice is not implemented or correct.")
+    train_callbacks.append(early)
 
 # Incremental loop
 for i in range(steps):
@@ -226,7 +229,7 @@ for i in range(steps):
     model.compile("adam", lr=learning_rate_adam, decay=("exponential", exponential_decay))
     time_dict["simulation_compiling_adam"].append(time.time())
     time_dict["simulation_training_adam"].append(time.time())
-    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100, callbacks=[early for _ in [1] if earlystopping])
+    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100, callbacks=train_callbacks)
     time_dict["simulation_training_adam"].append(time.time())
 
     if lbfgs_iterations>0:
