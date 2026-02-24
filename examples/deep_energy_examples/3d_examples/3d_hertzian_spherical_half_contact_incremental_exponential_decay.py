@@ -6,7 +6,7 @@ from deepxde import backend as bkd
 from pathlib import Path
 import pyvista as pv
 import time
-from compsim_pinns.postprocess.custom_callbacks import LossPlateauStopping, WeightsBiasPlateauStopping, ResetLagrangeParameters
+from compsim_pinns.postprocess.custom_callbacks import LossPlateauStopping, WeightsBiasPlateauStopping
 
 dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 
@@ -19,12 +19,11 @@ if torch.cuda.is_available():
 '''
 @author: svoelkl
 
-Contact example eighthsphere, done with an incremental approach.
-Additionally for enforcing the contact conditions a ALM type approachs is deployed.
+Torsion test for a 3D block, done with an incremental approach.
 '''
 
 from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-from compsim_pinns.geometry.gmsh_models import SphereEighthHertzian
+from compsim_pinns.geometry.gmsh_models import SphereHalfHertzian
 from compsim_pinns.geometry.geometry_utils import polar_transformation_3d_spherical
 
 from compsim_pinns.elasticity import elasticity_utils
@@ -36,7 +35,7 @@ from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
 from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
 from compsim_pinns.hyperelasticity import hyperelasticity_utils
-from compsim_pinns.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_3d, compute_elastic_properties, first_piola_stress_tensor_3D, cauchy_stress_3D, green_lagrange_strain_3D, deformation_gradient_3D_t, matrix_determinant_3D
+from compsim_pinns.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_3d, compute_elastic_properties, first_piola_stress_tensor_3D, cauchy_stress_3D, green_lagrange_strain_3D
 from compsim_pinns.contact_mech.contact_utils import calculate_gap_in_normal_direction_deep_energy
 from compsim_pinns.contact_mech import contact_utils
 
@@ -59,7 +58,7 @@ time_dict["meshing"].append(time.time())
 radius = 1
 center = [0,0,0]
 
-Block_3D_obj = SphereEighthHertzian(radius=radius, center=center)
+Block_3D_obj = SphereHalfHertzian(radius=radius, center=center)
 
 gmsh_model = Block_3D_obj.generateGmshModel(visualize_mesh=False)
 time_dict["meshing"].append(time.time())
@@ -90,8 +89,7 @@ geom = GmshGeometryElementDeepEnergy(
                            coord_quadrature_boundary=coord_quadrature_boundary,
                            boundary_dim=boundary_dimension,
                            weight_quadrature_boundary=weight_quadrature_boundary,
-                           boundary_selection_map=boundary_selection_map,
-                           lagrange_method=True)
+                           boundary_selection_map=boundary_selection_map)
 time_dict["element_information"].append(time.time())
 time_dict["setup"].append(time.time())
 
@@ -120,30 +118,31 @@ def potential_energy(X,
                      mapped_normal_boundary_t, 
                      jacobian_boundary_t, 
                      global_weights_boundary_t,
-                     boundary_selection_tag,
-                     lagrange_multipliers):
+                     boundary_selection_tag):
     
     internal_energy_density = strain_energy_neo_hookean_3d(inputs, outputs)
     
     internal_energy = global_element_weights_t*(internal_energy_density[beg_pde:beg_boundary])*jacobian_t
     ####################################################################################################################
+    # get the external work
+    # select the points where external force is applied
+    cond = boundary_selection_tag["on_top"]
+    u_y = outputs[:,1:2][beg_boundary:][cond]
+    
+    external_force_density = -ext_traction*u_y
+    external_work = global_weights_boundary_t[cond]*(external_force_density)*jacobian_boundary_t[cond]
+    ####################################################################################################################
     # contact work
     cond = boundary_selection_tag["on_boundary_circle_contact"]
-    deformations_grad = deformation_gradient_3D_t(inputs, outputs)
-    F = deformations_grad[beg_boundary:]
-    J = torch.det(F).view(-1, 1, 1)
-    FinvT = torch.linalg.inv(F).transpose(1, 2)
-    cofF = J * FinvT
-    current_normals = torch.nn.functional.normalize(torch.einsum("bij,bj->bi", FinvT, mapped_normal_boundary_t), dim=1)
-    gap_n = calculate_gap_in_normal_direction_deep_energy(inputs[beg_boundary:], outputs[beg_boundary:], X, current_normals, cond)
-    epsilon=1e4
-    contact_force_density = 1 / (2*epsilon) * (bkd.relu(lagrange_multipliers[cond] - epsilon * gap_n) ** 2 - lagrange_multipliers[cond] ** 2)
-    cofF_n = torch.einsum("bij,bj->bi", cofF, mapped_normal_boundary_t)
-    int_transf_factor = torch.linalg.norm(cofF_n, dim=1, keepdim=True)
-    contact_work = global_weights_boundary_t[cond]*(contact_force_density)*jacobian_boundary_t[cond]*int_transf_factor[cond]
-    lagrange_multipliers[cond] = bkd.relu(lagrange_multipliers[cond] - epsilon * gap_n)
     
-    return ([internal_energy, contact_work], lagrange_multipliers)
+    gap_n = calculate_gap_in_normal_direction_deep_energy(inputs[beg_boundary:], outputs[beg_boundary:], X, mapped_normal_boundary_t, cond)
+    #gap_y = inputs[:,1:2][beg_boundary:][cond] + outputs[:,1:2][beg_boundary:][cond] + radius
+    #gap_n = tf.math.divide_no_nan(gap_y, tf.math.abs(mapped_normal_boundary_t[:,1:2][cond]))
+    eta=3e3
+    contact_force_density = 1/2*eta*bkd.relu(-gap_n)*bkd.relu(-gap_n)
+    contact_work = global_weights_boundary_t[cond]*(contact_force_density)*jacobian_boundary_t[cond]
+    
+    return [internal_energy, -external_work, contact_work]
 
 n_dummy = 1
 data = DeepEnergyPDE(
@@ -157,23 +156,7 @@ data = DeepEnergyPDE(
 )
 
 def output_transform(x, y):
-    u = y[:, 0:1]
-    v = y[:, 1:2]
-    w = y[:, 2:3]
-    
-    x_loc = x[:, 0:1]
-    y_loc = x[:, 1:2]
-    z_loc = x[:, 2:3]
-    
-    # define surfaces
-    top_surface = -y_loc
-    x_0_surface = x_loc
-    z_0_surface = z_loc
-    
-    return bkd.concat([u*(x_0_surface)/e_modul, #displacement in x direction is 0 at x=0
-                      -displacement_bc + v*(top_surface)/e_modul, # displacement BC on the top surface
-                      w*(z_0_surface)/e_modul, #displacement in z direction is 0 at z=0
-                      ], axis=1)
+    return bkd.concat([y[:, 1:2]/e_modul, y[:, 0:1]/e_modul, y[:, 2:3]/e_modul], axis=1)
 
 # 3 inputs, 3 outputs for 3D 
 layer_size = [3] + [50] * 5 + [3]
@@ -186,19 +169,18 @@ loss_weights=None
 model = dde.Model(data, net)
 
 # Model parameters 
-steps = 25
-max_displacement_bc = 0.2
+steps = 1
+max_ext_traction = 5
 model_path = str(Path(__file__).parent)
-simulation_case = f"3d_hertzian_spherical_contact_incremental_ALM_displacement"
+simulation_case = f"3d_hertzian_spherical_half_contact_incremental_exponential_decay"
 learning_rate_adam = 1E-3
-learning_rate_total_decay = 1E-3
+learning_rate_total_decay = 1E-8
 adam_iterations = 50000
 exponential_decay = learning_rate_total_decay ** (1 / 5000)
 lbfgs_iterations = 0
 rel_err_l2_disp = []
 rel_err_l2_stress = []
 l2_iteration = []
-violations = np.empty((steps,5))
 relaxation_adam_iterations = 0 # just to not get any errors when not using it (undefined variable in naming)
 relaxation = False
 earlystopping = True
@@ -210,15 +192,13 @@ if relaxation:
     relaxation_epsilon = 1e0
     relaxation_adam_iterations = 5000
     print(f"\nRelaxation step using a factor of {relaxation_epsilon} of the step width with {relaxation_adam_iterations} iterations.\n")
-    displacement_bc = relaxation_epsilon * max_displacement_bc / steps
+    ext_traction = relaxation_epsilon * max_ext_traction / steps
     model.compile("adam", lr=learning_rate_adam)
     time_dict["relaxation_compiling"].append(time.time())
     time_dict["relaxation_training"].append(time.time())
     losshistory, train_state = model.train(iterations=relaxation_adam_iterations, display_every=100)
     time_dict["relaxation_training"].append(time.time())
 
-reset_lagrange = ResetLagrangeParameters()
-train_callbacks = [reset_lagrange]
 if earlystopping:
     if earlystopping_choice == "loss":
         early = LossPlateauStopping(patience=500, min_delta=1e-5)
@@ -226,17 +206,16 @@ if earlystopping:
         early = WeightsBiasPlateauStopping(patience=500, min_delta=1e-4, norm_choice="fro")
     else:
         raise ValueError("The specified stopping choice is not implemented or correct.")
-    train_callbacks.append(early)
 
 # Incremental loop
 for i in range(steps):
-    displacement_bc = max_displacement_bc/steps*(i+1)
-    print(f"\nTraining for a prescribed displacement of {displacement_bc}.\n")
+    ext_traction = max_ext_traction/steps*(i+1)
+    print(f"\nTraining for a traction of {ext_traction}.\n")
     time_dict["simulation_compiling_adam"].append(time.time())
     model.compile("adam", lr=learning_rate_adam, decay=("exponential", exponential_decay))
     time_dict["simulation_compiling_adam"].append(time.time())
     time_dict["simulation_training_adam"].append(time.time())
-    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100, callbacks=train_callbacks)
+    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100, callbacks=[early for _ in [1] if earlystopping])
     time_dict["simulation_training_adam"].append(time.time())
 
     if lbfgs_iterations>0:
@@ -264,21 +243,10 @@ for i in range(steps):
     grid.point_data["pred_displacement"] = displacement_pred
     grid.point_data["pred_cauchy_stress"] = cauchy_stress_pred
 
-    # Return violations of non-penetration condition (only in y)
-    displaced_X_y = points[:,1:2] + output[:,1:2]
-    displaced_X_y_violated = displaced_X_y[displaced_X_y < projection_plane["y"]] - projection_plane["y"]
-    if displaced_X_y_violated.size == 0:
-        violations[i,:] = np.zeros((5,))
-    else:
-        violations[i,:]= [displaced_X_y_violated.size, -displaced_X_y_violated.mean(), displaced_X_y_violated.std(), -displaced_X_y_violated.min(), -displaced_X_y_violated.max()]
-    print(f"The non-penetration condition is violated at {violations[i,0]:.0f} points.")
-    print(f"It is violated with a mean of {violations[i,1]:.3e} with a standard deviation of {violations[i,2]:.3e}.")
-    print(f"The maximal violation is {violations[i,3]:.3e}, the minimal is {violations[i,4]:.3e}.\n")
-
     ## Compare with FEM reference
-    if (displacement_bc <= max_displacement_bc) and (min(displacement_bc % 0.008, 0.008 - displacement_bc % 0.008) < 1E-12):
+    if ((ext_traction * 10) % 2 == 0) & (ext_traction <= max_ext_traction):
         fem_path = str(Path(__file__).parent.parent)
-        fem_reference = pv.read(fem_path+f"/fem_reference/3d_sphere_contact_displacement_fem_reference_{int(displacement_bc * 1000):04}.vtu")
+        fem_reference = pv.read(fem_path+f"/fem_reference/3d_sphere_contact_fem_reference_{int((ext_traction * 10)):02}.vtu")
         points_fem = fem_reference.points
         displacement_fem = fem_reference.point_data["displacement"]
         cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
@@ -318,12 +286,11 @@ for i in range(steps):
         fem_reference.point_data["absolute_cauchy_stress_error"] = abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem)
         fem_reference.point_data["relative_displacement_error"] = np.divide(np.abs(displacement_pred_on_fem_mesh - displacement_fem), np.abs(displacement_fem), out=np.zeros_like(displacement_fem, dtype=float), where=displacement_fem!=0)
         fem_reference.point_data["relative_cauchy_stress_error"] = np.divide(np.abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem), np.abs(cauchy_stress_fem), out=np.zeros_like(cauchy_stress_fem, dtype=float), where=cauchy_stress_fem!=0)
-        file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_fem_compare_{int(displacement_bc * 1000):04}")
+        file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_fem_compare_{int(ext_traction * 10):02}")
         fem_reference.save(f"{file_path_fem_compare}.vtu")
 
-    file_path = os.path.join(model_path, f"{simulation_case}_{int(displacement_bc * 1000):04}")
+    file_path = os.path.join(model_path, f"{simulation_case}_{int(ext_traction * 10):02}")
     grid.save(f"{file_path}.vtu")
-    np.save(f"{model_path}/{simulation_case}_violations", violations)
     time_dict["simulation_prediction"].append(time.time())
 
 model.save(f"{model_path}/{simulation_case}")
@@ -336,7 +303,8 @@ dde.saveplot(
 
 fig1, ax1 = plt.subplots(1,2,figsize=(20,8))
 ax1[0].plot(losshistory.steps, [loss[0] for loss in losshistory.loss_train], label="Internal energy", marker="x")
-ax1[0].plot(losshistory.steps, [loss[1] for loss in losshistory.loss_train], label="Contact work", marker="x")
+ax1[0].plot(losshistory.steps, [loss[1] for loss in losshistory.loss_train], label="External work", marker="x")
+ax1[0].plot(losshistory.steps, [loss[2] for loss in losshistory.loss_train], label="Contact work", marker="x")
 ax1[0].plot(losshistory.steps, [sum(losses) for losses in losshistory.loss_train], label="Total energy", marker="x")
 ax1[0].set_xlabel("Iterations", size=17)
 ax1[0].set_ylabel("Energy", size=17)
@@ -345,7 +313,8 @@ ax1[0].legend(fontsize=17)
 ax1[0].grid()
 
 ax1[1].plot(losshistory.steps, [abs(loss[0]) for loss in losshistory.loss_train], label="Internal energy", marker="x")
-ax1[1].plot(losshistory.steps, [abs(loss[1]) for loss in losshistory.loss_train], label="Contact work", marker="x")
+ax1[1].plot(losshistory.steps, [abs(loss[1]) for loss in losshistory.loss_train], label="External work", marker="x")
+ax1[1].plot(losshistory.steps, [abs(loss[2]) for loss in losshistory.loss_train], label="Contact work", marker="x")
 ax1[1].plot(losshistory.steps, [abs(sum(losses)) for losses in losshistory.loss_train], label="Total energy", marker="x")
 ax1[1].set_xlabel("Iterations", size=17)
 ax1[1].set_ylabel("Energy", size=17)

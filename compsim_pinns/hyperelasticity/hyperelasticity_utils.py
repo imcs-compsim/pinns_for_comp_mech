@@ -180,6 +180,13 @@ def deformation_gradient_3D(x, y):
 
     return f_xx, f_yy, f_zz, f_xy, f_yx, f_xz, f_zx, f_yz, f_zy
 
+def deformation_gradient_3D_t(x, y):
+    f_xx, f_yy, f_zz, f_xy, f_yx, f_xz, f_zx, f_yz, f_zy = deformation_gradient_3D(x, y)
+    return torch.stack((f_xx, f_xy, f_xz,
+                        f_yx, f_yy, f_yz,
+                        f_zx, f_zy, f_zz)).transpose(0,1).reshape((-1,3,3))
+
+
 def strain_energy_neo_hookean_2d(x, y):
     # deformation gradient
     f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y)

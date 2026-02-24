@@ -35,7 +35,7 @@ from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
 from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
 from compsim_pinns.hyperelasticity import hyperelasticity_utils
-from compsim_pinns.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_3d, compute_elastic_properties, first_piola_stress_tensor_3D, cauchy_stress_3D, green_lagrange_strain_3D
+from compsim_pinns.hyperelasticity.hyperelasticity_utils import strain_energy_neo_hookean_3d, compute_elastic_properties, first_piola_stress_tensor_3D, cauchy_stress_3D, green_lagrange_strain_3D, deformation_gradient_3D_t, matrix_determinant_3D
 from compsim_pinns.contact_mech.contact_utils import calculate_gap_in_normal_direction_deep_energy
 from compsim_pinns.contact_mech import contact_utils
 
@@ -126,11 +126,18 @@ def potential_energy(X,
     ####################################################################################################################
     # contact work
     cond = boundary_selection_tag["on_boundary_circle_contact"]
-    
-    gap_n = calculate_gap_in_normal_direction_deep_energy(inputs[beg_boundary:], outputs[beg_boundary:], X, mapped_normal_boundary_t, cond)
-    eta=1e4
-    contact_force_density = 1/2*eta*bkd.relu(-gap_n)*bkd.relu(-gap_n)
-    contact_work = global_weights_boundary_t[cond]*(contact_force_density)*jacobian_boundary_t[cond]
+    deformations_grad = deformation_gradient_3D_t(inputs, outputs)
+    F = deformations_grad[beg_boundary:]
+    J = torch.det(F).view(-1, 1, 1)
+    FinvT = torch.linalg.inv(F).transpose(1, 2)
+    cofF = J * FinvT
+    current_normals = torch.nn.functional.normalize(torch.einsum("bij,bj->bi", FinvT, mapped_normal_boundary_t), dim=1)
+    gap_n = calculate_gap_in_normal_direction_deep_energy(inputs[beg_boundary:], outputs[beg_boundary:], X, current_normals, cond)
+    epsilon=1e4
+    contact_force_density = 1 / 2 * epsilon * bkd.relu(-gap_n) ** 2
+    cofF_n = torch.einsum("bij,bj->bi", cofF, mapped_normal_boundary_t)
+    int_transf_factor = torch.linalg.norm(cofF_n, dim=1, keepdim=True)
+    contact_work = global_weights_boundary_t[cond]*(contact_force_density)*jacobian_boundary_t[cond]*int_transf_factor[cond]
     
     return [internal_energy, contact_work]
 
@@ -252,8 +259,11 @@ for i in range(steps):
 
     # Return violations of non-penetration condition (only in y)
     displaced_X_y = points[:,1:2] + output[:,1:2]
-    displaced_X_y_violated = displaced_X_y[displaced_X_y < -1] - projection_plane["y"]
-    violations[i,:]= [displaced_X_y_violated.size, -displaced_X_y_violated.mean(), displaced_X_y_violated.std(), -displaced_X_y_violated.min(), -displaced_X_y_violated.max()]
+    displaced_X_y_violated = displaced_X_y[displaced_X_y < projection_plane["y"]] - projection_plane["y"]
+    if displaced_X_y_violated.size == 0:
+        violations[i,:] = np.zeros((5,))
+    else:
+        violations[i,:]= [displaced_X_y_violated.size, -displaced_X_y_violated.mean(), displaced_X_y_violated.std(), -displaced_X_y_violated.min(), -displaced_X_y_violated.max()]
     print(f"The non-penetration condition is violated at {violations[i,0]:.0f} points.")
     print(f"It is violated with a mean of {violations[i,1]:.3e} with a standard deviation of {violations[i,2]:.3e}.")
     print(f"The maximal violation is {violations[i,3]:.3e}, the minimal is {violations[i,4]:.3e}.\n")
