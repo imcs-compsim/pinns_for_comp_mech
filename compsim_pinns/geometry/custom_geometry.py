@@ -1680,7 +1680,7 @@ class GmshGeometryElementDeepEnergy(Geometry):
                         
                         boundary_normal_coordinate_list = [self.boundary_normal(edge_coords.reshape(-1, self.dim)).ravel() for edge_coords in edge_coordinate_list]
                         boundary_normal_mapped = self.get_mapped_coordinates(self.boundary_dim, self.coord_quadrature_boundary, boundary_normal_coordinate_list)
-                        self.mapped_normal_boundary[boundary_element_id*self.n_gp_boundary:(boundary_element_id+1)*self.n_gp_boundary,:] = boundary_normal_mapped
+                        self.mapped_normal_boundary[boundary_element_id*self.n_gp_boundary:(boundary_element_id+1)*self.n_gp_boundary,:] = boundary_normal_mapped / np.linalg.norm(boundary_normal_mapped, axis=1, keepdims=True)
                         # # get the boundary normal of point 0 (point 1 should give also the same)
                         # if self.dim == 2:
                         #     boundary_normal_node_1 = self.boundary_normal(edge_coordinate_list[0].reshape(-1,self.dim))
