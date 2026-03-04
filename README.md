@@ -142,7 +142,7 @@ docker run -it imcs-pinn conda run -n compsim_pinns python examples/elasticity_3
 
 Whenever you use or mention 'compsim_pinns' in some sort of scientific document/publication/presentation, please cite the following publications. They are publicly available at [AMSES](https://amses-journal.springeropen.com/articles/10.1186/s40323-024-00265-3) and [Springer Nature](https://link.springer.com/chapter/10.1007/978-3-031-93213-7_33).
 
-```
+```bibtex
 @article{Sahin2024,
   title = {Solving Forward and Inverse Problems of Contact Mechanics Using Physics-Informed Neural Networks},
   author = {Sahin, Tarik and Von Danwitz, Max and Popp, Alexander},
@@ -155,7 +155,9 @@ Whenever you use or mention 'compsim_pinns' in some sort of scientific document/
   doi = {10.1186/s40323-024-00265-3},
   date = {2024-05-08}
 }
-
+```
+Results from this paper are obtained in hash [c79d3f24023e36341385f10d728e5a93c925fad3](https://github.com/imcs-compsim/pinns_for_comp_mech/tree/c79d3f24023e36341385f10d728e5a93c925fad3).
+```bibtex
 @incollection{Sahin2025,
   title = {Physics-Informed Neural Networks for Solving Contact Problems in Three Dimensions},
   booktitle = {Advances and Challenges in Computational Mechanics},
