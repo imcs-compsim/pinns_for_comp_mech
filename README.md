@@ -160,7 +160,7 @@ Whenever you use or mention 'compsim_pinns' in some sort of scientific document/
   title = {Physics-Informed Neural Networks for Solving Contact Problems in Three Dimensions},
   booktitle = {Advances and Challenges in Computational Mechanics},
   author = {Sahin, Tarik and Wolff, Daniel and Popp, Alexander},
-  editor = {Graf, Wolfgang and Fleischhauer, Robert and Storm, Johannes and Wollny, Lines},
+  editor = {Graf, Wolfgang and Fleischhauer, Robert and Storm, Johannes and Wollny, Ines},
   date = {2025},
   pages = {419--431},
   publisher = {Springer Nature Switzerland},
