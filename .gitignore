@@ -8,7 +8,7 @@
 *.log
 *.lof
 *.out
-*.fls 
+*.fls
 *.fdb_latexmk
 *.aux
 *.bbl

@@ -76,4 +76,3 @@ markers = [
     "unit_tests: marks tests as unit tests",
     "integration_tests: marks tests as integration tests",
 ]
-    
