@@ -5,16 +5,16 @@ build-backend = "hatchling.build"
 # General metadata for the project
 [project]
 name = "CompSim_PINNs"
-version = "2025.0.0"
+version = "2026.0.0"
 license = { text = "MIT" }
 authors = [
+  {name = "Simon Völkl", email = "simon.voelkl@unibw.de"},
+  {name = "Daniel Wolff", email = "d.wolff@unibw.de"},
   {name = "Tarik Sahin", email = "tarik.sahin@unibw.de"},
   {name = "Max von Danwitz", email = "max.danwitz@unibw.de"},
-  {name = "Daniel Wolff", email = "d.wolff@unibw.de"},
-  {name = "Simon Völkl", email = "simon.voelkl@unibw.de"},
 ]
 maintainers = [
-  {name = "Tarik Sahin", email = "tarik.sahin@unibw.de"},
+  {name = "Simon Völkl", email = "simon.voelkl@unibw.de"},
   {name = "Daniel Wolff", email = "d.wolff@unibw.de"},
 ]
 description = "A library for PINNs on Computational Mechanics"

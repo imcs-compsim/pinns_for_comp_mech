@@ -1,6 +1,9 @@
 # weird MacOS files
 *.DS_Store
 
+# VS Code files
+.vscode/*
+
 # latex generated files
 *.log
 *.lof
