@@ -1,11 +1,14 @@
 # weird MacOS files
 *.DS_Store
 
+# VS Code files
+.vscode/*
+
 # latex generated files
 *.log
 *.lof
 *.out
-*.fls 
+*.fls
 *.fdb_latexmk
 *.aux
 *.bbl
