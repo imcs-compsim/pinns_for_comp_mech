@@ -7,6 +7,9 @@ from deepxde.callbacks import Callback
 from deepxde import utils
 from deepxde.backend import backend_name, tf, torch, paddle
 
+from compsim_pinns.hyperelasticity.hyperelasticity_utils import deformation_gradient_3D_t
+from compsim_pinns.contact_mech.contact_utils import calculate_gap_in_normal_direction_deep_energy
+
 class EpochTracker(Callback):
     """Tracks and provides access to the current epoch number during training."""
 
@@ -212,3 +215,41 @@ class ResetLagrangeParameters(Callback):
             raise ValueError("You are requesting a reset of lagrange parameters even though you are not using a lagrange method.")
         self.model.data.geom.lagrange_parameter = np.zeros_like(self.model.data.geom.lagrange_parameter)
         print(f"Resetting lagrange parameters.")
+
+class UpdateLagrangeParameters(Callback):
+    """
+    Update the lagrange parameters at the end of a training.
+    This is necessary for a Uzawa type of Augmented Lagrangian method.
+    """
+
+    def __init__(self, epsilon):
+        super().__init__()
+        self.epsilon = float(epsilon)
+
+    def on_train_end(self):
+        # find tensor location
+        device = next(self.model.net.parameters()).device
+        dtype = next(self.model.net.parameters()).dtype
+        # collect data from neural network
+        X = self.model.data.train_x
+        cond = self.model.data.geom.boundary_selection_tag["on_boundary_circle_contact"]
+        inputs = torch.as_tensor(X, device=device, dtype=dtype).requires_grad_(True)
+        self.model.net.eval()
+        outputs = self.model.net(inputs)
+        mapped_normal_boundary_t = torch.as_tensor(self.model.data.geom.mapped_normal_boundary, device=device, dtype=dtype)
+        bcs_start = np.cumsum([0] + self.model.data.num_bcs)
+        bcs_start = list(map(int, bcs_start))
+        pde_start = bcs_start[-1]
+        beg_boundary =  pde_start + self.model.data.geom.mapped_coordinates.shape[0]
+        # compute current normals and current gap
+        deformations_grad = deformation_gradient_3D_t(inputs, outputs)
+        F = deformations_grad[beg_boundary:]
+        J = torch.det(F).view(-1, 1, 1)
+        FinvT = torch.linalg.inv(F).transpose(1, 2)
+        current_normals = torch.nn.functional.normalize(torch.einsum("bij,bj->bi", FinvT, mapped_normal_boundary_t), dim=1)
+        gap_n = calculate_gap_in_normal_direction_deep_energy(inputs[beg_boundary:], outputs[beg_boundary:], X, current_normals, cond)
+        # compute the new lagrange parameters
+        lagrange_parameter = torch.as_tensor(self.model.data.geom.lagrange_parameter, device=device, dtype=dtype)
+        lagrange_parameter[cond] = torch.relu(lagrange_parameter[cond] - self.epsilon * gap_n)
+        self.model.data.geom.lagrange_parameter = lagrange_parameter.detach().cpu().numpy()
+        print(f"Updating lagrange parameters.")
