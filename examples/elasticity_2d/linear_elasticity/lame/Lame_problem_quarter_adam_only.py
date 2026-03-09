@@ -1,29 +1,27 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Solves the quarter Lame problem.
 
   * * * * * *
   *            *
   *              *
-  *                *     
-     *              *   
-       *             * 
-        *             *    
+  *                *
+     *              *
+       *             *
+        *             *
   y      *            *
   |__x   * * * * * * **
   -------| --> R_i
-  ---------------------| -->R_o     
- 
+  ---------------------| -->R_o
+
 Dirichlet BCs:
 
 u_x(x=0,y) = 0
 u_y(x,y=0) = 0
 
-where u_x represents the displacement in x direction, while u_y represents the displacement in y direction. 
+where u_x represents the displacement in x direction, while u_y represents the displacement in y direction.
 
 Neumann boundary conditions (in polar coordinates)
-P(r=R_i,\theta) = 1 
+P(r=R_i,\theta) = 1
 
 In this problem set the material properties as follows:
     - lame : 1153.846
@@ -34,7 +32,7 @@ which will lead Young's modulus: 2000 and Poisson's coeff: 0.3. In this example,
 u_s = u_x*x
 v_s = u_y*y
 
-where u_x and u_y are the network predictions.   
+where u_x and u_y are the network predictions.
 
 
 The problem definition and analytical solution:
@@ -42,14 +40,25 @@ https://par.nsf.gov/servlets/purl/10100420
 
 @author: tsahin
 """
-import deepxde as dde
-import numpy as np
-import matplotlib.tri as tri
-import deepxde.backend as bkd
 
-from compsim_pinns.elasticity.elasticity_utils import stress_plane_stress, momentum_2d_plane_stress, problem_parameters, zero_neumman_plane_stress_x, zero_neumman_plane_stress_y, stress_to_traction_2d
-from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals, polar_transformation_2d
+import deepxde as dde
+import deepxde.backend as bkd
+import matplotlib.tri as tri
+import numpy as np
+
 from compsim_pinns.elasticity import elasticity_utils
+from compsim_pinns.elasticity.elasticity_utils import (
+    momentum_2d_plane_stress,
+    problem_parameters,
+    stress_plane_stress,
+    stress_to_traction_2d,
+    zero_neumman_plane_stress_x,
+    zero_neumman_plane_stress_y,
+)
+from compsim_pinns.geometry.geometry_utils import (
+    calculate_boundary_normals,
+    polar_transformation_2d,
+)
 
 # change global variables in elasticity_utils
 elasticity_utils.lame = 1153.846
@@ -57,9 +66,9 @@ elasticity_utils.shear = 769.23
 
 # geometrical parameters
 radius_inner = 1
-center_inner = [0,0]
+center_inner = [0, 0]
 radius_outer = 2
-center_outer = [0,0]
+center_outer = [0, 0]
 
 # First create two cylinders and subtract the small one from the large one. Then create a rectangle and intersect it with the region which is left.
 geom_disk_1 = dde.geometry.Disk(center_inner, radius_inner)
@@ -73,38 +82,102 @@ elasticity_utils.geom = geom
 # Inner pressure
 pressure_inlet = 1
 
+
 def pressure_inner_x(x, y, X):
-    
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
-    
-    normals, cond = calculate_boundary_normals(X,geom)
+    """Compute pressure inner x for this example setup.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        y: Field values or model outputs associated with `x`.
+        X: Input coordinates used by this callback.
+
+    Returns:
+        Any: Computed value returned by `pressure_inner_x`.
+    """
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x, y)
+
+    normals, cond = calculate_boundary_normals(X, geom)
     Tx, _, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    return Tx + pressure_inlet*normals[:,0:1]
+    return Tx + pressure_inlet * normals[:, 0:1]
+
 
 def pressure_inner_y(x, y, X):
+    """Compute pressure inner y for this example setup.
 
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x,y)
-    
-    normals, cond = calculate_boundary_normals(X,geom)
+    Args:
+        x: Input coordinates used to evaluate the function.
+        y: Field values or model outputs associated with `x`.
+        X: Input coordinates used by this callback.
+
+    Returns:
+        Any: Computed value returned by `pressure_inner_y`.
+    """
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x, y)
+
+    normals, cond = calculate_boundary_normals(X, geom)
     _, Ty, _, _ = stress_to_traction_2d(sigma_xx, sigma_yy, sigma_xy, normals, cond)
 
-    return Ty + pressure_inlet*normals[:,1:2]
+    return Ty + pressure_inlet * normals[:, 1:2]
 
 
 def boundary_outer(x, on_boundary):
-    return on_boundary and np.isclose(np.linalg.norm(x - center_outer, axis=-1), radius_outer)
+    """Check whether a point satisfies the `boundary_outer` boundary condition.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        on_boundary: Boundary indicator provided by the geometry callback.
+
+    Returns:
+        bool: Result of the `boundary_outer` evaluation.
+    """
+    return on_boundary and np.isclose(
+        np.linalg.norm(x - center_outer, axis=-1), radius_outer
+    )
+
 
 def boundary_inner(x, on_boundary):
-    return on_boundary and np.isclose(np.linalg.norm(x - center_inner, axis=-1), radius_inner)
+    """Check whether a point satisfies the `boundary_inner` boundary condition.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        on_boundary: Boundary indicator provided by the geometry callback.
+
+    Returns:
+        bool: Result of the `boundary_inner` evaluation.
+    """
+    return on_boundary and np.isclose(
+        np.linalg.norm(x - center_inner, axis=-1), radius_inner
+    )
+
 
 def boundary_left(x, on_boundary):
-    return on_boundary and np.isclose(x[0],0)
+    """Check whether a point satisfies the `boundary_left` boundary condition.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        on_boundary: Boundary indicator provided by the geometry callback.
+
+    Returns:
+        bool: Result of the `boundary_left` evaluation.
+    """
+    return on_boundary and np.isclose(x[0], 0)
+
 
 def boundary_bottom(x, on_boundary):
-    return on_boundary and np.isclose(x[1],0)
+    """Check whether a point satisfies the `boundary_bottom` boundary condition.
 
-soft_dirichlet = True # enforce the Dirichlet BC softly
+    Args:
+        x: Input coordinates used to evaluate the function.
+        on_boundary: Boundary indicator provided by the geometry callback.
+
+    Returns:
+        bool: Result of the `boundary_bottom` evaluation.
+    """
+    return on_boundary and np.isclose(x[1], 0)
+
+
+soft_dirichlet = True  # enforce the Dirichlet BC softly
 
 bc1 = dde.OperatorBC(geom, pressure_inner_x, boundary_inner)
 bc2 = dde.OperatorBC(geom, pressure_inner_y, boundary_inner)
@@ -119,11 +192,21 @@ bc8 = dde.OperatorBC(geom, zero_neumman_plane_stress_y, boundary_left)
 data = dde.data.PDE(
     geom,
     momentum_2d_plane_stress,
-    [bc1, bc2, bc3, bc4, bc5, bc6, bc7, bc8], # remove bc3 and bc4, if you want to enforce Dirichlet BC hardly
+    [
+        bc1,
+        bc2,
+        bc3,
+        bc4,
+        bc5,
+        bc6,
+        bc7,
+        bc8,
+    ],  # remove bc3 and bc4, if you want to enforce Dirichlet BC hardly
     num_domain=1500,
     num_boundary=500,
     num_test=None,
 )
+
 
 def output_transform_hard(x, y):
     """
@@ -134,7 +217,8 @@ def output_transform_hard(x, y):
     """
     u = y[:, 0:1]
     v = y[:, 1:2]
-    return bkd.concat((u*x, v*y), axis=1)
+    return bkd.concat((u * x, v * y), axis=1)
+
 
 def output_transform_hard_scaled(x, y):
     """
@@ -146,7 +230,8 @@ def output_transform_hard_scaled(x, y):
 
     u = y[:, 0:1]
     v = y[:, 1:2]
-    return bkd.concat((u*x*0.001, v*y*0.001), axis=1)
+    return bkd.concat((u * x * 0.001, v * y * 0.001), axis=1)
+
 
 def output_transform_scaled(x, y):
     """
@@ -156,7 +241,8 @@ def output_transform_scaled(x, y):
     """
     u = y[:, 0:1]
     v = y[:, 1:2]
-    return bkd.concat((u*0.001, v*0.001), axis=1)
+    return bkd.concat((u * 0.001, v * 0.001), axis=1)
+
 
 # two inputs x and y, two outputs ux and uy
 layer_size = [2] + [50] * 5 + [2]
@@ -178,12 +264,12 @@ else:
 loss_scaling = True
 
 if loss_scaling:
-    loss_weights = [1,1,1,1,1e6,1e6,1,1,1,1]
+    loss_weights = [1, 1, 1, 1, 1e6, 1e6, 1, 1, 1, 1]
 else:
     if not soft_dirichlet:
-        loss_weights = [1,1,1,1,1,1,1,1]
+        loss_weights = [1, 1, 1, 1, 1, 1, 1, 1]
     else:
-        loss_weights = [1,1,1,1,1,1,1,1,1,1]
+        loss_weights = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 
 model = dde.Model(data, net)
 # train adam
@@ -194,65 +280,117 @@ losshistory, train_state = model.train(iterations=1000, display_every=200)
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
 
-def compareModelPredictionAndAnalyticalSolution(model):
-    '''
-    This function plots analytical solutions vs the predictions. 
-    '''
 
-    nu,_,_,e_modul = problem_parameters()
-    
-    r = np.linspace(radius_inner, radius_outer,100)
+def compareModelPredictionAndAnalyticalSolution(model):
+    """
+    This function plots analytical solutions vs the predictions.
+    """
+
+    nu, _, _, youngs_modulus = problem_parameters()
+
+    r = np.linspace(radius_inner, radius_outer, 100)
     y = np.zeros(r.shape[0])
 
-    dr2 = (radius_outer**2 - radius_inner**2)
+    dr2 = radius_outer**2 - radius_inner**2
 
-    sigma_rr_analytical = radius_inner**2*pressure_inlet/dr2*(r**2-radius_outer**2)/r**2
-    sigma_theta_analytical = radius_inner**2*pressure_inlet/dr2*(r**2+radius_outer**2)/r**2
-    u_rad_analytical = radius_inner**2*pressure_inlet*r/(e_modul*(radius_outer**2-radius_inner**2))*(1-nu+(radius_outer/r)**2*(1+nu))
+    sigma_rr_analytical = (
+        radius_inner**2 * pressure_inlet / dr2 * (r**2 - radius_outer**2) / r**2
+    )
+    sigma_theta_analytical = (
+        radius_inner**2 * pressure_inlet / dr2 * (r**2 + radius_outer**2) / r**2
+    )
+    u_rad_analytical = (
+        radius_inner**2
+        * pressure_inlet
+        * r
+        / (youngs_modulus * (radius_outer**2 - radius_inner**2))
+        * (1 - nu + (radius_outer / r) ** 2 * (1 + nu))
+    )
 
-    r_x = np.hstack((r.reshape(-1,1),y.reshape(-1,1)))
+    r_x = np.hstack((r.reshape(-1, 1), y.reshape(-1, 1)))
     disps = model.predict(r_x)
-    u_pred, v_pred = disps[:,0:1], disps[:,1:2]
-    u_rad_pred = np.sqrt(u_pred**2+v_pred**2)
+    u_pred, v_pred = disps[:, 0:1], disps[:, 1:2]
+    u_rad_pred = np.sqrt(u_pred**2 + v_pred**2)
     sigma_xx, sigma_yy, sigma_xy = model.predict(r_x, operator=stress_plane_stress)
-    sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, r_x)
+    sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(
+        sigma_xx, sigma_yy, sigma_xy, r_x
+    )
 
-    err_norm_disp = np.sqrt(np.sum((u_rad_pred.flatten()-u_rad_analytical.flatten())**2))
-    ex_norm_disp = np.sqrt(np.sum(u_rad_analytical.flatten()**2))
-    rel_err_l2_disp = err_norm_disp/ex_norm_disp
+    err_norm_disp = np.sqrt(
+        np.sum((u_rad_pred.flatten() - u_rad_analytical.flatten()) ** 2)
+    )
+    ex_norm_disp = np.sqrt(np.sum(u_rad_analytical.flatten() ** 2))
+    rel_err_l2_disp = err_norm_disp / ex_norm_disp
     print("Relative L2 error for displacement: ", rel_err_l2_disp)
 
-    err_norm_stress = np.sqrt(np.sum((sigma_rr_analytical-sigma_rr.flatten())**2+(sigma_theta_analytical-sigma_theta.flatten())**2))
-    ex_norm_stress = np.sqrt(np.sum(sigma_rr_analytical**2+sigma_theta_analytical**2))
-    rel_err_l2_stress = err_norm_stress/ex_norm_stress
+    err_norm_stress = np.sqrt(
+        np.sum(
+            (sigma_rr_analytical - sigma_rr.flatten()) ** 2
+            + (sigma_theta_analytical - sigma_theta.flatten()) ** 2
+        )
+    )
+    ex_norm_stress = np.sqrt(np.sum(sigma_rr_analytical**2 + sigma_theta_analytical**2))
+    rel_err_l2_stress = err_norm_stress / ex_norm_stress
     print("Relative L2 error for stress: ", rel_err_l2_stress)
 
 
 X = geom.random_points(600)
-boun = geom.random_boundary_points(100)
-X = np.vstack((X,boun))
-X_corners = np.array([[radius_inner, 0],[radius_outer, 0],[0, radius_inner],[0, radius_outer]])
-X = np.vstack((X,X_corners))
+bound = geom.random_boundary_points(100)
+X = np.vstack((X, bound))
+X_corners = np.array(
+    [[radius_inner, 0], [radius_outer, 0], [0, radius_inner], [0, radius_outer]]
+)
+X = np.vstack((X, X_corners))
 
 displacement = model.predict(X)
 sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_stress)
-sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(sigma_xx, sigma_yy, sigma_xy, X)
+sigma_rr, sigma_theta, sigma_rtheta = polar_transformation_2d(
+    sigma_xx, sigma_yy, sigma_xy, X
+)
 
-combined_disp = tuple(np.vstack((np.array(displacement[:,0].tolist()),np.array(displacement[:,1].tolist()),np.zeros(displacement[:,0].shape[0]))))
-combined_stress = tuple(np.vstack((np.array(sigma_xx.flatten().tolist()),np.array(sigma_yy.flatten().tolist()),np.array(sigma_xy.flatten().tolist()))))
-combined_stress_polar = tuple(np.vstack((np.array(sigma_rr.tolist()),np.array(sigma_theta.tolist()),np.array(sigma_rtheta.tolist()))))
+combined_disp = tuple(
+    np.vstack(
+        (
+            np.array(displacement[:, 0].tolist()),
+            np.array(displacement[:, 1].tolist()),
+            np.zeros(displacement[:, 0].shape[0]),
+        )
+    )
+)
+combined_stress = tuple(
+    np.vstack(
+        (
+            np.array(sigma_xx.flatten().tolist()),
+            np.array(sigma_yy.flatten().tolist()),
+            np.array(sigma_xy.flatten().tolist()),
+        )
+    )
+)
+combined_stress_polar = tuple(
+    np.vstack(
+        (
+            np.array(sigma_rr.tolist()),
+            np.array(sigma_theta.tolist()),
+            np.array(sigma_rtheta.tolist()),
+        )
+    )
+)
 
-x = X[:,0].flatten()
-y = X[:,1].flatten()
+x = X[:, 0].flatten()
+y = X[:, 1].flatten()
 z = np.zeros(y.shape)
 triang = tri.Triangulation(x, y)
 
-#masking off the unwanted triangles
-condition = np.isclose(np.sqrt((x[triang.triangles]**2+y[triang.triangles]**2)),np.array([1, 1, 1]))
+# masking off the unwanted triangles
+condition = np.isclose(
+    np.sqrt((x[triang.triangles] ** 2 + y[triang.triangles] ** 2)), np.array([1, 1, 1])
+)
 condition = ~np.all(condition, axis=1)
 
 dol_triangles = triang.triangles[condition]
-offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1])
-cell_types = np.ones(dol_triangles.shape[0])*5
+offset = np.arange(
+    3, dol_triangles.shape[0] * dol_triangles.shape[1] + 1, dol_triangles.shape[1]
+)
+cell_types = np.ones(dol_triangles.shape[0]) * 5
 
 compareModelPredictionAndAnalyticalSolution(model)

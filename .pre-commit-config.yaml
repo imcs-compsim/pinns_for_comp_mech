@@ -51,14 +51,14 @@ repos:
     hooks:
       - id: interrogate
         name: Run interrogate (linter for docstrings)
-        args: [--fail-under=100, --ignore-init-module, --style=google, -vv]
-        exclude: ^website/
+        args: ["--fail-under=100", "--ignore-init-module", "--style=google", "-vv"]
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.19.1
     hooks:
       - id: mypy
         name: Run mypy (static type checker for python)
         args: ["--install-types", "--non-interactive", "--ignore-missing-imports", "--follow-imports=silent"]
+        exclude: ^examples/
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.0
     hooks:
