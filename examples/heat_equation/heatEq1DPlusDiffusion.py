@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Solves a space-time model problem based on the heat equation. The parameter
 
@@ -10,14 +8,13 @@ Created on Wed Nov 17 13:27:23 2021
 
 @author: maxvondanwitz
 """
+
 import os
+
 os.environ["DDE_BACKEND"] = "tensorflow.compat.v1"
-import numpy as np
-
 import deepxde as dde
+import numpy as np
 from deepxde.backend import tf
-
-
 from postProcessModelParameter import compareModelPredictionAndAnalyticalSolution
 
 ### Model problem
@@ -40,12 +37,12 @@ def pde(x, y):
     """
     Expresses the PDE residual of the heat equation.
     """
-    du_t = dde.grad.jacobian(y, x, i=0, j=2) # dy_i / dx_j
-    du_xx = dde.grad.hessian(y, x, i=0, j=0) # d^2y / dx_i dx_j
+    du_t = dde.grad.jacobian(y, x, i=0, j=2)  # dy_i / dx_j
+    du_xx = dde.grad.hessian(y, x, i=0, j=0)  # d^2y / dx_i dx_j
 
     # In this test case, the diffusion coefficient, k, is an input to the
     # neural network, namely
-    k = x[:,1:2]
+    k = x[:, 1:2]
 
     return du_t - k * du_xx
 
@@ -60,8 +57,9 @@ def initial_condition(x):
     x : x passed to this function by the dde.pde is the NN input. Therefore,
         we must first extract the space coordinate.
     """
-    x_1 = x[:,0:1]
-    return tf.cos(np.pi*x_1)
+    x_1 = x[:, 0:1]
+    return tf.cos(np.pi * x_1)
+
 
 # Boundary condition
 def boundary_condition(x):
@@ -73,22 +71,24 @@ def boundary_condition(x):
     x : x passed to this function by the dde.pde is the NN input. Therefore,
         we must first extract the time coordinate.
     """
-    x_t = x[:,2:3]
-    k = x[:,1:2]
-    return -tf.exp(-k*(np.pi)**2*x_t)
+    x_t = x[:, 2:3]
+    k = x[:, 1:2]
+    return -tf.exp(-k * (np.pi) ** 2 * x_t)
+
 
 def pde_on_param_boundary(x, y, X):
     """
     Expresses the PDE residual of the heat equation.
     """
-    du_t = dde.grad.jacobian(y, x, i=0, j=2) # dy_i / dx_j
-    du_xx = dde.grad.hessian(y, x, i=0, j=0) # d^2y / dx_i dx_j
+    du_t = dde.grad.jacobian(y, x, i=0, j=2)  # dy_i / dx_j
+    du_xx = dde.grad.hessian(y, x, i=0, j=0)  # d^2y / dx_i dx_j
 
     # In this test case, the diffusion coefficient, k, is an input to the
     # neural network, namely
-    k = x[:,1:2]
+    k = x[:, 1:2]
 
     return du_t - k * du_xx
+
 
 # Analytical solution
 def analytical_solution(x, k, t):
@@ -103,26 +103,55 @@ def analytical_solution(x, k, t):
     k : diffusion coefficient
     """
 
-    return np.exp(-k*np.pi**2*t) * np.cos(np.pi*x)
-
+    return np.exp(-k * np.pi**2 * t) * np.cos(np.pi * x)
 
 
 # TimePDE provides alreaddy a boolean that indicates whether a point is on
 # the boundary. The additional checks can be used to select specific parts of
 # the boundary.
 def boundary_space(x, on_boundary):
+    """Check whether a point satisfies the `boundary_space` boundary condition.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        on_boundary: Boundary indicator provided by the geometry callback.
+
+    Returns:
+        bool: Result of the `boundary_space` evaluation.
+    """
     return on_boundary and (np.isclose(x[0], x_min) or np.isclose(x[0], x_max))
 
+
 def boundary_param(x, on_boundary):
+    """Check whether a point satisfies the `boundary_param` boundary condition.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        on_boundary: Boundary indicator provided by the geometry callback.
+
+    Returns:
+        bool: Result of the `boundary_param` evaluation.
+    """
     return on_boundary and (np.isclose(x[1], k_min) or np.isclose(x[1], k_max))
 
+
 def boundary_initial(x, on_initial):
+    """Check whether a point satisfies the `boundary_initial` boundary condition.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        on_initial: Value for on initial.
+
+    Returns:
+        bool: Result of the `boundary_initial` evaluation.
+    """
     return on_initial
+
 
 # Boundary and initial conditions
 bc1 = dde.DirichletBC(spaceTimeDomain, boundary_condition, boundary_space)
 bc2 = dde.OperatorBC(spaceTimeDomain, pde_on_param_boundary, boundary_param)
-ic = dde.IC(spaceTimeDomain, initial_condition , boundary_initial)
+ic = dde.IC(spaceTimeDomain, initial_condition, boundary_initial)
 
 # Number of residual points (points where loss functions are evaluated.)
 points_on_domain = 100
@@ -131,12 +160,16 @@ points_on_initial = 100
 points_for_testing = 100
 
 # Define the PDE problem:
-data = dde.data.TimePDE(spaceTimeDomain, pde, [bc1, bc2, ic],
-                        num_domain = points_on_domain,
-                        num_boundary = points_on_boundary,
-                        num_initial = points_on_initial,
-                        train_distribution = "uniform",
-                        num_test = points_for_testing)
+data = dde.data.TimePDE(
+    spaceTimeDomain,
+    pde,
+    [bc1, bc2, ic],
+    num_domain=points_on_domain,
+    num_boundary=points_on_boundary,
+    num_initial=points_on_initial,
+    train_distribution="uniform",
+    num_test=points_for_testing,
+)
 
 
 # ... and configure an appropriate network.
@@ -159,7 +192,7 @@ model.compile("adam", lr=1e-3, loss_weights=lw)
 losshistory, train_state = model.train(epochs=2000)
 
 
-model.compile("L-BFGS",loss_weights=lw)
+model.compile("L-BFGS", loss_weights=lw)
 losshistory, train_state = model.train()
 
 # # Plot/print the results

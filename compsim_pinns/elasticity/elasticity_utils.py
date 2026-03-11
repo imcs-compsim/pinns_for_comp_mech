@@ -125,13 +125,13 @@ def problem_parameters():
         Lame parameter
     shear : float
         Shear modulus
-    e_module : float
+    youngs_modulus : float
         Young's modulus
     """
-    e_module = shear * (3 * lame + 2 * shear) / (lame + shear)
+    youngs_modulus = shear * (3 * lame + 2 * shear) / (lame + shear)
     nu = lame / (2 * (lame + shear))
 
-    return nu, lame, shear, e_module
+    return nu, lame, shear, youngs_modulus
 
 
 def stress_plane_strain(x, y):
@@ -156,12 +156,16 @@ def stress_plane_strain(x, y):
     """
     eps_xx, eps_yy, eps_xy = elastic_strain_2d(x, y)
 
-    nu, lame, shear, e_module = problem_parameters()
+    nu, lame, shear, youngs_modulus = problem_parameters()
 
     # calculate stress terms (constitutive law - plane strain)
-    sigma_xx = e_module / ((1 + nu) * (1 - 2 * nu)) * ((1 - nu) * eps_xx + nu * eps_yy)
-    sigma_yy = e_module / ((1 + nu) * (1 - 2 * nu)) * (nu * eps_xx + (1 - nu) * eps_yy)
-    sigma_xy = e_module / ((1 + nu) * (1 - 2 * nu)) * ((1 - 2 * nu) * eps_xy)
+    sigma_xx = (
+        youngs_modulus / ((1 + nu) * (1 - 2 * nu)) * ((1 - nu) * eps_xx + nu * eps_yy)
+    )
+    sigma_yy = (
+        youngs_modulus / ((1 + nu) * (1 - 2 * nu)) * (nu * eps_xx + (1 - nu) * eps_yy)
+    )
+    sigma_xy = youngs_modulus / ((1 + nu) * (1 - 2 * nu)) * ((1 - 2 * nu) * eps_xy)
 
     return sigma_xx, sigma_yy, sigma_xy
 
@@ -188,11 +192,11 @@ def stress_plane_stress(x, y):
     """
     eps_xx, eps_yy, eps_xy = elastic_strain_2d(x, y)
 
-    nu, lame, shear, e_module = problem_parameters()
+    nu, lame, shear, youngs_modulus = problem_parameters()
 
-    sigma_xx = e_module / (1 - nu**2) * (eps_xx + nu * eps_yy)
-    sigma_yy = e_module / (1 - nu**2) * (nu * eps_xx + eps_yy)
-    sigma_xy = e_module / (1 - nu**2) * ((1 - nu) * eps_xy)
+    sigma_xx = youngs_modulus / (1 - nu**2) * (eps_xx + nu * eps_yy)
+    sigma_yy = youngs_modulus / (1 - nu**2) * (nu * eps_xx + eps_yy)
+    sigma_xy = youngs_modulus / (1 - nu**2) * ((1 - nu) * eps_xy)
 
     return sigma_xx, sigma_yy, sigma_xy
 
@@ -648,10 +652,10 @@ def get_stress_tensor(x, y):
     """
     eps_xx, eps_yy, eps_zz, eps_xy, eps_yz, eps_xz = get_elastic_strain_3d(x, y)
 
-    nu, lame, shear, e_module = problem_parameters()
+    nu, lame, shear, youngs_modulus = problem_parameters()
 
     # calculate stress terms (constitutive law)
-    factor = e_module / ((1 + nu) * (1 - 2 * nu))
+    factor = youngs_modulus / ((1 + nu) * (1 - 2 * nu))
 
     sigma_xx = factor * ((1 - nu) * eps_xx + nu * eps_yy + nu * eps_zz)
     sigma_yy = factor * ((1 - nu) * eps_yy + nu * eps_xx + nu * eps_zz)
@@ -1220,20 +1224,22 @@ def stress_rate_plane_strain(x, y):
     # get the strain rates for plane strain
     eps_xx_rate, eps_yy_rate, eps_xy_rate = strain_rate_2d(x, y)
 
-    nu, _, _, e_module = problem_parameters()
+    nu, _, _, youngs_modulus = problem_parameters()
 
     # calculate stress rates (hooke's law - plane strain)
     sigma_xx_t = (
-        e_module
+        youngs_modulus
         / ((1 + nu) * (1 - 2 * nu))
         * ((1 - nu) * eps_xx_rate + nu * eps_yy_rate)
     )
     sigma_yy_t = (
-        e_module
+        youngs_modulus
         / ((1 + nu) * (1 - 2 * nu))
         * (nu * eps_xx_rate + (1 - nu) * eps_yy_rate)
     )
-    sigma_xy_t = e_module / ((1 + nu) * (1 - 2 * nu)) * ((1 - 2 * nu) * eps_xy_rate)
+    sigma_xy_t = (
+        youngs_modulus / ((1 + nu) * (1 - 2 * nu)) * ((1 - 2 * nu) * eps_xy_rate)
+    )
 
     return sigma_xx_t, sigma_yy_t, sigma_xy_t
 
@@ -1620,10 +1626,10 @@ def stress_rate_tensor_3d(x, y):
         elastic_strain_rate_3d(x, y)
     )
 
-    nu, lame, shear, e_module = problem_parameters()
+    nu, lame, shear, youngs_modulus = problem_parameters()
 
     # calculate stress terms (constitutive law)
-    factor = e_module / ((1 + nu) * (1 - 2 * nu))
+    factor = youngs_modulus / ((1 + nu) * (1 - 2 * nu))
 
     sigma_xx_rate = factor * (
         (1 - nu) * eps_xx_rate + nu * eps_yy_rate + nu * eps_zz_rate
