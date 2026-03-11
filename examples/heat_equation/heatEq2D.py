@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Solves a space-time model problem based on the heat equation.
 Follows Section 3.3.1 in Compressible Flow Simulation with Space-Time FE
@@ -8,14 +6,15 @@ Created on Wed Nov 17 13:27:23 2021
 
 @author: maxvondanwitz
 """
+
 import os
+
 os.environ["DDE_BACKEND"] = "tensorflow.compat.v1"
-import numpy as np
-
 import deepxde as dde
+import numpy as np
 from deepxde.backend import tf
-
 from postProcessModel import compareModelPredictionAndAnalyticalSolution
+
 
 ### Model problem
 # PDE
@@ -23,10 +22,11 @@ def pde(x, y, k):
     """
     Expresses the PDE residual of the heat equation.
     """
-    dy_t = dde.grad.jacobian(y, x, i=0, j=2) # dy_i / dx_j
-    dy_xx = dde.grad.hessian(y, x, i=0, j=0) # d^2y / dx_i dx_j
-    dy_yy = dde.grad.hessian(y, x, i=1, j=1) # d^2y / dx_i dx_j
+    dy_t = dde.grad.jacobian(y, x, i=0, j=2)  # dy_i / dx_j
+    dy_xx = dde.grad.hessian(y, x, i=0, j=0)  # d^2y / dx_i dx_j
+    dy_yy = dde.grad.hessian(y, x, i=1, j=1)  # d^2y / dx_i dx_j
     return dy_t - k * (dy_xx + dy_yy)
+
 
 def diffusionCoeff(x):
     """
@@ -35,6 +35,7 @@ def diffusionCoeff(x):
     that returns an numpy array.
     """
     return np.array([[0.1]])
+
 
 # Initial condition
 def initial_condition(x):
@@ -46,9 +47,10 @@ def initial_condition(x):
     x : x passed to this function by the dde.pde is the NN input. Therefore,
         we must first extract the space coordinate.
     """
-    x_1 = x[:,0:1]
-    x_2 = x[:,1:2]
-    return tf.cos(np.pi*x_1)*tf.cos(np.pi*x_2)
+    x_1 = x[:, 0:1]
+    x_2 = x[:, 1:2]
+    return tf.cos(np.pi * x_1) * tf.cos(np.pi * x_2)
+
 
 # Boundary condition
 def boundary_condition(x):
@@ -65,6 +67,7 @@ def boundary_condition(x):
     # return -tf.exp(-k*(np.pi)**2*x_t)
     return 0.0
 
+
 # Analytical solution
 def analytical_solution(x, y, t, k):
     """
@@ -79,7 +82,7 @@ def analytical_solution(x, y, t, k):
     k : diffusion coefficient
     """
 
-    return np.exp(-2*k*np.pi**2*t) * np.cos(np.pi*x) * np.cos(np.pi*y)
+    return np.exp(-2 * k * np.pi**2 * t) * np.cos(np.pi * x) * np.cos(np.pi * y)
 
 
 # Computational domain
@@ -94,17 +97,38 @@ spaceDomain = dde.geometry.Rectangle([x_min, y_min], [x_max, y_max])
 timeDomain = dde.geometry.TimeDomain(t_min, t_max)
 spaceTimeDomain = dde.geometry.GeometryXTime(spaceDomain, timeDomain)
 
+
 # Why do we define these functions? TimePDE seems to provide alreaddy a
 # boolean that indicates whether a point is on the boundary.
 def boundary_space(x, on_boundary):
+    """Check whether a point satisfies the `boundary_space` boundary condition.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        on_boundary: Boundary indicator provided by the geometry callback.
+
+    Returns:
+        bool: Result of the `boundary_space` evaluation.
+    """
     return on_boundary
 
+
 def boundary_initial(x, on_initial):
+    """Check whether a point satisfies the `boundary_initial` boundary condition.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        on_initial: Value for on initial.
+
+    Returns:
+        bool: Result of the `boundary_initial` evaluation.
+    """
     return on_initial
+
 
 # Boundary and initial conditions
 bc = dde.DirichletBC(spaceTimeDomain, boundary_condition, boundary_space)
-ic = dde.IC(spaceTimeDomain, initial_condition , boundary_initial)
+ic = dde.IC(spaceTimeDomain, initial_condition, boundary_initial)
 
 # Number of residual points (points where loss functions are evaluated.)
 points_on_domain = 1000
@@ -113,13 +137,17 @@ points_on_initial = 100
 points_for_testing = 1000
 
 # Define the PDE problem:
-data = dde.data.TimePDE(spaceTimeDomain, pde, [bc, ic],
-                        num_domain = points_on_domain,
-                        num_boundary = points_on_boundary,
-                        num_initial = points_on_initial,
-                        train_distribution = "LHS",
-                        num_test = points_for_testing,
-                        auxiliary_var_function=diffusionCoeff)
+data = dde.data.TimePDE(
+    spaceTimeDomain,
+    pde,
+    [bc, ic],
+    num_domain=points_on_domain,
+    num_boundary=points_on_boundary,
+    num_initial=points_on_initial,
+    train_distribution="LHS",
+    num_test=points_for_testing,
+    auxiliary_var_function=diffusionCoeff,
+)
 
 
 # ... and configure an appropriate network.
@@ -146,4 +174,3 @@ losshistory, train_state = model.train(epochs=10000)
 # dde.saveplot(losshistory, train_state, issave=True, isplot=True)
 
 compareModelPredictionAndAnalyticalSolution(model, analytical_solution)
-    

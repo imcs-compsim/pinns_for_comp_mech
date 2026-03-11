@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Solves a space-time model problem based on the heat equation.
 Follows Section 3.3.1 in Compressible Flow Simulation with Space-Time FE
@@ -9,22 +7,22 @@ Created on Wed Nov 17 13:27:23 2021
 @author: maxvondanwitz
 """
 
-import matplotlib.pyplot as plt
-import numpy as np
-
 import deepxde as dde
+import numpy as np
 from deepxde.backend import torch
+
 
 def pde(x, y):
     """
     Expresses the PDE residual of the heat equation.
     """
-    # Diffusion coefficient 
+    # Diffusion coefficient
     k = 0.1
-    
+
     dy_t = dde.grad.jacobian(y, x, i=0, j=1)
     dy_xx = dde.grad.hessian(y, x, i=0, j=0)
     return dy_t - k * dy_xx
+
 
 # Initial condition
 def initial_condition(x):
@@ -36,8 +34,9 @@ def initial_condition(x):
     x : x passed to this function by the dde.pde is the NN input. Therefore,
         we must first extract the space coordinate.
     """
-    x_s = torch.tensor(x[:,0:1])
-    return torch.cos(np.pi*x_s)
+    x_s = torch.tensor(x[:, 0:1])
+    return torch.cos(np.pi * x_s)
+
 
 # Boundary condition
 def boundary_condition(x):
@@ -49,10 +48,10 @@ def boundary_condition(x):
     x : x passed to this function by the dde.pde is the NN input. Therefore,
         we must first extract the time coordinate.
     """
-    x_t = torch.tensor(x[:,1:2])
+    x_t = torch.tensor(x[:, 1:2])
     k = 0.1
-    
-    return -torch.exp(-k*(np.pi)**2*x_t)
+
+    return -torch.exp(-k * (np.pi) ** 2 * x_t)
 
 
 # Analytical solution
@@ -68,19 +67,24 @@ def analytical_solution(x, t, k):
     k : diffusion coefficient
     """
 
-    return np.exp(-k*np.pi**2*t) * np.cos(np.pi*x)
+    return np.exp(-k * np.pi**2 * t) * np.cos(np.pi * x)
+
 
 def postProcess(model):
-    '''
+    """
     Performs heat equation specific post-processing of a trained model.
 
     Parameters
     ----------
     X : trained deepxde model
 
-    '''
+    """
     import os
-    from compsim_pinns.postprocess.export_vtk import meshGeometry, solutionFieldOnMeshToVtk
+
+    from compsim_pinns.postprocess.export_vtk import (
+        meshGeometry,
+        solutionFieldOnMeshToVtk,
+    )
 
     geom = model.data.geom
 
@@ -88,9 +92,9 @@ def postProcess(model):
 
     temperature = model.predict(X)
 
-    pointData = { "temperature" : temperature.flatten()}
+    pointData = {"temperature": temperature.flatten()}
 
-    file_path = os.path.join(os.getcwd(),"heatEquation2D")
+    file_path = os.path.join(os.getcwd(), "heatEquation2D")
 
     solutionFieldOnMeshToVtk(X, triangles, pointData, file_path)
 
@@ -105,27 +109,54 @@ spaceDomain = dde.geometry.Interval(xmin, xmax)
 timeDomain = dde.geometry.TimeDomain(tmin, tmax)
 spaceTimeDomain = dde.geometry.GeometryXTime(spaceDomain, timeDomain)
 
+
 # Why do we define these functions. TimePDE seems to provide alreaddy a
 # boolean that indicates whether a point is on the boundary.
 def boundary_space(x, on_boundary):
+    """Check whether a point satisfies the `boundary_space` boundary condition.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        on_boundary: Boundary indicator provided by the geometry callback.
+
+    Returns:
+        bool: Result of the `boundary_space` evaluation.
+    """
     return on_boundary
 
+
 def boundary_initial(x, on_initial):
+    """Check whether a point satisfies the `boundary_initial` boundary condition.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        on_initial: Value for on initial.
+
+    Returns:
+        bool: Result of the `boundary_initial` evaluation.
+    """
     return on_initial
+
 
 # Boundary and initial conditions
 bc = dde.DirichletBC(spaceTimeDomain, boundary_condition, boundary_space)
-ic = dde.IC(spaceTimeDomain, initial_condition , boundary_initial)
+ic = dde.IC(spaceTimeDomain, initial_condition, boundary_initial)
 
 # First guess on some scaling of the individual terms in the loss function
 # ToDo: Can we derive a physics-informed scaling of these terms?
 lw = [1, 100, 100]
 
 # Define the PDE problem and configurations of the network:
-data = dde.data.TimePDE(spaceTimeDomain, pde, [bc, ic], num_domain=250,
-                        num_boundary=32, num_initial=16, num_test=254,
-                        # auxiliary_var_function=diffusionCoeff
-                        )
+data = dde.data.TimePDE(
+    spaceTimeDomain,
+    pde,
+    [bc, ic],
+    num_domain=250,
+    num_boundary=32,
+    num_initial=16,
+    num_test=254,
+    # auxiliary_var_function=diffusionCoeff
+)
 
 net = dde.nn.FNN([2] + [20] * 3 + [1], "tanh", "Glorot normal")
 model = dde.Model(data, net)
@@ -147,7 +178,7 @@ dde.saveplot(losshistory, train_state, issave=True, isplot=True)
 
 # Comment it since it will cause problems in GitHub actions due to missing display
 
-# # Define some query points on our compuational domain.
+# # Define some query points on our computational domain.
 # # Number of points in each dimension:
 # x_dim, t_dim = (21, 26)
 
