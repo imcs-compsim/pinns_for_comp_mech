@@ -122,18 +122,18 @@ def change_global_variables(input_globals):
     utils.shear = input_globals[2]
     utils.lame = input_globals[3]
     print(
-        "E-Module: ",
+        "Youngs modulus: ",
         utils.youngs_modulus,
-        " Nu: ",
+        "Nu: ",
         utils.nu,
-        " Shear: ",
+        "Shear: ",
         utils.shear,
-        " Lame: ",
+        "Lame: ",
         utils.lame,
     )
 
 
-# Compine the result after compute_elastic_properties function in an array
+# Combine the result after compute_elastic_properties function in an array
 def result_global_variables():
     result = [utils.youngs_modulus, utils.nu, utils.shear, utils.lame]
     return result
@@ -183,7 +183,7 @@ def test_compute_elastic_properties_error_raised(inputs_error_elastic_properties
             [0.0, 0.0, 0.0, 0.0],
         ),
         (
-            # Should be right,but it is not
+            # Should be right, but it is not
             [1.0, 1.0, None, None],
             [1.0, 1.0, 0.25, -0.5],
         ),
@@ -249,13 +249,13 @@ def test_compute_elastic_properties_error_raised(inputs_error_elastic_properties
 def test_compute_elastic_properties(input_known, output_all):
     change_global_variables(input_known)
     print(
-        "E-Module: ",
+        "Youngs modulus: ",
         utils.youngs_modulus,
-        " Nu: ",
+        "Nu: ",
         utils.nu,
-        " Shear: ",
+        "Shear: ",
         utils.shear,
-        " Lame: ",
+        "Lame: ",
         utils.lame,
     )
     compute_elastic_properties()
