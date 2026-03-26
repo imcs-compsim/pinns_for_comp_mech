@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 
 import compsim_pinns.hyperelasticity.hyperelasticity_utils as utils
-
 from compsim_pinns.hyperelasticity.hyperelasticity_utils import (
     compute_elastic_properties,
     matrix_determinant_2D,
@@ -13,8 +12,6 @@ from compsim_pinns.hyperelasticity.hyperelasticity_utils import (
 
 
 # Testing matrix_determinant_2D()
-
-
 @pytest.mark.parametrize(
     "tensor_2d, determinant_2d",
     [
