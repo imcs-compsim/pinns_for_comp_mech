@@ -11,9 +11,6 @@ from compsim_pinns.hyperelasticity.hyperelasticity_utils import (
 
 # --------------------- Tests ---------------------
 
-# Machine Epsilon:
-# eps = sys.float_info.epsilon
-# print(eps)
 
 # Testing matrix_determinant_2D()
 
