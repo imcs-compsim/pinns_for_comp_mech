@@ -3,7 +3,6 @@ import pytest
 
 import compsim_pinns.hyperelasticity.hyperelasticity_utils as utils
 
-# from compsim_pinns.hyperelasticity.hyperelasticity_utils import youngs_modulus, nu, shear, lame
 from compsim_pinns.hyperelasticity.hyperelasticity_utils import (
     compute_elastic_properties,
     matrix_determinant_2D,
