@@ -12,7 +12,6 @@ The results are compared against reference FEM solutions and saved to VTK format
 """
 
 import os
-from pathlib import Path
 
 import deepxde as dde
 import numpy as np
@@ -256,40 +255,25 @@ loss_weights = None
 
 model = dde.Model(data, net)
 
-restore_model = True
-model_path = (
-    str(Path(__file__).parent.parent.parent)
-    + f"/pretrained_models/deep_energy_examples/3d_torsion/3d_torsion_nonlinear"
-)
+# model.compile("adam", lr=0.001)
+# losshistory, train_state = model.train(epochs=stabilization_model_epoch, display_every=100)
 
-if not restore_model:
-    # model.compile("adam", lr=0.001)
-    # losshistory, train_state = model.train(epochs=stabilization_model_epoch, display_every=100)
+apply_load = True
 
-    apply_load = True
+model.compile("adam", lr=0.001)
+# losshistory, train_state = model.train(epochs=3000, display_every=100)
+# if you want to save the model, run the following
+losshistory, train_state = model.train(epochs=3000, display_every=100)
 
-    model.compile("adam", lr=0.001)
-    # losshistory, train_state = model.train(epochs=3000, display_every=100)
-    # if you want to save the model, run the following
-    losshistory, train_state = model.train(
-        epochs=3000, display_every=100, model_save_path=model_path
-    )
+# For pytorch
+# LBFGS_options["iter_per_step"] = 1
+# LBFGS_options["maxiter"] = 500
 
-    # For pytorch
-    # LBFGS_options["iter_per_step"] = 1
-    # LBFGS_options["maxiter"] = 500
+LBFGS_options["maxiter"] = 1000
+model.compile("L-BFGS")
+losshistory, train_state = model.train(display_every=100)
+# losshistory, train_state = model.train(display_every=100, model_save_path=model_path)
 
-    LBFGS_options["maxiter"] = 1000
-    model.compile("L-BFGS")
-    losshistory, train_state = model.train(display_every=100)
-    # losshistory, train_state = model.train(display_every=100, model_save_path=model_path)
-
-else:
-    n_epochs = 4007
-    model_restore_path = model_path + "-" + str(n_epochs) + ".ckpt"
-
-    model.compile("adam", lr=0.001)
-    model.restore(save_path=model_restore_path)
 # 'train' took 110.185835 s adam for 5000 iter, and I tried with 3000 so 'train' took 68.116314 s
 # 'train' took 52.052350 s lbfgs, second is 'train' took 41.838312 s for 1018
 

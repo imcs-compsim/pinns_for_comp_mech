@@ -8,7 +8,6 @@ https://onlinelibrary.wiley.com/doi/epdf/10.1002/nme.6132
 """
 
 import os
-from pathlib import Path
 
 import deepxde as dde
 import matplotlib.pyplot as plt
@@ -182,22 +181,13 @@ activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 
-model_path = (
-    str(Path(__file__).parent.parent.parent.parent)
-    + "/pretrained_models/elasticity_2d/lame/lame"
-)
-n_epochs = 3106  # trained model has 3106 iterations
-model_restore_path = model_path + "-" + str(n_epochs) + ".ckpt"
-
 model = dde.Model(data, net)
 # if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
 model.compile("adam", lr=0.001)
-losshistory, train_state = model.train(
-    epochs=0, display_every=200, model_restore_path=model_restore_path
-)
+losshistory, train_state = model.train(iterations=2000, display_every=200)
 
-# model.compile("L-BFGS")
-# model.train(model_save_path=model_path)
+model.compile("L-BFGS")
+model.train()
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
@@ -270,7 +260,6 @@ def compareModelPredictionAndAnalyticalSolution(model):
     fig.tight_layout()
 
     plt.savefig("Lame_quarter_gmsh")
-    plt.show()
 
 
 X, offset, cell_types, dol_triangles = geom.get_mesh()

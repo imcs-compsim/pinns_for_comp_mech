@@ -15,8 +15,6 @@ Key components include:
 The script outputs a VTU file for visualization in tools like ParaView.
 """
 
-from pathlib import Path
-
 import deepxde as dde
 import numpy as np
 import pyvista as pv
@@ -248,35 +246,23 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
-restore_model = False
-model_path = (
-    str(Path(__file__).parent.parent.parent)
-    + f"/pretrained_models/deep_energy_examples/3d_contact_ring_instability/3d_contact_ring_instability_quarter_torus"
-)
 
-if not restore_model:
-    # model.compile("adam", lr=0.001)
-    # losshistory, train_state = model.train(epochs=stabilization_model_epoch, display_every=100)
+# model.compile("adam", lr=0.001)
+# losshistory, train_state = model.train(epochs=stabilization_model_epoch, display_every=100)
 
-    model.compile("adam", lr=0.001)
-    losshistory, train_state = model.train(epochs=5000, display_every=100)
-    # if you want to save the model, run the following
-    # losshistory, train_state = model.train(epochs=5000, display_every=100, model_save_path=model_path)
+model.compile("adam", lr=0.001)
+losshistory, train_state = model.train(epochs=5000, display_every=100)
+# if you want to save the model, run the following
+# losshistory, train_state = model.train(epochs=5000, display_every=100, model_save_path=model_path)
 
-    # For pytorch
-    # LBFGS_options["iter_per_step"] = 1
-    # LBFGS_options["maxiter"] = 500
+# For pytorch
+# LBFGS_options["iter_per_step"] = 1
+# LBFGS_options["maxiter"] = 500
 
-    LBFGS_options["maxiter"] = 1000
-    model.compile("L-BFGS")
-    losshistory, train_state = model.train(display_every=100)
-    # losshistory, train_state = model.train(display_every=100, model_save_path=model_path)
-else:
-    n_epochs = 5471
-    model_restore_path = model_path + "-" + str(n_epochs) + ".ckpt"
-
-    model.compile("adam", lr=0.001)
-    model.restore(save_path=model_restore_path)
+LBFGS_options["maxiter"] = 1000
+model.compile("L-BFGS")
+losshistory, train_state = model.train(display_every=100)
+# losshistory, train_state = model.train(display_every=100, model_save_path=model_path)
 
 # Get mesh data from your class
 points, _, cell_types, elements = geom.get_mesh()
