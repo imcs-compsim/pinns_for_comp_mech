@@ -1,9 +1,13 @@
-import gmsh
 import sys
+
+import gmsh
 import numpy as np
 
+
 class QuarterCirclewithHole(object):
-    def __init__(self, center, inner_radius, outer_radius, mesh_size=0.15, gmsh_options=None):
+    def __init__(
+        self, center, inner_radius, outer_radius, mesh_size=0.15, gmsh_options=None
+    ):
         self.center = center
         self.inner_radius = inner_radius
         self.outer_radius = outer_radius
@@ -11,18 +15,18 @@ class QuarterCirclewithHole(object):
         self.gmsh_options = gmsh_options
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates the quarter of a circle including a hole.
 
         Parameters
         ----------
         visualize_mesh : boolean
-            a booelan value to show the mesh using Gmsh or not
-        Returns 
+            a boolean value to show the mesh using Gmsh or not
+        Returns
         -------
         gmsh_model: Object
-            gmsh model 
-        '''
+            gmsh model
+        """
         # Parameters
         xc = self.center[0]
         yc = self.center[1]
@@ -45,12 +49,12 @@ class QuarterCirclewithHole(object):
 
         if self.gmsh_options:
             for command, value in self.gmsh_options.items():
-                if type(value).__name__ == 'str':
+                if type(value).__name__ == "str":
                     gmsh.option.setString(command, value)
                 else:
                     gmsh.option.setNumber(command, value)
-        
-        #gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
+
+        # gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
 
         gmsh_model.add("QuarterCirclewithHole")
 
@@ -61,7 +65,7 @@ class QuarterCirclewithHole(object):
         s2 = factory.addDisk(xc, yc, zc, r2, r2)
         # create the rectangle
         s3 = factory.addRectangle(xc, yc, zc, r2, r2)
-        # substract the small disk from the large one
+        # subtract the small disk from the large one
         s4, ss4 = factory.cut([(2, s2)], [(2, s1)])
         # intersect it with the rectangle
         factory.intersect(s4, [(2, s3)])
@@ -72,13 +76,16 @@ class QuarterCirclewithHole(object):
         gmsh_model.mesh.generate(2)
 
         if visualize_mesh:
-            if '-nopopup' not in sys.argv:
+            if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
 
         return gmsh_model
 
+
 class RingQuarter(object):
-    def __init__(self, center, inner_radius, outer_radius, mesh_size=0.15, gmsh_options=None):
+    def __init__(
+        self, center, inner_radius, outer_radius, mesh_size=0.15, gmsh_options=None
+    ):
         self.center = center
         self.inner_radius = inner_radius
         self.outer_radius = outer_radius
@@ -86,18 +93,18 @@ class RingQuarter(object):
         self.gmsh_options = gmsh_options
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates the quarter of a circle including a hole.
 
         Parameters
         ----------
         visualize_mesh : boolean
-            a booelan value to show the mesh using Gmsh or not
-        Returns 
+            a boolean value to show the mesh using Gmsh or not
+        Returns
         -------
         gmsh_model: Object
-            gmsh model 
-        '''
+            gmsh model
+        """
         # Parameters
         xc = self.center[0]
         yc = self.center[1]
@@ -120,12 +127,12 @@ class RingQuarter(object):
 
         if self.gmsh_options:
             for command, value in self.gmsh_options.items():
-                if type(value).__name__ == 'str':
+                if type(value).__name__ == "str":
                     gmsh.option.setString(command, value)
                 else:
                     gmsh.option.setNumber(command, value)
-        
-        #gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
+
+        # gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
 
         gmsh_model.add("QuarterCirclewithHole")
 
@@ -136,7 +143,7 @@ class RingQuarter(object):
         s2 = factory.addDisk(xc, yc, zc, r2, r2)
         # create the rectangle
         s3 = factory.addRectangle(xc, yc, zc, -r2, -r2)
-        # substract the small disk from the large one
+        # subtract the small disk from the large one
         s4, ss4 = factory.cut([(2, s2)], [(2, s1)])
         # intersect it with the rectangle
         factory.intersect(s4, [(2, s3)])
@@ -147,22 +154,24 @@ class RingQuarter(object):
         gmsh_model.mesh.generate(2)
 
         if visualize_mesh:
-            if '-nopopup' not in sys.argv:
+            if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
 
         return gmsh_model
 
+
 class QuarterTorus3D(object):
-    def __init__(self, center, major_radius, tube_radius,
-                 mesh_size=0.01, gmsh_options=None):
+    def __init__(
+        self, center, major_radius, tube_radius, mesh_size=0.01, gmsh_options=None
+    ):
         self.center = center  # [x, y, z]
         self.major_radius = major_radius  # Distance from center to tube center
-        self.tube_radius = tube_radius    # Radius of tube
+        self.tube_radius = tube_radius  # Radius of tube
         self.mesh_size = mesh_size
         self.gmsh_options = gmsh_options
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates a 3D half torus geometry and meshes it.
 
         Parameters
@@ -177,7 +186,7 @@ class QuarterTorus3D(object):
         Returns
         -------
         gmsh_model : The gmsh model instance.
-        '''
+        """
         xc, yc, zc = self.center
         R = self.major_radius
         r = self.tube_radius
@@ -200,29 +209,41 @@ class QuarterTorus3D(object):
                     gmsh.option.setNumber(command, value)
 
         # 1. Create full torus
-        torus = factory.addTorus(xc, yc, zc, R, r, angle=np.pi/2)
-        factory.rotate([(3, torus)], xc, yc, zc, 0, 0, 1, 2*np.pi / 2)  # Rotate 90° CCW about Z
+        torus = factory.addTorus(xc, yc, zc, R, r, angle=np.pi / 2)
+        factory.rotate(
+            [(3, torus)], xc, yc, zc, 0, 0, 1, 2 * np.pi / 2
+        )  # Rotate 90° CCW about Z
 
         # 2. Create a cutting box to keep only half
-        cut_box = factory.addBox(xc - (R+r), yc - (R+r), zc,
-                                 R+r, R+r, -r)
+        cut_box = factory.addBox(xc - (R + r), yc - (R + r), zc, R + r, R + r, -r)
 
         # 3. Cut torus with box to get half-torus
-        cut_volume, _ = factory.cut([(3, torus)], [(3, cut_box)],
-                                    removeObject=True, removeTool=True)
+        cut_volume, _ = factory.cut(
+            [(3, torus)], [(3, cut_box)], removeObject=True, removeTool=True
+        )
 
         # 4. Synchronize and generate mesh
         gmsh_model.occ.synchronize()
         gmsh_model.mesh.generate(3)
 
         if visualize_mesh:
-            if '-nopopup' not in sys.argv:
+            if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
 
         return gmsh_model
 
+
 class RingQuarter3D(object):
-    def __init__(self, center, inner_radius, outer_radius, thickness=0.1, mesh_size=0.15, num_elements=5, gmsh_options=None):
+    def __init__(
+        self,
+        center,
+        inner_radius,
+        outer_radius,
+        thickness=0.1,
+        mesh_size=0.15,
+        num_elements=5,
+        gmsh_options=None,
+    ):
         self.center = center
         self.inner_radius = inner_radius
         self.outer_radius = outer_radius
@@ -232,7 +253,7 @@ class RingQuarter3D(object):
         self.gmsh_options = gmsh_options
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates a quarter of a ring with a hole, extruded into 3D and meshed with hexahedral elements.
 
         Parameters
@@ -248,7 +269,7 @@ class RingQuarter3D(object):
         -------
         gmsh_model : Object
             The gmsh model instance.
-        '''
+        """
         xc, yc, zc = self.center
         r1 = self.inner_radius
         r2 = self.outer_radius
@@ -276,10 +297,14 @@ class RingQuarter3D(object):
         s_inner = factory.addDisk(xc, yc, zc, r1, r1)
         s_outer = factory.addDisk(xc, yc, zc, r2, r2)
         # add the rectangle
-        rect = factory.addRectangle(xc, yc, zc, -r2, -r2)                
+        rect = factory.addRectangle(xc, yc, zc, -r2, -r2)
 
-        ring_surface, _ = factory.cut([(2, s_outer)], [(2, s_inner)], removeObject=True, removeTool=True)
-        quarter_ring, _ = factory.intersect(ring_surface, [(2, rect)], removeObject=True, removeTool=True)
+        ring_surface, _ = factory.cut(
+            [(2, s_outer)], [(2, s_inner)], removeObject=True, removeTool=True
+        )
+        quarter_ring, _ = factory.intersect(
+            ring_surface, [(2, rect)], removeObject=True, removeTool=True
+        )
 
         gmsh_model.occ.synchronize()
 
@@ -291,7 +316,9 @@ class RingQuarter3D(object):
         thickness = self.thickness
         volumes = []
         for s in quarter_ring:
-            extruded = factory.extrude([s], 0, 0, thickness, numElements=[self.num_elements], recombine=True)
+            extruded = factory.extrude(
+                [s], 0, 0, thickness, numElements=[self.num_elements], recombine=True
+            )
             volumes.extend([e for e in extruded if e[0] == 3])
 
         gmsh_model.occ.synchronize()
@@ -300,13 +327,23 @@ class RingQuarter3D(object):
         gmsh_model.mesh.generate(3)
 
         if visualize_mesh:
-            if '-nopopup' not in sys.argv:
+            if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
 
         return gmsh_model
 
+
 class RingHalf3D(object):
-    def __init__(self, center, inner_radius, outer_radius, thickness=0.1, mesh_size=0.15, num_elements=5, gmsh_options=None):
+    def __init__(
+        self,
+        center,
+        inner_radius,
+        outer_radius,
+        thickness=0.1,
+        mesh_size=0.15,
+        num_elements=5,
+        gmsh_options=None,
+    ):
         self.center = center
         self.inner_radius = inner_radius
         self.outer_radius = outer_radius
@@ -316,7 +353,7 @@ class RingHalf3D(object):
         self.gmsh_options = gmsh_options
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates a quarter of a ring with a hole, extruded into 3D and meshed with hexahedral elements.
 
         Parameters
@@ -332,7 +369,7 @@ class RingHalf3D(object):
         -------
         gmsh_model : Object
             The gmsh model instance.
-        '''
+        """
         xc, yc, zc = self.center
         r1 = self.inner_radius
         r2 = self.outer_radius
@@ -361,8 +398,12 @@ class RingHalf3D(object):
         s_outer = factory.addDisk(xc, yc, zc, r2, r2)
         rect = factory.addRectangle(xc + r2, yc, zc, -2 * r2, -2 * r2)
 
-        ring_surface, _ = factory.cut([(2, s_outer)], [(2, s_inner)], removeObject=True, removeTool=True)
-        quarter_ring, _ = factory.intersect(ring_surface, [(2, rect)], removeObject=True, removeTool=True)
+        ring_surface, _ = factory.cut(
+            [(2, s_outer)], [(2, s_inner)], removeObject=True, removeTool=True
+        )
+        quarter_ring, _ = factory.intersect(
+            ring_surface, [(2, rect)], removeObject=True, removeTool=True
+        )
 
         gmsh_model.occ.synchronize()
 
@@ -374,7 +415,9 @@ class RingHalf3D(object):
         thickness = self.thickness
         volumes = []
         for s in quarter_ring:
-            extruded = factory.extrude([s], 0, 0, thickness, numElements=[self.num_elements], recombine=True)
+            extruded = factory.extrude(
+                [s], 0, 0, thickness, numElements=[self.num_elements], recombine=True
+            )
             volumes.extend([e for e in extruded if e[0] == 3])
 
         gmsh_model.occ.synchronize()
@@ -383,14 +426,16 @@ class RingHalf3D(object):
         gmsh_model.mesh.generate(3)
 
         if visualize_mesh:
-            if '-nopopup' not in sys.argv:
+            if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
 
         return gmsh_model
 
-    
+
 class RingHalf(object):
-    def __init__(self, center, inner_radius, outer_radius, mesh_size=0.15, gmsh_options=None):
+    def __init__(
+        self, center, inner_radius, outer_radius, mesh_size=0.15, gmsh_options=None
+    ):
         self.center = center
         self.inner_radius = inner_radius
         self.outer_radius = outer_radius
@@ -398,18 +443,18 @@ class RingHalf(object):
         self.gmsh_options = gmsh_options
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates the quarter of a circle including a hole.
 
         Parameters
         ----------
         visualize_mesh : boolean
-            a booelan value to show the mesh using Gmsh or not
-        Returns 
+            a boolean value to show the mesh using Gmsh or not
+        Returns
         -------
         gmsh_model: Object
-            gmsh model 
-        '''
+            gmsh model
+        """
         # Parameters
         xc = self.center[0]
         yc = self.center[1]
@@ -432,12 +477,12 @@ class RingHalf(object):
 
         if self.gmsh_options:
             for command, value in self.gmsh_options.items():
-                if type(value).__name__ == 'str':
+                if type(value).__name__ == "str":
                     gmsh.option.setString(command, value)
                 else:
                     gmsh.option.setNumber(command, value)
-        
-        #gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
+
+        # gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
 
         gmsh_model.add("QuarterCirclewithHole")
 
@@ -447,8 +492,8 @@ class RingHalf(object):
         # create the large disk
         s2 = factory.addDisk(xc, yc, zc, r2, r2)
         # create the rectangle
-        s3 = factory.addRectangle(xc+r2, yc, zc, -2*r2, -2*r2)
-        # substract the small disk from the large one
+        s3 = factory.addRectangle(xc + r2, yc, zc, -2 * r2, -2 * r2)
+        # subtract the small disk from the large one
         s4, ss4 = factory.cut([(2, s2)], [(2, s1)])
         # intersect it with the rectangle
         factory.intersect(s4, [(2, s3)])
@@ -459,13 +504,16 @@ class RingHalf(object):
         gmsh_model.mesh.generate(2)
 
         if visualize_mesh:
-            if '-nopopup' not in sys.argv:
+            if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
 
         return gmsh_model
 
+
 class CirclewithHole(object):
-    def __init__(self, center, inner_radius, outer_radius, mesh_size=0.15, gmsh_options=None):
+    def __init__(
+        self, center, inner_radius, outer_radius, mesh_size=0.15, gmsh_options=None
+    ):
         self.center = center
         self.inner_radius = inner_radius
         self.outer_radius = outer_radius
@@ -473,18 +521,18 @@ class CirclewithHole(object):
         self.gmsh_options = gmsh_options
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates a circle including a hole.
 
         Parameters
         ----------
         visualize_mesh : boolean
-            a booelan value to show the mesh using Gmsh or not
-        Returns 
+            a boolean value to show the mesh using Gmsh or not
+        Returns
         -------
         gmsh_model: Object
-            gmsh model 
-        '''
+            gmsh model
+        """
 
         # Parameters
         xc = self.center[0]
@@ -508,12 +556,12 @@ class CirclewithHole(object):
 
         if self.gmsh_options:
             for command, value in self.gmsh_options.items():
-                if type(value).__name__ == 'str':
+                if type(value).__name__ == "str":
                     gmsh.option.setString(command, value)
                 else:
                     gmsh.option.setNumber(command, value)
-        
-        #gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
+
+        # gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
 
         gmsh_model.add("CirclewithHole")
 
@@ -522,7 +570,7 @@ class CirclewithHole(object):
         s1 = factory.addDisk(xc, yc, zc, r1, r1)
         # create the large disk
         s2 = factory.addDisk(xc, yc, zc, r2, r2)
-        # substract the small disk from the large one
+        # subtract the small disk from the large one
         factory.cut([(2, s2)], [(2, s1)])
         # intersect it with the rectangle
 
@@ -532,43 +580,46 @@ class CirclewithHole(object):
         gmsh_model.mesh.generate(2)
 
         if visualize_mesh:
-            if '-nopopup' not in sys.argv:
+            if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
 
         return gmsh_model
 
+
 class Block_2D(object):
-    def __init__(self, coord_left_corner, coord_right_corner, mesh_size=0.15, gmsh_options=None):
+    def __init__(
+        self, coord_left_corner, coord_right_corner, mesh_size=0.15, gmsh_options=None
+    ):
         self.coord_left_corner = coord_left_corner
         self.coord_right_corner = coord_right_corner
         self.mesh_size = mesh_size
         self.gmsh_options = gmsh_options
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates a circle including a hole.
 
         Parameters
         ----------
         visualize_mesh : boolean
-            a booelan value to show the mesh using Gmsh or not
-        Returns 
+            a boolean value to show the mesh using Gmsh or not
+        Returns
         -------
         gmsh_model: Object
-            gmsh model 
-        '''
+            gmsh model
+        """
 
         # Parameters
         x0 = self.coord_left_corner[0]
         y0 = self.coord_left_corner[1]
         x1 = self.coord_right_corner[0]
         y1 = self.coord_right_corner[1]
-        assert(x1>x0)
-        assert(y1>y0)
+        assert x1 > x0
+        assert y1 > y0
         l = x1 - x0
-        h = y1 - y0 
+        h = y1 - y0
         # Mesh size.
-        lcar = self.mesh_size * min(h,l)
+        lcar = self.mesh_size * min(h, l)
 
         # create gmsh model instance
         gmsh_model = gmsh.model
@@ -582,12 +633,12 @@ class Block_2D(object):
 
         if self.gmsh_options:
             for command, value in self.gmsh_options.items():
-                if type(value).__name__ == 'str':
+                if type(value).__name__ == "str":
                     gmsh.option.setString(command, value)
                 else:
                     gmsh.option.setNumber(command, value)
-        
-        #gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
+
+        # gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
 
         gmsh_model.add("Rectangle")
 
@@ -599,11 +650,12 @@ class Block_2D(object):
         gmsh_model.mesh.generate(2)
 
         if visualize_mesh:
-            if '-nopopup' not in sys.argv:
+            if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
 
         return gmsh_model
-    
+
+
 # class Block_3D_hex(object):
 #     def __init__(self, length, height, width, seed_l=10, seed_w=10, seed_h=10):
 #         self.length = length
@@ -612,7 +664,7 @@ class Block_2D(object):
 #         self.seed_l = seed_l
 #         self.seed_w = seed_w
 #         self.seed_h = seed_h
-    
+
 #     def generateGmshModel(self, visualize_mesh=False):
 #         '''
 #         Generates a 3D block with a structured hex mesh.
@@ -620,27 +672,27 @@ class Block_2D(object):
 #         Parameters
 #         ----------
 #         visualize_mesh : boolean
-#             a booelan value to show the mesh using Gmsh or not
-#         Returns 
+#             a boolean value to show the mesh using Gmsh or not
+#         Returns
 #         -------
 #         gmsh_model: Object
-#             gmsh model 
+#             gmsh model
 #         '''
 #         # Parameters
 #         length= self.length #in x direction
 #         width = self.width #in y direction
 #         height = self.height #in z direction
-        
+
 #         seed_l = self.seed_l
 #         seed_w = self.seed_w
 #         seed_h = self.seed_h
-        
+
 #         # create gmsh model instance
 #         gmsh_model = gmsh.model
 
 #         # initialize gmsh
 #         gmsh.initialize(sys.argv)
-        
+
 #         # Add points (corners of the cube)
 #         p1 = gmsh.model.geo.addPoint(0, 0, 0)
 #         p2 = gmsh.model.geo.addPoint(length, 0, 0)
@@ -716,7 +768,7 @@ class Block_2D(object):
 #         gmsh.model.mesh.setRecombine(2, s4)
 #         gmsh.model.mesh.setRecombine(2, s5)
 #         gmsh.model.mesh.setRecombine(2, s6)
-        
+
 #         # Synchronize the geometry
 #         #gmsh_model.geo.synchronize()
 #         gmsh_model.occ.synchronize()
@@ -729,7 +781,7 @@ class Block_2D(object):
 #                 gmsh.fltk.run()
 
 #         return gmsh_model
-    
+
 # class Block_3D_hex(object):
 #     def __init__(self, coord_left_corner, coord_right_corner, mesh_size=0.15, gmsh_options=None):
 #         self.coord_left_corner = coord_left_corner
@@ -745,10 +797,10 @@ class Block_2D(object):
 #         ----------
 #         visualize_mesh : boolean
 #             A boolean value to show the mesh using Gmsh or not
-#         Returns 
+#         Returns
 #         -------
 #         gmsh_model: Object
-#             Gmsh model 
+#             Gmsh model
 #         '''
 
 #         # Parameters
@@ -830,8 +882,9 @@ class Block_2D(object):
 
 #         return gmsh_model
 
+
 class SphereEighthHertzian(object):
-    def __init__(self, radius=1.0, center=[0,0,0]):
+    def __init__(self, radius=1.0, center=[0, 0, 0]):
         self.radius = radius
         self.center = center
 
@@ -843,13 +896,17 @@ class SphereEighthHertzian(object):
         occ = model.occ
 
         # Full sphere
-        sphere = occ.addSphere(self.center[0], self.center[0], self.center[0], self.radius)
+        sphere = occ.addSphere(
+            self.center[0], self.center[0], self.center[0], self.radius
+        )
 
         # Box to cut 1/8 (positive x, y, z)
         box = occ.addBox(0, 0, 0, self.radius, -self.radius, self.radius)
 
         # Intersect sphere with positive octant box
-        tag = occ.intersect([(3, sphere)], [(3, box)], removeObject=True, removeTool=True)[0][0]
+        tag = occ.intersect(
+            [(3, sphere)], [(3, box)], removeObject=True, removeTool=True
+        )[0][0]
 
         # Synchronize CAD
         occ.synchronize()
@@ -876,10 +933,11 @@ class SphereEighthHertzian(object):
 
         return gmsh.model
 
+
 class Sphere_hertzian(object):
     def __init__(self, path):
         self.path = path
-    
+
     def generateGmshModel(self, visualize_mesh=False):
         # Initialize Gmsh
         gmsh.initialize()
@@ -903,11 +961,11 @@ class Sphere_hertzian(object):
         # Set more divisions on the bottom curves
         # Replace curve IDs with the actual curve IDs from the geometry
         # To find correct edges: just visualize it
-        for curve_id in [8,10,11,15]:  
+        for curve_id in [8, 10, 11, 15]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 8)
-        for curve_id in [2,7,9]:  
+        for curve_id in [2, 7, 9]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 5)
-        for curve_id in [3,12,14]:  
+        for curve_id in [3, 12, 14]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 20)
 
         # Synchronize geometry
@@ -921,10 +979,11 @@ class Sphere_hertzian(object):
 
         return gmsh_model
 
+
 class Sphere_hertzian_reverted(object):
     def __init__(self, path):
         self.path = path
-    
+
     def generateGmshModel(self, visualize_mesh=False):
         # Initialize Gmsh
         gmsh.initialize()
@@ -948,11 +1007,11 @@ class Sphere_hertzian_reverted(object):
         # Set more divisions on the bottom curves
         # Replace curve IDs with the actual curve IDs from the geometry
         # To find correct edges: just visualize it
-        for curve_id in [6,7,8,9]: 
+        for curve_id in [6, 7, 8, 9]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 20)
-        for curve_id in [1,4,14]: 
+        for curve_id in [1, 4, 14]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 5)
-        for curve_id in [5,12,16]:
+        for curve_id in [5, 12, 16]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 30)
 
         # Synchronize geometry
@@ -965,11 +1024,12 @@ class Sphere_hertzian_reverted(object):
             gmsh.fltk.run()
 
         return gmsh_model
-    
+
+
 class Half_sphere_hertzian(object):
     def __init__(self, path):
         self.path = path
-    
+
     def generateGmshModel(self, visualize_mesh=False):
         # Initialize Gmsh
         gmsh.initialize()
@@ -993,13 +1053,13 @@ class Half_sphere_hertzian(object):
         # Set more divisions on the bottom curves
         # Replace curve IDs with the actual curve IDs from the geometry
         # To find correct edges: just visualize it
-        for curve_id in [2,3,5,6,12,14]: 
+        for curve_id in [2, 3, 5, 6, 12, 14]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 5)
-        for curve_id in [4,13]: 
+        for curve_id in [4, 13]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 10)
-        for curve_id in [7,8]: 
+        for curve_id in [7, 8]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 15)
-        # for curve_id in [1,4,14]: 
+        # for curve_id in [1,4,14]:
         #     gmsh.model.mesh.setTransfiniteCurve(curve_id, 5)
         # for curve_id in [5,12,16]:
         #     gmsh.model.mesh.setTransfiniteCurve(curve_id, 30)
@@ -1014,11 +1074,12 @@ class Half_sphere_hertzian(object):
             gmsh.fltk.run()
 
         return gmsh_model
+
 
 class Half_sphere_hertzian2(object):
     def __init__(self, path):
         self.path = path
-    
+
     def generateGmshModel(self, visualize_mesh=False):
         # Initialize Gmsh
         gmsh.initialize()
@@ -1042,11 +1103,11 @@ class Half_sphere_hertzian2(object):
         # Set more divisions on the bottom curves
         # Replace curve IDs with the actual curve IDs from the geometry
         # To find correct edges: just visualize it
-        for curve_id in [2,10,15,29,5,6,18,19,31,32,40,41]: 
+        for curve_id in [2, 10, 15, 29, 5, 6, 18, 19, 31, 32, 40, 41]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 10)
-        for curve_id in [3,7,30,14]: 
+        for curve_id in [3, 7, 30, 14]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 15)
-        # for curve_id in [1,4,14]: 
+        # for curve_id in [1,4,14]:
         #     gmsh.model.mesh.setTransfiniteCurve(curve_id, 5)
         # for curve_id in [5,12,16]:
         #     gmsh.model.mesh.setTransfiniteCurve(curve_id, 30)
@@ -1062,11 +1123,12 @@ class Half_sphere_hertzian2(object):
 
         return gmsh_model
 
+
 class Geom_step_to_gmsh(object):
-    def __init__(self, path, curve_info = None):
+    def __init__(self, path, curve_info=None):
         self.path = path
         self.curve_info = curve_info
-    
+
     def generateGmshModel(self, visualize_mesh=False):
         # Initialize Gmsh
         gmsh.initialize()
@@ -1099,10 +1161,11 @@ class Geom_step_to_gmsh(object):
 
         return gmsh_model
 
+
 class Cylinder_hertzian(object):
     def __init__(self, path):
         self.path = path
-    
+
     def generateGmshModel(self, visualize_mesh=False):
         # Initialize Gmsh
         gmsh.initialize()
@@ -1125,15 +1188,15 @@ class Cylinder_hertzian(object):
 
         # Set more divisions on the bottom curves
         # Replace curve IDs with the actual curve IDs from the geometry
-        for curve_id in [7,9]:  
+        for curve_id in [7, 9]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 15)
-        for curve_id in [14,18]:  
+        for curve_id in [14, 18]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 8)
         gmsh.model.mesh.setTransfiniteCurve(8, 40)
         gmsh.model.mesh.setTransfiniteCurve(6, 25)
-        for curve_id in [2,16]:  
+        for curve_id in [2, 16]:
             gmsh.model.mesh.setTransfiniteCurve(curve_id, 15)
-        # for curve_id in [5,12,16]:  
+        # for curve_id in [5,12,16]:
         #     gmsh.model.mesh.setTransfiniteCurve(curve_id, 30)
 
         # Synchronize geometry
@@ -1147,9 +1210,10 @@ class Cylinder_hertzian(object):
 
         return gmsh_model
 
+
 class Block_3D_hex(object):
     def __init__(self, origin, length, height, width, divisions, gmsh_options=None):
-        '''
+        """
         Parameters
         ----------
         coord_left_corner : list
@@ -1162,7 +1226,7 @@ class Block_3D_hex(object):
             Scaling factor for the mesh size.
         gmsh_options : dict
             Optional Gmsh options.
-        '''
+        """
         self.origin = origin
         self.length = length
         self.height = height
@@ -1171,7 +1235,7 @@ class Block_3D_hex(object):
         self.gmsh_options = gmsh_options
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates a 3D block with structured hexahedral mesh.
 
         Parameters
@@ -1181,15 +1245,15 @@ class Block_3D_hex(object):
         Returns
         -------
         gmsh_model: Object
-            Gmsh model 
-        '''
+            Gmsh model
+        """
 
         # Parameters
         x0, y0, z0 = self.origin
 
         l = self.length  # Length along x-axis
         h = self.height  # Length along y-axis
-        w = self.width # Length along z-axis
+        w = self.width  # Length along z-axis
 
         nx, ny, nz = self.divisions  # Number of divisions along each axis
 
@@ -1212,7 +1276,7 @@ class Block_3D_hex(object):
         surfaces = gmsh_model.getEntities(2)
         curves = gmsh_model.getEntities(1)
 
-        # Set transfinite lines to enforce structured mesh with different divisions on each axis        
+        # Set transfinite lines to enforce structured mesh with different divisions on each axis
         gmsh.model.mesh.setTransfiniteCurve(curves[0][1], nz)
         gmsh.model.mesh.setTransfiniteCurve(curves[1][1], ny)
         gmsh.model.mesh.setTransfiniteCurve(curves[2][1], nz)
@@ -1252,27 +1316,30 @@ class Block_3D_hex(object):
             gmsh.fltk.run()
 
         return gmsh_model
-                         
+
+
 class Block_3D(object):
-    def __init__(self, coord_left_corner, coord_right_corner, mesh_size=0.15, gmsh_options=None):
+    def __init__(
+        self, coord_left_corner, coord_right_corner, mesh_size=0.15, gmsh_options=None
+    ):
         self.coord_left_corner = coord_left_corner
         self.coord_right_corner = coord_right_corner
         self.mesh_size = mesh_size
         self.gmsh_options = gmsh_options
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates a 3D block.
 
         Parameters
         ----------
         visualize_mesh : boolean
-            a booelan value to show the mesh using Gmsh or not
-        Returns 
+            a boolean value to show the mesh using Gmsh or not
+        Returns
         -------
         gmsh_model: Object
-            gmsh model 
-        '''
+            gmsh model
+        """
 
         # Parameters
         x0 = self.coord_left_corner[0]
@@ -1281,14 +1348,14 @@ class Block_3D(object):
         x1 = self.coord_right_corner[0]
         y1 = self.coord_right_corner[1]
         z1 = self.coord_right_corner[2]
-        assert(x1>x0)
-        assert(y1>y0)
-        assert(z1>z0)
+        assert x1 > x0
+        assert y1 > y0
+        assert z1 > z0
         l = x1 - x0
         h = y1 - y0
-        w = z1 - z0 
+        w = z1 - z0
         # Mesh size.
-        lcar = self.mesh_size * min(h,l,w)
+        lcar = self.mesh_size * min(h, l, w)
 
         # create gmsh model instance
         gmsh_model = gmsh.model
@@ -1302,12 +1369,12 @@ class Block_3D(object):
 
         if self.gmsh_options:
             for command, value in self.gmsh_options.items():
-                if type(value).__name__ == 'str':
+                if type(value).__name__ == "str":
                     gmsh.option.setString(command, value)
                 else:
                     gmsh.option.setNumber(command, value)
-        
-        #gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
+
+        # gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
 
         gmsh_model.add("Box")
 
@@ -1319,13 +1386,22 @@ class Block_3D(object):
         gmsh_model.mesh.generate(3)
 
         if visualize_mesh:
-            if '-nopopup' not in sys.argv:
+            if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
 
         return gmsh_model
 
+
 class Rectangle_4PointBending(object):
-    def __init__(self, l_beam, h_beam, region_size_dict, mesh_size=0.15, refine_factor=12, gmsh_options=None):
+    def __init__(
+        self,
+        l_beam,
+        h_beam,
+        region_size_dict,
+        mesh_size=0.15,
+        refine_factor=12,
+        gmsh_options=None,
+    ):
         self.l_beam = l_beam
         self.h_beam = h_beam
         self.region_size_dict = region_size_dict
@@ -1334,21 +1410,21 @@ class Rectangle_4PointBending(object):
         self.refine_factor = refine_factor
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates a rectangle with partitioned mesh.
 
         Parameters
         ----------
         visualize_mesh : boolean
-            a booelan value to show the mesh using Gmsh or not
-        Returns 
+            a boolean value to show the mesh using Gmsh or not
+        Returns
         -------
         gmsh_model: Object
-            gmsh model 
-        '''
+            gmsh model
+        """
 
         # Mesh size.
-        lc = self.mesh_size #* min(self.l_beam,self.h_beam)
+        lc = self.mesh_size  # * min(self.l_beam,self.h_beam)
 
         # create gmsh model instance
         gmsh_model = gmsh.model
@@ -1358,7 +1434,7 @@ class Rectangle_4PointBending(object):
 
         if self.gmsh_options:
             for command, value in self.gmsh_options.items():
-                if type(value).__name__ == 'str':
+                if type(value).__name__ == "str":
                     gmsh.option.setString(command, value)
                 else:
                     gmsh.option.setNumber(command, value)
@@ -1366,20 +1442,52 @@ class Rectangle_4PointBending(object):
         gmsh_model.add("Beam with partitioned mesh")
 
         #  corner points
-        c1 = gmsh_model.geo.addPoint(0, 0, 0, lc) # left bottom, origin
-        c2 = gmsh_model.geo.addPoint(self.l_beam, 0, 0, lc) # right bottom
-        c3 = gmsh_model.geo.addPoint(self.l_beam, self.h_beam, 0, lc) # right top
-        c4 = gmsh_model.geo.addPoint(0, self.h_beam, 0, lc) # left top 
- 
+        c1 = gmsh_model.geo.addPoint(0, 0, 0, lc)  # left bottom, origin
+        c2 = gmsh_model.geo.addPoint(self.l_beam, 0, 0, lc)  # right bottom
+        c3 = gmsh_model.geo.addPoint(self.l_beam, self.h_beam, 0, lc)  # right top
+        c4 = gmsh_model.geo.addPoint(0, self.h_beam, 0, lc)  # left top
+
         # location points
-        p1 = gmsh_model.geo.addPoint(self.region_size_dict["r1"]["start"], 0, 0, lc) # p1
-        p2 = gmsh_model.geo.addPoint(self.region_size_dict["r1"]["start"]+self.region_size_dict["r1"]["increment"], 0, 0, lc) # p2
-        p3 = gmsh_model.geo.addPoint(self.region_size_dict["r2"]["start"], 0, 0, lc) # p3
-        p4 = gmsh_model.geo.addPoint(self.region_size_dict["r2"]["start"]+self.region_size_dict["r2"]["increment"], 0, 0, lc) # p4
-        p5 = gmsh_model.geo.addPoint(self.region_size_dict["r3"]["start"], self.h_beam, 0, lc) # p5
-        p6 = gmsh_model.geo.addPoint(self.region_size_dict["r3"]["start"]+self.region_size_dict["r3"]["increment"], self.h_beam, 0, lc) # p6
-        p7 = gmsh_model.geo.addPoint(self.region_size_dict["r4"]["start"], self.h_beam, 0, lc) # p7  
-        p8 = gmsh_model.geo.addPoint(self.region_size_dict["r4"]["start"]+self.region_size_dict["r4"]["increment"], self.h_beam, 0, lc) # p8
+        p1 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r1"]["start"], 0, 0, lc
+        )  # p1
+        p2 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r1"]["start"]
+            + self.region_size_dict["r1"]["increment"],
+            0,
+            0,
+            lc,
+        )  # p2
+        p3 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r2"]["start"], 0, 0, lc
+        )  # p3
+        p4 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r2"]["start"]
+            + self.region_size_dict["r2"]["increment"],
+            0,
+            0,
+            lc,
+        )  # p4
+        p5 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r3"]["start"], self.h_beam, 0, lc
+        )  # p5
+        p6 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r3"]["start"]
+            + self.region_size_dict["r3"]["increment"],
+            self.h_beam,
+            0,
+            lc,
+        )  # p6
+        p7 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r4"]["start"], self.h_beam, 0, lc
+        )  # p7
+        p8 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r4"]["start"]
+            + self.region_size_dict["r4"]["increment"],
+            self.h_beam,
+            0,
+            lc,
+        )  # p8
 
         # generate lines (use counter-clockwise direction)
         gmsh_model.geo.addLine(c1, p1)
@@ -1398,7 +1506,7 @@ class Rectangle_4PointBending(object):
         # The third elementary entity is the surface. In order to define a simple
         # rectangular surface from the four curves defined above, a curve loop has first
         # to be defined.
-        curve_loop =[1,2,3,4,5,6,7,8,9,10,11,12]
+        curve_loop = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         gmsh_model.geo.addCurveLoop(curve_loop, 1)
 
         # We can then define the surface as a list of curve loops (only one here,
@@ -1411,10 +1519,9 @@ class Rectangle_4PointBending(object):
         # be synchronized with the Gmsh model
         gmsh_model.geo.synchronize()
 
-
         if self.refine_factor:
             gmsh_model.mesh.field.add("Distance", 1)
-            gmsh_model.mesh.field.setNumbers(1, "CurvesList", [2,4,8,10])
+            gmsh_model.mesh.field.setNumbers(1, "CurvesList", [2, 4, 8, 10])
             gmsh_model.mesh.field.setNumber(1, "Sampling", 100)
 
             gmsh_model.mesh.field.add("Threshold", 2)
@@ -1425,7 +1532,7 @@ class Rectangle_4PointBending(object):
             gmsh_model.mesh.field.setNumber(2, "DistMax", 0.02)
 
             gmsh_model.mesh.field.add("Min", 3)
-            gmsh_model.mesh.field.setNumbers(3, "FieldsList", [2,3])
+            gmsh_model.mesh.field.setNumbers(3, "FieldsList", [2, 3])
 
             gmsh_model.mesh.field.setAsBackgroundMesh(3)
 
@@ -1433,13 +1540,22 @@ class Rectangle_4PointBending(object):
         gmsh_model.mesh.generate(2)
 
         if visualize_mesh:
-            if '-nopopup' not in sys.argv:
+            if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
 
         return gmsh_model
 
+
 class Rectangle_4PointBendingCentered(object):
-    def __init__(self, coord_left_corner, coord_right_corner, region_size_dict, mesh_size=0.15, refine_factor=12, gmsh_options=None):
+    def __init__(
+        self,
+        coord_left_corner,
+        coord_right_corner,
+        region_size_dict,
+        mesh_size=0.15,
+        refine_factor=12,
+        gmsh_options=None,
+    ):
         self.coord_left_corner = coord_left_corner
         self.coord_right_corner = coord_right_corner
         self.region_size_dict = region_size_dict
@@ -1448,21 +1564,21 @@ class Rectangle_4PointBendingCentered(object):
         self.refine_factor = refine_factor
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates a rectangle with partitioned mesh.
 
         Parameters
         ----------
         visualize_mesh : boolean
-            a booelan value to show the mesh using Gmsh or not
-        Returns 
+            a boolean value to show the mesh using Gmsh or not
+        Returns
         -------
         gmsh_model: Object
-            gmsh model 
-        '''
+            gmsh model
+        """
 
         # Mesh size.
-        lc = self.mesh_size #* min(self.l_beam,self.h_beam)
+        lc = self.mesh_size  # * min(self.l_beam,self.h_beam)
 
         # create gmsh model instance
         gmsh_model = gmsh.model
@@ -1472,33 +1588,81 @@ class Rectangle_4PointBendingCentered(object):
 
         if self.gmsh_options:
             for command, value in self.gmsh_options.items():
-                if type(value).__name__ == 'str':
+                if type(value).__name__ == "str":
                     gmsh.option.setString(command, value)
                 else:
                     gmsh.option.setNumber(command, value)
 
         gmsh_model.add("Beam with partitioned mesh")
-        
+
         x0 = self.coord_left_corner[0]
         y0 = self.coord_left_corner[1]
         x1 = self.coord_right_corner[0]
-        y1 = self.coord_right_corner[1]    
+        y1 = self.coord_right_corner[1]
 
         #  corner points
-        c1 = gmsh_model.geo.addPoint(x0, y0, 0, lc) # left bottom, origin
-        c2 = gmsh_model.geo.addPoint(x1, y0, 0, lc) # right bottom
-        c3 = gmsh_model.geo.addPoint(x1, y1, 0, lc) # right top
-        c4 = gmsh_model.geo.addPoint(x0, y1, 0, lc) # left top 
- 
+        c1 = gmsh_model.geo.addPoint(x0, y0, 0, lc)  # left bottom, origin
+        c2 = gmsh_model.geo.addPoint(x1, y0, 0, lc)  # right bottom
+        c3 = gmsh_model.geo.addPoint(x1, y1, 0, lc)  # right top
+        c4 = gmsh_model.geo.addPoint(x0, y1, 0, lc)  # left top
+
         # location points
-        p1 = gmsh_model.geo.addPoint(self.region_size_dict["r1"]["center"]-self.region_size_dict["r1"]["deviation"], y0, 0, lc) # p1
-        p2 = gmsh_model.geo.addPoint(self.region_size_dict["r1"]["center"]+self.region_size_dict["r1"]["deviation"], y0, 0, lc) # p2
-        p3 = gmsh_model.geo.addPoint(self.region_size_dict["r2"]["center"]-self.region_size_dict["r2"]["deviation"], y0, 0, lc) # p3
-        p4 = gmsh_model.geo.addPoint(self.region_size_dict["r2"]["center"]+self.region_size_dict["r2"]["deviation"], y0, 0, lc) # p4
-        p5 = gmsh_model.geo.addPoint(self.region_size_dict["r3"]["center"]-self.region_size_dict["r3"]["deviation"], y1, 0, lc) # p5
-        p6 = gmsh_model.geo.addPoint(self.region_size_dict["r3"]["center"]+self.region_size_dict["r3"]["deviation"], y1, 0, lc) # p6
-        p7 = gmsh_model.geo.addPoint(self.region_size_dict["r4"]["center"]-self.region_size_dict["r4"]["deviation"], y1, 0, lc) # p7  
-        p8 = gmsh_model.geo.addPoint(self.region_size_dict["r4"]["center"]+self.region_size_dict["r4"]["deviation"], y1, 0, lc) # p8
+        p1 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r1"]["center"]
+            - self.region_size_dict["r1"]["deviation"],
+            y0,
+            0,
+            lc,
+        )  # p1
+        p2 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r1"]["center"]
+            + self.region_size_dict["r1"]["deviation"],
+            y0,
+            0,
+            lc,
+        )  # p2
+        p3 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r2"]["center"]
+            - self.region_size_dict["r2"]["deviation"],
+            y0,
+            0,
+            lc,
+        )  # p3
+        p4 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r2"]["center"]
+            + self.region_size_dict["r2"]["deviation"],
+            y0,
+            0,
+            lc,
+        )  # p4
+        p5 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r3"]["center"]
+            - self.region_size_dict["r3"]["deviation"],
+            y1,
+            0,
+            lc,
+        )  # p5
+        p6 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r3"]["center"]
+            + self.region_size_dict["r3"]["deviation"],
+            y1,
+            0,
+            lc,
+        )  # p6
+        p7 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r4"]["center"]
+            - self.region_size_dict["r4"]["deviation"],
+            y1,
+            0,
+            lc,
+        )  # p7
+        p8 = gmsh_model.geo.addPoint(
+            self.region_size_dict["r4"]["center"]
+            + self.region_size_dict["r4"]["deviation"],
+            y1,
+            0,
+            lc,
+        )  # p8
 
         # generate lines (use counter-clockwise direction)
         gmsh_model.geo.addLine(c1, p1)
@@ -1517,7 +1681,7 @@ class Rectangle_4PointBendingCentered(object):
         # The third elementary entity is the surface. In order to define a simple
         # rectangular surface from the four curves defined above, a curve loop has first
         # to be defined.
-        curve_loop =[1,2,3,4,5,6,7,8,9,10,11,12]
+        curve_loop = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         gmsh_model.geo.addCurveLoop(curve_loop, 1)
 
         # We can then define the surface as a list of curve loops (only one here,
@@ -1530,10 +1694,9 @@ class Rectangle_4PointBendingCentered(object):
         # be synchronized with the Gmsh model
         gmsh_model.geo.synchronize()
 
-
         if self.refine_factor:
             gmsh_model.mesh.field.add("Distance", 1)
-            gmsh_model.mesh.field.setNumbers(1, "CurvesList", [2,4,8,10])
+            gmsh_model.mesh.field.setNumbers(1, "CurvesList", [2, 4, 8, 10])
             gmsh_model.mesh.field.setNumber(1, "Sampling", 100)
 
             gmsh_model.mesh.field.add("Threshold", 2)
@@ -1544,7 +1707,7 @@ class Rectangle_4PointBendingCentered(object):
             gmsh_model.mesh.field.setNumber(2, "DistMax", 0.02)
 
             gmsh_model.mesh.field.add("Min", 3)
-            gmsh_model.mesh.field.setNumbers(3, "FieldsList", [2,3])
+            gmsh_model.mesh.field.setNumbers(3, "FieldsList", [2, 3])
 
             gmsh_model.mesh.field.setAsBackgroundMesh(3)
 
@@ -1552,36 +1715,45 @@ class Rectangle_4PointBendingCentered(object):
         gmsh_model.mesh.generate(2)
 
         if visualize_mesh:
-            if '-nopopup' not in sys.argv:
+            if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
 
         return gmsh_model
-    
+
+
 class QuarterDisc(object):
-    def __init__(self, radius, center, angle=None, refine_times=None, mesh_size=0.15, gmsh_options=None):
+    def __init__(
+        self,
+        radius,
+        center,
+        angle=None,
+        refine_times=None,
+        mesh_size=0.15,
+        gmsh_options=None,
+    ):
         self.radius = radius
         self.center = center
         if angle:
-            self.angle_rad = np.pi*angle/180
+            self.angle_rad = np.pi * angle / 180
         else:
             self.angle_rad = angle
-        self.refine_times = refine_times 
+        self.refine_times = refine_times
         self.mesh_size = mesh_size
         self.gmsh_options = gmsh_options
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates a quarter disc with partition or without it.
 
         Parameters
         ----------
         visualize_mesh : boolean
-            a booelan value to show the mesh using Gmsh or not
-        Returns 
+            a boolean value to show the mesh using Gmsh or not
+        Returns
         -------
         gmsh_model: Object
-            gmsh model 
-        '''
+            gmsh model
+        """
 
         # Mesh size.
         lcar = self.mesh_size * self.radius
@@ -1594,37 +1766,47 @@ class QuarterDisc(object):
 
         if self.gmsh_options:
             for command, value in self.gmsh_options.items():
-                if type(value).__name__ == 'str':
+                if type(value).__name__ == "str":
                     gmsh.option.setString(command, value)
                 else:
                     gmsh.option.setNumber(command, value)
-        
+
         x_loc_p3 = None
         y_loc_p3 = None
 
         gmsh_model.add("Rectangle")
 
-        p0 = gmsh_model.geo.addPoint(self.center[0],self.center[1],0, lcar, 1)
-        p1 = gmsh_model.geo.addPoint(self.center[0]-self.radius,self.center[1],0, lcar, 2)
-        p2 = gmsh_model.geo.addPoint(self.center[0],self.center[1]-self.radius,0, lcar, 3)
+        p0 = gmsh_model.geo.addPoint(self.center[0], self.center[1], 0, lcar, 1)
+        p1 = gmsh_model.geo.addPoint(
+            self.center[0] - self.radius, self.center[1], 0, lcar, 2
+        )
+        p2 = gmsh_model.geo.addPoint(
+            self.center[0], self.center[1] - self.radius, 0, lcar, 3
+        )
         if self.angle_rad:
-            p3 = gmsh_model.geo.addPoint(self.radius*np.cos(self.angle_rad),self.radius*np.sin(self.angle_rad),0, lcar, 4)
-            x_loc_p3 = self.radius*np.cos(self.angle_rad)
-            y_loc_p3 = self.radius*np.sin(self.angle_rad)
+            p3 = gmsh_model.geo.addPoint(
+                self.radius * np.cos(self.angle_rad),
+                self.radius * np.sin(self.angle_rad),
+                0,
+                lcar,
+                4,
+            )
+            x_loc_p3 = self.radius * np.cos(self.angle_rad)
+            y_loc_p3 = self.radius * np.sin(self.angle_rad)
 
         c1 = gmsh_model.geo.addLine(p0, p1)
         c2 = gmsh_model.geo.addLine(p2, p0)
-        if self.angle_rad: 
-            c3 = gmsh_model.geo.addCircleArc(p1,p0,p3)
-            c4 = gmsh_model.geo.addCircleArc(p3,p0,p2)
-            
-            gmsh_model.geo.addCurveLoop([c1,c2,c3,c4], 1)
+        if self.angle_rad:
+            c3 = gmsh_model.geo.addCircleArc(p1, p0, p3)
+            c4 = gmsh_model.geo.addCircleArc(p3, p0, p2)
+
+            gmsh_model.geo.addCurveLoop([c1, c2, c3, c4], 1)
         else:
-            c3 = gmsh_model.geo.addCircleArc(p1,p0,p2)
-            gmsh_model.geo.addCurveLoop([c1,c2,c3], 1)
+            c3 = gmsh_model.geo.addCircleArc(p1, p0, p2)
+            gmsh_model.geo.addCurveLoop([c1, c2, c3], 1)
 
         gmsh_model.geo.addPlaneSurface([1], 1)
-        
+
         gmsh_model.geo.synchronize()
 
         if self.refine_times and self.angle_rad:
@@ -1636,11 +1818,11 @@ class QuarterDisc(object):
             gmsh_model.mesh.field.setNumber(2, "InField", 1)
             gmsh_model.mesh.field.setNumber(2, "SizeMin", lcar / self.refine_times)
             gmsh_model.mesh.field.setNumber(2, "SizeMax", lcar)
-            gmsh_model.mesh.field.setNumber(2, "DistMin", self.radius/10000)
-            gmsh_model.mesh.field.setNumber(2, "DistMax", self.radius/1000)
+            gmsh_model.mesh.field.setNumber(2, "DistMin", self.radius / 10000)
+            gmsh_model.mesh.field.setNumber(2, "DistMax", self.radius / 1000)
 
             gmsh_model.mesh.field.add("Min", 3)
-            gmsh_model.mesh.field.setNumbers(3, "FieldsList", [2,3])
+            gmsh_model.mesh.field.setNumbers(3, "FieldsList", [2, 3])
 
             gmsh_model.mesh.field.setAsBackgroundMesh(3)
 
@@ -1648,12 +1830,12 @@ class QuarterDisc(object):
         gmsh_model.mesh.generate(2)
 
         if visualize_mesh:
-            if '-nopopup' not in sys.argv:
+            if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
 
         return gmsh_model, x_loc_p3, y_loc_p3
 
-    
+
 class Line_1D(object):
     def __init__(self, coord_left, coord_right, mesh_size=0.1, gmsh_options=None):
         self.coord_left = coord_left
@@ -1662,18 +1844,18 @@ class Line_1D(object):
         self.gmsh_options = gmsh_options
 
     def generateGmshModel(self, visualize_mesh=False):
-        '''
+        """
         Generates a 3D block.
 
         Parameters
         ----------
         visualize_mesh : boolean
-            a booelan value to show the mesh using Gmsh or not
-        Returns 
+            a boolean value to show the mesh using Gmsh or not
+        Returns
         -------
         gmsh_model: Object
-            gmsh model 
-        '''
+            gmsh model
+        """
 
         # Parameters
         x0 = self.coord_left
@@ -1682,9 +1864,9 @@ class Line_1D(object):
         x1 = self.coord_right
         y1 = 0
         z1 = 0
-        
-        assert(x1>x0)
-        
+
+        assert x1 > x0
+
         l = x1 - x0
         # Mesh size.
         lcar = self.mesh_size * l
@@ -1700,15 +1882,15 @@ class Line_1D(object):
 
         if self.gmsh_options:
             for command, value in self.gmsh_options.items():
-                if type(value).__name__ == 'str':
+                if type(value).__name__ == "str":
                     gmsh.option.setString(command, value)
                 else:
                     gmsh.option.setNumber(command, value)
-        
-        #gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
+
+        # gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
         point_a = gmsh.model.geo.addPoint(x0, y0, z0)
         point_b = gmsh.model.geo.addPoint(x1, y1, z1)
-        
+
         gmsh_model.geo.addLine(point_a, point_b)
 
         gmsh_model.geo.synchronize()
@@ -1717,7 +1899,103 @@ class Line_1D(object):
         gmsh_model.mesh.generate(1)
 
         if visualize_mesh:
-            if '-nopopup' not in sys.argv:
+            if "-nopopup" not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model
+
+
+class APIGeometry(object):
+    def __init__(self, dimension, mesh):
+        self.dimension = dimension
+        self.mesh_info = mesh
+
+    def generateGmshModel(self, visualize_mesh=False):
+        """
+        Generates a mesh from the provided information via the API.
+
+        Parameters
+        ----------
+        visualize_mesh : boolean
+            a boolean value to show the mesh using Gmsh or not
+        Returns
+        -------
+        gmsh_model: Object
+            gmsh model
+        """
+        gmsh.initialize(sys.argv)
+        gmsh_model = gmsh.model
+        coords = np.asarray(self.mesh_info["coordinates"])
+        node_ids = np.asarray(self.mesh_info["node_ids"], dtype=np.int64)
+        elem_ids = np.asarray(self.mesh_info["element_ids"], dtype=np.int64)
+        conn = np.asarray(self.mesh_info["connectivity"], dtype=np.int64)
+
+        # Make Gmsh-compliant tags (1-based)
+        node_tags = node_ids + 1  # node numbering offset from 4C
+        elem_tags = elem_ids + 1  # element numbering offset from 4C
+        elem_nodes = conn + 1  # node numbering offset from 4C
+
+        # Promote from 1D or 2D coords to 3D for gmsh API
+        if coords.shape[1] == 1:
+            coords3 = np.column_stack(
+                [coords, np.zeros(len(coords)), np.zeros(len(coords))]
+            )
+        elif coords.shape[1] == 2:
+            coords3 = np.column_stack([coords, np.zeros(len(coords))])
+        else:
+            coords3 = coords
+
+        nen = elem_nodes.shape[1]
+
+        def etype_from(d, n):
+            if d == 1 and n in (2, 3):
+                return ("line", 1 if n == 2 else 2)
+            elif d == 2 and n == 3:
+                return ("triangle", 1)
+            elif d == 2 and n == 6:
+                return ("triangle", 2)
+            elif d == 2 and n == 4:
+                return ("quadrangle", 1)
+            elif d == 2 and n in (8, 9):
+                return ("quadrangle", 2)
+            elif d == 3 and n == 4:
+                return ("tetrahedron", 1)
+            elif d == 3 and n == 10:
+                return ("tetrahedron", 2)
+            elif d == 3 and n == 8:
+                return ("hexahedron", 1)
+            elif d == 3 and n in (20, 27):
+                return ("hexahedron", 2)
+            else:
+                raise ValueError(
+                    f"Unsupported element type (dim, nodes per element) = ({d},{n})"
+                )
+
+        et_name, et_order = etype_from(self.dimension, nen)
+        etype = gmsh_model.mesh.getElementType(et_name, et_order)
+
+        try:
+            tag = gmsh_model.addDiscreteEntity(self.dimension)
+        except TypeError:
+            gmsh_model.addDiscreteEntity(self.dimension, -1)
+            tag = gmsh_model.getEntities(self.dimension)[-1][1]
+
+        gmsh_model.mesh.addNodes(
+            self.dimension,
+            tag,
+            node_tags.tolist(),
+            coords3.reshape(-1).astype(float).tolist(),
+        )
+        gmsh_model.mesh.addElements(
+            self.dimension,
+            tag,
+            [etype],
+            [elem_tags.tolist()],
+            [elem_nodes.reshape(-1).tolist()],
+        )
+
+        if visualize_mesh:
+            if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
 
         return gmsh_model
