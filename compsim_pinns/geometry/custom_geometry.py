@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from deepxde import config
 from deepxde.geometry.geometry import Geometry
-from gmsh_models import APIGeometry
+
+from compsim_pinns.geometry.gmsh_models import APIGeometry
 
 
 class GmshGeometry3D(Geometry):
@@ -1553,12 +1554,16 @@ class GmshGeometryElementDeepEnergy(Geometry):
         self.boundary_selection_map = boundary_selection_map
         self.boundary_selection_tag = None
         self.lagrange_parameter = None
+        self.boundary_normal_global = None
 
         if not self.only_get_mesh:
-            if self.dim == 2:
-                self.boundary_normal_global = self.fun_boundary_normal_global()
-            elif self.dim == 3:
-                self.boundary_normal_global = self.fun_boundary_normal_global_3d()
+            try:
+                if self.dim == 2:
+                    self.boundary_normal_global = self.fun_boundary_normal_global()
+                elif self.dim == 3:
+                    self.boundary_normal_global = self.fun_boundary_normal_global_3d()
+            except Exception:
+                self.boundary_normal_global = None
         # obtain element information
         if self.coord_quadrature is not None:
             self.n_gp = self.weight_quadrature.shape[0]
@@ -1642,8 +1647,105 @@ class GmshGeometryElementDeepEnergy(Geometry):
         contained_indices_boolean = np.any(contained_rows, axis=1)
         return contained_indices_boolean
 
+    def _get_boundary_entity_local_node_ids(self, element_type):
+        if element_type == 2:  # triangle with 3 nodes
+            return ((0, 1), (1, 2), (2, 0))
+        elif element_type == 3:  # quad with 4 nodes
+            return ((0, 1), (1, 2), (2, 3), (3, 0))
+        elif element_type == 4:  # tetrahedron with 4 nodes
+            return ((0, 2, 1), (0, 1, 3), (1, 2, 3), (2, 0, 3))
+        elif element_type == 5:  # hexahedron with 8 nodes
+            return (
+                (0, 3, 2, 1),
+                (4, 5, 6, 7),
+                (0, 1, 5, 4),
+                (1, 2, 6, 5),
+                (2, 3, 7, 6),
+                (3, 0, 4, 7),
+            )
+        raise NotImplemented(
+            f"Element type: {element_type}, not implemented! Use only triangle, quad, tet, or hex elements"
+        )
+
+    def _build_boundary_entity_lookup(self):
+        boundary_entity_count = {}
+
+        for element_tag in self.gmsh_model.mesh.getElements(self.dim, -1)[1][0]:
+            element_type, element_node_ids, _, _ = self.gmsh_model.mesh.getElement(
+                element_tag
+            )
+            local_boundary_entities = self._get_boundary_entity_local_node_ids(
+                element_type
+            )
+            for local_entity in local_boundary_entities:
+                entity_node_ids = tuple(
+                    int(element_node_ids[local_node_id])
+                    for local_node_id in local_entity
+                )
+                entity_key = tuple(sorted(entity_node_ids))
+                boundary_entity_count[entity_key] = (
+                    boundary_entity_count.get(entity_key, 0) + 1
+                )
+
+        return {
+            entity_key
+            for entity_key, count in boundary_entity_count.items()
+            if count == 1
+        }
+
+    def _compute_boundary_entity_normal(
+        self, boundary_coordinate_list, coordinate_list
+    ):
+        boundary_coords = np.asarray(boundary_coordinate_list, dtype=float)
+        cell_coords = np.asarray(coordinate_list, dtype=float)
+        cell_center = np.mean(cell_coords, axis=0)
+        entity_center = np.mean(boundary_coords, axis=0)
+
+        if self.dim == 2:
+            tangent = boundary_coords[1] - boundary_coords[0]
+            normal = np.array([tangent[1], -tangent[0]], dtype=float)
+        elif self.dim == 3:
+            if boundary_coords.shape[0] == 3:
+                normal = np.cross(
+                    boundary_coords[1] - boundary_coords[0],
+                    boundary_coords[2] - boundary_coords[0],
+                )
+            elif boundary_coords.shape[0] == 4:
+                normal = np.cross(
+                    boundary_coords[1] - boundary_coords[0],
+                    boundary_coords[2] - boundary_coords[0],
+                ) + np.cross(
+                    boundary_coords[2] - boundary_coords[0],
+                    boundary_coords[3] - boundary_coords[0],
+                )
+            else:
+                raise ValueError(
+                    "Boundary face must have 3 or 4 nodes for 3D normal computation."
+                )
+        else:
+            raise ValueError(
+                "Boundary-entity normal computation supports only 2D or 3D."
+            )
+
+        if np.dot(normal, entity_center - cell_center) < 0:
+            normal *= -1
+
+        normal_norm = np.linalg.norm(normal)
+        if np.isclose(normal_norm, 0.0):
+            raise ValueError(
+                "Degenerate boundary entity encountered during normal computation."
+            )
+
+        return normal / normal_norm
+
     def boundary_normal(self, x):
         """Slice the unit normal at x for Neumann or Robin boundary conditions."""
+
+        if self.boundary_normal_global is None:
+            raise ValueError(
+                "Boundary node normals are unavailable for this mesh. Boundary integration "
+                "uses boundary-entity normals directly."
+            )
 
         if self.dim == 2:
             n, uniq = self.boundary_normal_global
@@ -2072,26 +2174,18 @@ class GmshGeometryElementDeepEnergy(Geometry):
 
         # If the boundary integral information is desired
         if self.coord_quadrature_boundary is not None:
-            n_boundary_points = self.random_boundary_points(1).shape[0]
+            boundary_entity_lookup = self._build_boundary_entity_lookup()
+            n_boundary_entities = len(boundary_entity_lookup)
             self.n_gp_boundary = self.weight_quadrature_boundary.shape[0]
-            if self.dim == 2:
-                boundary_multiplier = 2  #
-            elif self.dim == 3:
-                boundary_multiplier = 12
-            # allocate the mapped_coordinates_boundary using the maximum possible number of boundary elements (edges in 2D and surface is 3D) using boundary_multiplier*n_boundary_points and self.n_gp_boundary
-            # Later we will reduce the sizes
+            boundary_storage_size = n_boundary_entities * self.n_gp_boundary
             self.mapped_coordinates_boundary = np.empty(
-                (n_boundary_points * boundary_multiplier * self.n_gp_boundary, self.dim)
+                (boundary_storage_size, self.dim)
             )
-            self.mapped_normal_boundary = np.empty(
-                (n_boundary_points * boundary_multiplier * self.n_gp_boundary, self.dim)
-            )
-            self.jacobian_boundary = np.empty(
-                (n_boundary_points * boundary_multiplier * self.n_gp_boundary, 1)
-            )
+            self.mapped_normal_boundary = np.empty((boundary_storage_size, self.dim))
+            self.jacobian_boundary = np.empty((boundary_storage_size, 1))
             self.global_weights_boundary = np.empty(
                 (
-                    n_boundary_points * boundary_multiplier * self.n_gp_boundary,
+                    boundary_storage_size,
                     self.weight_quadrature_boundary.shape[1],
                 )
             )
@@ -2102,7 +2196,7 @@ class GmshGeometryElementDeepEnergy(Geometry):
                 ]
                 self.boundary_selection_tag = {
                     tag: np.empty(
-                        (n_boundary_points * boundary_multiplier * self.n_gp_boundary,),
+                        (boundary_storage_size,),
                         dtype=bool,
                     )
                     for tag in tag_list
@@ -2112,11 +2206,15 @@ class GmshGeometryElementDeepEnergy(Geometry):
         boundary_element_id = 0
 
         for element_tag in self.gmsh_model.mesh.getElements(self.dim, -1)[1][0]:
-            if self.gmsh_model.mesh.getElement(element_tag)[1].shape[0] > 2**self.dim:
+            element_type, element_node_ids, _, _ = self.gmsh_model.mesh.getElement(
+                element_tag
+            )
+
+            if element_node_ids.shape[0] > 2**self.dim:
                 raise ValueError("Use linear elements.")
 
             coordinate_list = []
-            for node_id in self.gmsh_model.mesh.getElement(element_tag)[1]:
+            for node_id in element_node_ids:
                 coordinate_list.append(
                     self.gmsh_model.mesh.getNode(node_id)[0][0 : self.dim]
                 )
@@ -2142,102 +2240,22 @@ class GmshGeometryElementDeepEnergy(Geometry):
             element_id += 1
 
             if self.coord_quadrature_boundary is not None:
-                # https://gmsh.info/doc/texinfo/gmsh.html#Node-ordering
-                element_type = self.gmsh_model.mesh.getElement(element_tag)[0]
-                if element_type == 2:  # triangle with 3 nodes
-                    edge_list = [
-                        [coordinate_list[0], coordinate_list[1]],
-                        [coordinate_list[1], coordinate_list[2]],
-                        [coordinate_list[2], coordinate_list[0]],
-                    ]
-                elif element_type == 3:  # quad with 4 nodes
-                    edge_list = [
-                        [coordinate_list[0], coordinate_list[1]],
-                        [coordinate_list[1], coordinate_list[2]],
-                        [coordinate_list[2], coordinate_list[3]],
-                        [coordinate_list[3], coordinate_list[0]],
-                    ]
-                elif (
-                    element_type == 4
-                ):  # tets with 4 nodes. The following edge_list represents the surface_list, same variable name is used for easiness.
-                    edge_list = [
-                        [
-                            coordinate_list[0],
-                            coordinate_list[2],
-                            coordinate_list[1],
-                        ],  # Face 1
-                        [
-                            coordinate_list[0],
-                            coordinate_list[1],
-                            coordinate_list[3],
-                        ],  # Face 2
-                        [
-                            coordinate_list[1],
-                            coordinate_list[2],
-                            coordinate_list[3],
-                        ],  # Face 3
-                        [coordinate_list[2], coordinate_list[0], coordinate_list[3]],
-                    ]  # Face 4
-                elif (
-                    element_type == 5
-                ):  # hexa with 8 nodes. The following edge_list represents the surface_list, same variable name is used for easiness.
-                    # edge_list = [
-                    #             [coordinate_list[0], coordinate_list[3], coordinate_list[2], coordinate_list[1]],  # Face 1 (back)
-                    #             [coordinate_list[4], coordinate_list[5], coordinate_list[6], coordinate_list[7]],  # Face 2 (front)
-                    #             [coordinate_list[0], coordinate_list[4], coordinate_list[5], coordinate_list[1]],  # Face 3 (bottom)
-                    #             [coordinate_list[1], coordinate_list[5], coordinate_list[6], coordinate_list[2]],  # Face 4 (right)
-                    #             [coordinate_list[2], coordinate_list[6], coordinate_list[7], coordinate_list[3]],  # Face 5 (top)
-                    #             [coordinate_list[3], coordinate_list[7], coordinate_list[4], coordinate_list[0]]]   # Face 6 (left)
-                    edge_list = [
-                        [
-                            coordinate_list[0],
-                            coordinate_list[3],
-                            coordinate_list[2],
-                            coordinate_list[1],
-                        ],  # Face 1 (back)
-                        [
-                            coordinate_list[4],
-                            coordinate_list[5],
-                            coordinate_list[6],
-                            coordinate_list[7],
-                        ],  # Face 2 (front)
-                        [
-                            coordinate_list[0],
-                            coordinate_list[1],
-                            coordinate_list[5],
-                            coordinate_list[4],
-                        ],  # Face 3 (bottom)
-                        [
-                            coordinate_list[1],
-                            coordinate_list[2],
-                            coordinate_list[6],
-                            coordinate_list[5],
-                        ],  # Face 4 (right)
-                        [
-                            coordinate_list[2],
-                            coordinate_list[3],
-                            coordinate_list[7],
-                            coordinate_list[6],
-                        ],  # Face 5 (top)
-                        [
-                            coordinate_list[3],
-                            coordinate_list[0],
-                            coordinate_list[4],
-                            coordinate_list[7],
-                        ],
-                    ]  # Face 6 (left)
-                else:
-                    raise NotImplemented(
-                        f"Element type: {element_type}, not implemented! Use only triangle or quad elements"
-                    )
+                local_boundary_entities = self._get_boundary_entity_local_node_ids(
+                    element_type
+                )
 
-                for edge_coordinate_list in edge_list:
-                    on_boundary = all(
-                        self.on_boundary(coord.reshape(-1, self.dim))
-                        for coord in edge_coordinate_list
+                for local_boundary_entity in local_boundary_entities:
+                    edge_coordinate_list = [
+                        coordinate_list[local_node_id]
+                        for local_node_id in local_boundary_entity
+                    ]
+                    boundary_node_ids = tuple(
+                        int(element_node_ids[local_node_id])
+                        for local_node_id in local_boundary_entity
                     )
-                    # on_boundary = (self.on_boundary(edge_coordinate_list[0].reshape(-1,self.dim)) and self.on_boundary(edge_coordinate_list[1].reshape(-1,self.dim)) and self.on_boundary(edge_coordinate_list[2].reshape(-1,self.dim)) and self.on_boundary(edge_coordinate_list[3].reshape(-1,self.dim)))[0]
-                    if on_boundary:
+                    entity_key = tuple(sorted(boundary_node_ids))
+
+                    if entity_key in boundary_entity_lookup:
                         boundary_mapped_coordinate = self.get_mapped_coordinates(
                             self.boundary_dim,
                             self.coord_quadrature_boundary,
@@ -2251,16 +2269,11 @@ class GmshGeometryElementDeepEnergy(Geometry):
                             :,
                         ] = boundary_mapped_coordinate
 
-                        boundary_normal_coordinate_list = [
-                            self.boundary_normal(
-                                edge_coords.reshape(-1, self.dim)
-                            ).ravel()
-                            for edge_coords in edge_coordinate_list
-                        ]
-                        boundary_normal_mapped = self.get_mapped_coordinates(
-                            self.boundary_dim,
-                            self.coord_quadrature_boundary,
-                            boundary_normal_coordinate_list,
+                        boundary_normal = self._compute_boundary_entity_normal(
+                            edge_coordinate_list, coordinate_list
+                        )
+                        boundary_normal_mapped = np.repeat(
+                            boundary_normal.reshape(1, -1), self.n_gp_boundary, axis=0
                         )
                         self.mapped_normal_boundary[
                             boundary_element_id * self.n_gp_boundary : (
