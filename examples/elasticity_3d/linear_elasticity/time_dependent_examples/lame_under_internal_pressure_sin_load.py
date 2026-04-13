@@ -398,26 +398,13 @@ net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
 
-restore_model = True
-model_path = (
-    str(Path(__file__).parent.parent.parent.parent)
-    + f"/pretrained_models/elasticity_3d/lame_time/lame_3d_time"
-)
+model.compile("adam", lr=0.001)
+losshistory, train_state = model.train(epochs=2000, display_every=100)
+# losshistory, train_state = model.train(epochs=2000, display_every=200, model_save_path=model_path) # use if you want to save the model
 
-if not restore_model:
-    model.compile("adam", lr=0.001)
-    losshistory, train_state = model.train(epochs=2000, display_every=100)
-    # losshistory, train_state = model.train(epochs=2000, display_every=200, model_save_path=model_path) # use if you want to save the model
-
-    model.compile("L-BFGS")
-    losshistory, train_state = model.train(display_every=100)
-    # losshistory, train_state = model.train(display_every=200, model_save_path=model_path) # same as above
-else:
-    n_epochs = 16194
-    model_restore_path = model_path + "-" + str(n_epochs) + ".ckpt"
-
-    model.compile("adam", lr=0.001)
-    model.restore(save_path=model_restore_path)
+model.compile("L-BFGS")
+losshistory, train_state = model.train(display_every=100)
+# losshistory, train_state = model.train(display_every=200, model_save_path=model_path) # same as above
 
 solutionFieldOnMeshToVtkSpaceTime(
     geom,

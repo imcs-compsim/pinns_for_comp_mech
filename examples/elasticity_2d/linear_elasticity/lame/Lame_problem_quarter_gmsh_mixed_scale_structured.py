@@ -27,7 +27,6 @@ formatter = ticker.ScalarFormatter(useMathText=True)
 formatter.set_scientific(True)
 formatter.set_powerlimits((-1, 1))
 import time
-from pathlib import Path
 
 from compsim_pinns.elasticity import elasticity_utils
 from compsim_pinns.elasticity.elasticity_utils import (
@@ -247,26 +246,13 @@ net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
 
-restore_model = True
-model_path = (
-    str(Path(__file__).parent.parent.parent.parent)
-    + f"/pretrained_models/elasticity_2d/lame_structured/lame"
-)
+model.compile("adam", lr=0.001)
+losshistory, train_state = model.train(epochs=2000, display_every=100)
 
-if not restore_model:
-    model.compile("adam", lr=0.001)
-    losshistory, train_state = model.train(epochs=2000, display_every=100)
+model.compile("L-BFGS")
+losshistory, train_state = model.train(display_every=200)
 
-    model.compile("L-BFGS")
-    losshistory, train_state = model.train(display_every=200)
-
-    dde.saveplot(losshistory, train_state, issave=True, isplot=False)
-else:
-    n_epochs = 5484
-    model_restore_path = model_path + "-" + str(n_epochs) + ".ckpt"
-
-    model.compile("adam", lr=0.001)
-    model.restore(save_path=model_restore_path)
+dde.saveplot(losshistory, train_state, issave=True, isplot=False)
 
 
 def calculate_loss():
@@ -417,7 +403,6 @@ def compareModelPredictionAndAnalyticalSolution(model):
     fig.tight_layout()
 
     plt.savefig("Lame_quarter_gmsh_mixed_scaled_structured.png", dpi=300)
-    plt.show()
 
 
 gmsh_options = {"General.Terminal": 1, "Mesh.Algorithm": 6}
@@ -556,5 +541,4 @@ unstructuredGridToVTK(
     },
 )
 
-if not restore_model:
-    compareModelPredictionAndAnalyticalSolution(model)
+compareModelPredictionAndAnalyticalSolution(model)
