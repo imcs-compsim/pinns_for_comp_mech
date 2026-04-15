@@ -212,7 +212,7 @@ loss_weights=None
 
 model = dde.Model(data, net)
 
-# Model parameters 
+# Model parameters
 steps = 50
 torsion_angle = 150
 model_path = str(Path(__file__).parent)
@@ -234,14 +234,21 @@ time_dict["setup"].append(time.time())
 
 if relaxation:
     time_dict["relaxation_compiling"].append(time.time())
-    relaxation_epsilon = 1e0
-    relaxation_adam_iterations = 5000
-    print(f"\nRelaxation step using a factor of {relaxation_epsilon} of the step width with {relaxation_adam_iterations} iterations.\n")
-    theta_deg = relaxation_epsilon * torsion_angle / steps
+    theta_deg = torsion_angle / steps
+    relaxation_adam_iterations = 1000
+    print(f"\nRelaxation step for initial torsion of {theta_deg}.\n")
     model.compile("adam", lr=learning_rate_adam)
     time_dict["relaxation_compiling"].append(time.time())
     time_dict["relaxation_training"].append(time.time())
     losshistory, train_state = model.train(iterations=relaxation_adam_iterations, display_every=100)
+    time_dict["relaxation_training"].append(time.time())
+    time_dict["relaxation_compiling"].append(time.time())
+    relaxation_lbfgs_iterations = 1000
+    dde.optimizers.config.set_LBFGS_options(maxiter=relaxation_lbfgs_iterations)
+    model.compile("L-BFGS")
+    time_dict["relaxation_compiling"].append(time.time())
+    time_dict["relaxation_training"].append(time.time())
+    losshistory, train_state = model.train(display_every=1000)
     time_dict["relaxation_training"].append(time.time())
 
 if earlystopping:
@@ -334,6 +341,217 @@ for i in range(steps):
         file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_{compare_choice}_fem_compare_{int(theta_deg):03}")
         fem_reference.save(f"{file_path_fem_compare}.vtu")
 
+        # Look at results at gauss points
+        fem_gp_reference = pv.read(fem_path+f"/fem_reference/fem_reference_3d_block_torsion_angle_gp_info_{compare_choice}_{int(theta_deg):03}.vtu")
+        points_fem_gp = fem_gp_reference.points
+        displacement_fem_gp = fem_gp_reference.point_data["displacement"]
+        cauchy_stress_fem_gp = fem_gp_reference.point_data["cauchy_stress_gp"]
+
+        # ------------------------------------------------------------
+        # Compute GP-based L2-errors using HEX8 Jacobians
+        # ------------------------------------------------------------
+        import itertools
+
+        # Predict PINN fields at FEM Gauss points
+        displacement_pred_on_fem_gp = model.predict(points_fem_gp)
+        sigma_xx_gp_pred, sigma_yy_gp_pred, sigma_zz_gp_pred, sigma_xy_gp_pred, _, sigma_xz_gp_pred, _, sigma_yz_gp_pred, _ = model.predict(
+            points_fem_gp, operator=cauchy_stress_3D
+        )
+        cauchy_stress_pred_on_fem_gp = np.column_stack((
+            sigma_xx_gp_pred,
+            sigma_yy_gp_pred,
+            sigma_zz_gp_pred,
+            sigma_xy_gp_pred,
+            sigma_yz_gp_pred,
+            sigma_xz_gp_pred,
+        ))
+
+        # HEX8 connectivity from nodal FEM mesh
+        hex_conn = fem_reference.cells_dict[pv.CellType.HEXAHEDRON]
+        X_all = fem_reference.points
+
+        n_elem = hex_conn.shape[0]
+        n_gp = 8
+
+        if points_fem_gp.shape[0] != n_elem * n_gp:
+            raise ValueError(
+                f"Mismatch: found {points_fem_gp.shape[0]} gauss points, "
+                f"expected {n_elem * n_gp} = {n_elem} elements * {n_gp} gp."
+            )
+
+        # Standard HEX8 reference-node ordering
+        ref_nodes = np.array([
+            [-1.0, -1.0, -1.0],
+            [ 1.0, -1.0, -1.0],
+            [ 1.0,  1.0, -1.0],
+            [-1.0,  1.0, -1.0],
+            [-1.0, -1.0,  1.0],
+            [ 1.0, -1.0,  1.0],
+            [ 1.0,  1.0,  1.0],
+            [-1.0,  1.0,  1.0],
+        ], dtype=float)
+
+        # 2x2x2 Gauss points and weights
+        a = 1.0 / np.sqrt(3.0)
+        gauss_points_ref = np.array(list(itertools.product([-a, a], repeat=3)), dtype=float)
+        gauss_weights = np.ones(n_gp, dtype=float)
+
+        def dN_dxi_hex8(xi, eta, zeta):
+            xi_i = ref_nodes[:, 0]
+            eta_i = ref_nodes[:, 1]
+            zeta_i = ref_nodes[:, 2]
+
+            dN_dxi = 0.125 * xi_i * (1.0 + eta * eta_i) * (1.0 + zeta * zeta_i)
+            dN_deta = 0.125 * (1.0 + xi * xi_i) * eta_i * (1.0 + zeta * zeta_i)
+            dN_dzeta = 0.125 * (1.0 + xi * xi_i) * (1.0 + eta * eta_i) * zeta_i
+
+            return np.column_stack((dN_dxi, dN_deta, dN_dzeta))
+
+        # Compute detJ at all element Gauss points
+        detJ = np.zeros((n_elem, n_gp), dtype=float)
+
+        for e, conn in enumerate(hex_conn):
+            X_e = X_all[conn]  # (8, 3)
+            for g, (xi, eta, zeta) in enumerate(gauss_points_ref):
+                dN = dN_dxi_hex8(xi, eta, zeta)   # (8, 3)
+                J = X_e.T @ dN                    # (3, 3)
+                detJ[e, g] = np.linalg.det(J)
+
+        if np.any(detJ <= 0):
+            print(f"Warning: {np.sum(detJ <= 0)} Gauss points have non-positive detJ.")
+
+        # Reshape GP data elementwise
+        displacement_fem_gp_e = displacement_fem_gp.reshape(n_elem, n_gp, 3)
+        displacement_pred_gp_e = displacement_pred_on_fem_gp.reshape(n_elem, n_gp, 3)
+
+        cauchy_stress_fem_gp_e = cauchy_stress_fem_gp.reshape(n_elem, n_gp, 6)
+        cauchy_stress_pred_gp_e = cauchy_stress_pred_on_fem_gp.reshape(n_elem, n_gp, 6)
+
+        # Displacement L2-error
+        squared_error_disp_gp = np.sum((displacement_pred_gp_e - displacement_fem_gp_e) ** 2, axis=2)
+        squared_disp_gp = np.sum(displacement_fem_gp_e ** 2, axis=2)
+
+        l2_error_disp_gp = np.sum(squared_error_disp_gp * detJ * gauss_weights[None, :])
+        l2_norm_disp_gp = np.sum(squared_disp_gp * detJ * gauss_weights[None, :])
+
+        rel_l2_disp_gp = np.sqrt(l2_error_disp_gp / l2_norm_disp_gp)
+
+        # Stress L2-error in Frobenius norm using Voigt order:
+        # [xx, yy, zz, xy, yz, xz]
+        stress_err = cauchy_stress_pred_gp_e - cauchy_stress_fem_gp_e
+        squared_error_stress_gp = (
+            stress_err[:, :, 0] ** 2 + stress_err[:, :, 1] ** 2 + stress_err[:, :, 2] ** 2
+            + 2.0 * stress_err[:, :, 3] ** 2 + 2.0 * stress_err[:, :, 4] ** 2 + 2.0 * stress_err[:, :, 5] ** 2
+        )
+        squared_stress_gp = (
+            cauchy_stress_fem_gp_e[:, :, 0] ** 2 + cauchy_stress_fem_gp_e[:, :, 1] ** 2 + cauchy_stress_fem_gp_e[:, :, 2] ** 2
+            + 2.0 * cauchy_stress_fem_gp_e[:, :, 3] ** 2 + 2.0 * cauchy_stress_fem_gp_e[:, :, 4] ** 2 + 2.0 * cauchy_stress_fem_gp_e[:, :, 5] ** 2
+        )
+
+        l2_error_stress_gp = np.sum(squared_error_stress_gp * detJ * gauss_weights[None, :])
+        l2_norm_stress_gp = np.sum(squared_stress_gp * detJ * gauss_weights[None, :])
+
+        rel_l2_stress_gp = np.sqrt(l2_error_stress_gp / l2_norm_stress_gp)
+
+        print(f"Relative GP L2 error for displacement: {rel_l2_disp_gp}")
+        print(f"Relative GP L2 error for stress:       {rel_l2_stress_gp}")
+
+        # Relative vector L2 norm (displacement)
+        rel_vec_l2_disp = np.linalg.norm(
+            displacement_pred_on_fem_gp - displacement_fem_gp
+        ) / np.linalg.norm(displacement_fem_gp)
+
+        rel_vec_l2_disp_nodes = np.linalg.norm(
+            displacement_pred_on_fem_mesh - displacement_fem
+        ) / np.linalg.norm(displacement_fem)
+        print(f"Relative vector L2 error for displacement: GP: {rel_vec_l2_disp}")
+        print(f"                                        nodal: {rel_vec_l2_disp_nodes}")
+
+        # Relative vector L2 norm (stress)
+        rel_vec_l2_stress = np.linalg.norm(
+            cauchy_stress_pred_on_fem_gp - cauchy_stress_fem_gp
+        ) / np.linalg.norm(cauchy_stress_fem_gp)
+
+        rel_vec_l2_stress_nodes = np.linalg.norm(
+            cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem
+        ) / np.linalg.norm(cauchy_stress_fem)
+        print(f"Relative vector L2 error for stress:       GP: {rel_vec_l2_stress}")
+        print(f"                                        nodal: {rel_vec_l2_stress_nodes}")
+
+        # ------------------------------------------------------------
+        # Compute GP-based L2-errors using HEX8 Jacobians
+        # ------------------------------------------------------------
+
+        element_centers_fem = fem_reference.cell_centers().points
+        sigma_xx_center_pred, sigma_yy_center_pred, sigma_zz_center_pred, sigma_xy_center_pred, _, sigma_xz_center_pred, _, sigma_yz_center_pred, _ = model.predict(
+            element_centers_fem, operator=cauchy_stress_3D
+        )
+        cauchy_stress_pred_on_fem_centers = np.column_stack((
+            sigma_xx_center_pred,
+            sigma_yy_center_pred,
+            sigma_zz_center_pred,
+            sigma_xy_center_pred,
+            sigma_yz_center_pred,
+            sigma_xz_center_pred,
+        ))
+        stresses_fem_centers = fem_reference.cell_data["element_cauchy_stresses_xyz"]
+        rel_vec_l2_stress_centers = np.linalg.norm(
+            cauchy_stress_pred_on_fem_centers - stresses_fem_centers
+        ) / np.linalg.norm(stresses_fem_centers)
+        print(f"                                      centers: {rel_vec_l2_stress_centers}")
+
+        from sklearn.metrics import r2_score
+        # ------------------------------------------------------------
+        # R^2 scores for displacement and stress components (nodal FEM mesh)
+        # ------------------------------------------------------------
+        disp_labels = ["u_x", "u_y", "u_z"]
+        stress_labels = ["sigma_xx", "sigma_yy", "sigma_zz",
+                         "sigma_xy", "sigma_yz", "sigma_xz"]
+
+        # Compute R^2 scores component-wise
+        r2_disp = {
+            label: r2_score(displacement_fem[:, i], displacement_pred_on_fem_mesh[:, i])
+            for i, label in enumerate(disp_labels)
+        }
+
+        r2_stress = {
+            label: r2_score(cauchy_stress_fem[:, i], cauchy_stress_pred_on_fem_mesh[:, i])
+            for i, label in enumerate(stress_labels)
+        }
+
+        print("\nComponent-wise R² scores (nodal FEM mesh):")
+        for k, v in r2_disp.items():
+            print(f"{k:>8s}: {v: .8f}")
+        for k, v in r2_stress.items():
+            print(f"{k:>8s}: {v: .8f}")
+
+        # ------------------------------------------------------------
+        # R^2 scores for displacement and stress components (nodal FEM mesh)
+        # ------------------------------------------------------------ 
+
+    if theta_deg == torsion_angle:
+        pointa_yline = np.array((2, -0.5, 0))
+        pointb_yline = np.array((2,  0.5, 0))
+        pointa_zline = np.array((2, 0, -0.5))
+        pointb_zline = np.array((2, 0,  0.5))
+        resolution = 100
+        t = np.linspace(0, 1, resolution + 1)
+        points_yline = pointa_yline + (pointb_yline - pointa_yline) * t[:, None]
+        points_zline = pointa_zline + (pointb_zline - pointa_zline) * t[:, None]
+        disp_yline = model.predict(points_yline)
+        disp_zline = model.predict(points_zline)
+        sigma_xx_yline, sigma_yy_yline, sigma_zz_yline, sigma_xy_yline, _, sigma_xz_yline, _, sigma_yz_yline, _ = model.predict(points_yline, operator=cauchy_stress_3D)
+        stress_yline = np.column_stack((sigma_xx_yline, sigma_yy_yline, sigma_zz_yline, sigma_xy_yline, sigma_yz_yline, sigma_xz_yline))
+        sigma_xx_zline, sigma_yy_zline, sigma_zz_zline, sigma_xy_zline, _, sigma_xz_zline, _, sigma_yz_zline, _ = model.predict(points_zline, operator=cauchy_stress_3D)
+        stress_zline = np.column_stack((sigma_xx_zline, sigma_yy_zline, sigma_zz_zline, sigma_xy_zline, sigma_yz_zline, sigma_xz_zline))
+        np.savez(f"{model_path}/{simulation_case}_probe_lines.npz",
+            points_yline=points_yline,
+            points_zline=points_zline,
+            displacement_yline=disp_yline,
+            displacement_zline=disp_zline,
+            cauchy_stress_yline=stress_yline,
+            cauchy_stress_zline=stress_zline)
+
     file_path = os.path.join(model_path, f"{simulation_case}_{compare_choice}_{int(theta_deg):03}")
     grid.save(f"{file_path}.vtu")
     time_dict["simulation_prediction"].append(time.time())
@@ -378,8 +596,10 @@ with open(f"{model_path}/{simulation_case}_{compare_choice}-{train_state.step}_t
     print(f"Meshing:                              {(time_dict["meshing"][1] - time_dict["meshing"][0]):8.3f}", file=text_file)
     print(f"Building element information:         {(time_dict["element_information"][1] - time_dict["element_information"][0]):8.3f}", file=text_file)
     if relaxation:
-        print(f"Relaxation compilation:               {(time_dict["relaxation_compiling"][1] - time_dict["relaxation_compiling"][0]):8.3f}", file=text_file)
-        print(f"Relaxation training:                  {(time_dict["relaxation_training"][1] - time_dict["relaxation_training"][0]):8.3f}", file=text_file)
+        print(f"Relaxation compilation (adam):        {(time_dict["relaxation_compiling"][1] - time_dict["relaxation_compiling"][0]):8.3f}", file=text_file)
+        print(f"Relaxation training (adam):           {(time_dict["relaxation_training"][1] - time_dict["relaxation_training"][0]):8.3f}", file=text_file)
+        print(f"Relaxation compilation (L-BFGS):      {(time_dict["relaxation_compiling"][3] - time_dict["relaxation_compiling"][2]):8.3f}", file=text_file)
+        print(f"Relaxation training (L-BFGS):         {(time_dict["relaxation_training"][3] - time_dict["relaxation_training"][2]):8.3f}", file=text_file)
     if steps > 1:
         for i in range(steps):
             print(f"----------------------------------------------", file=text_file)

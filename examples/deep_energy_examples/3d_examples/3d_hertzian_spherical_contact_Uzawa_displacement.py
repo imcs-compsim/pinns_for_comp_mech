@@ -11,7 +11,7 @@ from compsim_pinns.postprocess.custom_callbacks import LossPlateauStopping, Weig
 dde.config.set_default_float("float64") # use double precision (needed for L-BFGS)
 
 import torch
-seed = 17
+seed = 284
 np.random.seed(seed)
 torch.manual_seed(seed)
 if torch.cuda.is_available():
@@ -170,7 +170,7 @@ def output_transform(x, y):
     z_0_surface = z_loc
     
     return bkd.concat([u*(x_0_surface)/e_modul, #displacement in x direction is 0 at x=0
-                      -max_displacement_bc + v*(top_surface)/e_modul, # displacement BC on the top surface
+                      -displacement_bc + v*(top_surface)/e_modul, # displacement BC on the top surface
                       w*(z_0_surface)/e_modul, #displacement in z direction is 0 at z=0
                       ], axis=1)
 
@@ -184,7 +184,8 @@ loss_weights=None
 
 model = dde.Model(data, net)
 
-# Model parameters 
+# Model parameters
+steps = 25
 lagrange_loops = 5
 epsilon_AL = 1E4
 max_displacement_bc = 0.2
@@ -198,13 +199,37 @@ lbfgs_iterations = 0
 rel_err_l2_disp = []
 rel_err_l2_stress = []
 l2_iteration = []
-violations = np.empty(5)
-earlystopping = False
+violations = np.empty((steps*lagrange_loops,5))
+relaxation_adam_iterations = 0 # just to not get any errors when not using it (undefined variable in naming)
+relaxation_lbfgs_iterations = 0 # just to not get any errors when not using it (undefined variable in naming)
+relaxation = True
+earlystopping = True
 earlystopping_choice = "weightsbiases" # "loss" or "weightsbiases"
 time_dict["setup"].append(time.time())
 
-reset_lagrange = UpdateLagrangeParameters(epsilon=epsilon_AL)
-train_callbacks = [reset_lagrange]
+update_lagrange = UpdateLagrangeParameters(epsilon=epsilon_AL)
+train_callbacks = [update_lagrange]
+reset_lagrange = ResetLagrangeParameters()
+
+if relaxation:
+    time_dict["relaxation_compiling"].append(time.time())
+    displacement_bc = max_displacement_bc / steps
+    relaxation_adam_iterations = 3000
+    print(f"\nRelaxation step for initial load of {displacement_bc}.\n")
+    model.compile("adam", lr=learning_rate_adam)
+    time_dict["relaxation_compiling"].append(time.time())
+    time_dict["relaxation_training"].append(time.time())
+    losshistory, train_state = model.train(iterations=relaxation_adam_iterations, display_every=100)
+    time_dict["relaxation_training"].append(time.time())
+    time_dict["relaxation_compiling"].append(time.time())
+    relaxation_lbfgs_iterations = 1000
+    dde.optimizers.config.set_LBFGS_options(maxiter=relaxation_lbfgs_iterations)
+    model.compile("L-BFGS")
+    time_dict["relaxation_compiling"].append(time.time())
+    time_dict["relaxation_training"].append(time.time())
+    losshistory, train_state = model.train(display_every=1000)
+    time_dict["relaxation_training"].append(time.time())
+
 if earlystopping:
     if earlystopping_choice == "loss":
         early = LossPlateauStopping(patience=500, min_delta=1e-5)
@@ -215,100 +240,106 @@ if earlystopping:
     train_callbacks.append(early)
 
 # Incremental loop
-for j in range(lagrange_loops):
-    print(f"\nTraining for a prescribed displacement of {max_displacement_bc}.\n")
-    time_dict["simulation_compiling_adam"].append(time.time())
-    model.compile("adam", lr=learning_rate_adam, decay=("exponential", exponential_decay))
-    time_dict["simulation_compiling_adam"].append(time.time())
-    time_dict["simulation_training_adam"].append(time.time())
-    losshistory, train_state = model.train(iterations=adam_iterations, display_every=100, callbacks=train_callbacks)
-    time_dict["simulation_training_adam"].append(time.time())
+for i in range(steps):
+    displacement_bc = max_displacement_bc/steps*(i+1)
+    print(f"\nTraining for a prescribed displacement of {displacement_bc}.\n")
+    for j in range(lagrange_loops):
+        time_dict["simulation_compiling_adam"].append(time.time())
+        model.compile("adam", lr=learning_rate_adam, decay=("exponential", exponential_decay))
+        time_dict["simulation_compiling_adam"].append(time.time())
+        time_dict["simulation_training_adam"].append(time.time())
+        if j == 0:
+            losshistory, train_state = model.train(iterations=adam_iterations, display_every=100, callbacks=train_callbacks + [reset_lagrange])
+        else:
+            losshistory, train_state = model.train(iterations=adam_iterations, display_every=100, callbacks=train_callbacks)
+        time_dict["simulation_training_adam"].append(time.time())
 
-    if lbfgs_iterations>0:
-        time_dict["simulation_compiling_lbfgs"].append(time.time())
-        dde.optimizers.config.set_LBFGS_options(maxiter=lbfgs_iterations)
-        model.compile("L-BFGS")
-        time_dict["simulation_compiling_lbfgs"].append(time.time())
-        time_dict["simulation_training_lbfgs"].append(time.time())
-        losshistory, train_state = model.train(display_every=1000)
-        time_dict["simulation_training_lbfgs"].append(time.time())
+        if lbfgs_iterations>0:
+            time_dict["simulation_compiling_lbfgs"].append(time.time())
+            dde.optimizers.config.set_LBFGS_options(maxiter=lbfgs_iterations)
+            model.compile("L-BFGS")
+            time_dict["simulation_compiling_lbfgs"].append(time.time())
+            time_dict["simulation_training_lbfgs"].append(time.time())
+            losshistory, train_state = model.train(display_every=1000)
+            time_dict["simulation_training_lbfgs"].append(time.time())
 
-    # Save results
-    time_dict["simulation_prediction"].append(time.time())
-    points, _, cell_types, elements = geom.get_mesh()
-    n_nodes_per_cell = elements.shape[1]
-    n_cells = elements.shape[0]
-    cells = np.hstack([np.insert(elem, 0, n_nodes_per_cell) for elem in elements])
-    cells = np.array(cells, dtype=np.int64)
-    cell_types = np.array(cell_types, dtype=np.uint8)
-    grid = pv.UnstructuredGrid(cells, cell_types, points)
-    output = model.predict(points)
-    displacement_pred = np.column_stack((output[:,0:1], output[:,1:2], output[:,2:3]))
-    sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yx, sigma_xz, sigma_zx, sigma_yz, sigma_zy = model.predict(points, operator=cauchy_stress_3D)
-    cauchy_stress_pred = np.column_stack((sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz))
-    grid.point_data["pred_displacement"] = displacement_pred
-    grid.point_data["pred_cauchy_stress"] = cauchy_stress_pred
+        # Save results
+        time_dict["simulation_prediction"].append(time.time())
+        points, _, cell_types, elements = geom.get_mesh()
+        n_nodes_per_cell = elements.shape[1]
+        n_cells = elements.shape[0]
+        cells = np.hstack([np.insert(elem, 0, n_nodes_per_cell) for elem in elements])
+        cells = np.array(cells, dtype=np.int64)
+        cell_types = np.array(cell_types, dtype=np.uint8)
+        grid = pv.UnstructuredGrid(cells, cell_types, points)
+        output = model.predict(points)
+        displacement_pred = np.column_stack((output[:,0:1], output[:,1:2], output[:,2:3]))
+        sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yx, sigma_xz, sigma_zx, sigma_yz, sigma_zy = model.predict(points, operator=cauchy_stress_3D)
+        cauchy_stress_pred = np.column_stack((sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz))
+        grid.point_data["pred_displacement"] = displacement_pred
+        grid.point_data["pred_cauchy_stress"] = cauchy_stress_pred
 
-    # Return violations of non-penetration condition (only in y)
-    displaced_X_y = points[:,1:2] + output[:,1:2]
-    displaced_X_y_violated = displaced_X_y[displaced_X_y < projection_plane["y"]] - projection_plane["y"]
-    if displaced_X_y_violated.size == 0:
-        violations[:] = np.zeros((5,))
-    else:
-        violations[:]= [displaced_X_y_violated.size, -displaced_X_y_violated.mean(), displaced_X_y_violated.std(), -displaced_X_y_violated.min(), -displaced_X_y_violated.max()]
-    print(f"The non-penetration condition is violated at {violations[0]:.0f} points.")
-    print(f"It is violated with a mean of {violations[1]:.3e} with a standard deviation of {violations[2]:.3e}.")
-    print(f"The maximal violation is {violations[3]:.3e}, the minimal is {violations[4]:.3e}.\n")
+        # Return violations of non-penetration condition (only in y)
+        displaced_X_y = points[:,1:2] + output[:,1:2]
+        displaced_X_y_violated = displaced_X_y[displaced_X_y < projection_plane["y"]] - projection_plane["y"]
+        if displaced_X_y_violated.size == 0:
+            violations[(i*lagrange_loops+j),:] = np.zeros((5,))
+        else:
+            violations[(i*lagrange_loops+j),:]= [displaced_X_y_violated.size, -displaced_X_y_violated.mean(), displaced_X_y_violated.std(), -displaced_X_y_violated.min(), -displaced_X_y_violated.max()]
+        print(f"The non-penetration condition is violated at {violations[(i*lagrange_loops+j),0]:.0f} points.")
+        print(f"It is violated with a mean of {violations[(i*lagrange_loops+j),1]:.3e} with a standard deviation of {violations[(i*lagrange_loops+j),2]:.3e}.")
+        print(f"The maximal violation is {violations[(i*lagrange_loops+j),3]:.3e}, the minimal is {violations[(i*lagrange_loops+j),4]:.3e}.\n")
 
-    ## Compare with FEM reference
-    fem_path = str(Path(__file__).parent.parent)
-    fem_reference = pv.read(fem_path+f"/fem_reference/3d_sphere_contact_displacement_fem_reference_{int(max_displacement_bc * 1000):04}.vtu")
-    points_fem = fem_reference.points
-    displacement_fem = fem_reference.point_data["displacement"]
-    cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
+        ## Compare with FEM reference
+        if (displacement_bc <= max_displacement_bc) and (min(displacement_bc % 0.008, 0.008 - displacement_bc % 0.008) < 1E-12):
+            fem_path = str(Path(__file__).parent.parent)
+            fem_reference = pv.read(fem_path+f"/fem_reference/3d_sphere_contact_displacement_fem_reference_{int(displacement_bc * 1000):04}.vtu")
+            points_fem = fem_reference.points
+            displacement_fem = fem_reference.point_data["displacement"]
+            cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
 
-    # Compute values on FEM nodes
-    displacement_pred_on_fem_mesh = model.predict(points_fem)
-    sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, _, sigma_xz_pred_on_fem_mesh, _, sigma_yz_pred_on_fem_mesh, _ = model.predict(points_fem, operator=cauchy_stress_3D)
-    cauchy_stress_pred_on_fem_mesh = np.column_stack((sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, sigma_yz_pred_on_fem_mesh, sigma_xz_pred_on_fem_mesh))
-    tensor_cauchy_stress_pred_on_fem_mesh = np.transpose(np.array([[sigma_xx_pred_on_fem_mesh.flatten(), sigma_xy_pred_on_fem_mesh.flatten(), sigma_xz_pred_on_fem_mesh.flatten()],
-                                                                [sigma_xy_pred_on_fem_mesh.flatten(), sigma_yy_pred_on_fem_mesh.flatten(), sigma_yz_pred_on_fem_mesh.flatten()],
-                                                                [sigma_xz_pred_on_fem_mesh.flatten(), sigma_yz_pred_on_fem_mesh.flatten(), sigma_zz_pred_on_fem_mesh.flatten()]]),(2,0,1))
-    tensor_cauchy_stress_fem = np.array([[cauchy_stress_fem[:,0], cauchy_stress_fem[:,3], cauchy_stress_fem[:,5],
-                                        cauchy_stress_fem[:,3], cauchy_stress_fem[:,1], cauchy_stress_fem[:,4],
-                                        cauchy_stress_fem[:,5], cauchy_stress_fem[:,4], cauchy_stress_fem[:,2]]]).T.reshape(-1,3,3)
+            # Compute values on FEM nodes
+            displacement_pred_on_fem_mesh = model.predict(points_fem)
+            sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, _, sigma_xz_pred_on_fem_mesh, _, sigma_yz_pred_on_fem_mesh, _ = model.predict(points_fem, operator=cauchy_stress_3D)
+            cauchy_stress_pred_on_fem_mesh = np.column_stack((sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, sigma_yz_pred_on_fem_mesh, sigma_xz_pred_on_fem_mesh))
+            tensor_cauchy_stress_pred_on_fem_mesh = np.transpose(np.array([[sigma_xx_pred_on_fem_mesh.flatten(), sigma_xy_pred_on_fem_mesh.flatten(), sigma_xz_pred_on_fem_mesh.flatten()],
+                                                                        [sigma_xy_pred_on_fem_mesh.flatten(), sigma_yy_pred_on_fem_mesh.flatten(), sigma_yz_pred_on_fem_mesh.flatten()],
+                                                                        [sigma_xz_pred_on_fem_mesh.flatten(), sigma_yz_pred_on_fem_mesh.flatten(), sigma_zz_pred_on_fem_mesh.flatten()]]),(2,0,1))
+            tensor_cauchy_stress_fem = np.array([[cauchy_stress_fem[:,0], cauchy_stress_fem[:,3], cauchy_stress_fem[:,5],
+                                                cauchy_stress_fem[:,3], cauchy_stress_fem[:,1], cauchy_stress_fem[:,4],
+                                                cauchy_stress_fem[:,5], cauchy_stress_fem[:,4], cauchy_stress_fem[:,2]]]).T.reshape(-1,3,3)
 
-    # Compute L2-error
-    volume_integral = fem_reference.copy()
-    volume_integral.point_data["squared_error_disp"] = np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem, axis=1) ** 2
-    volume_integral.point_data["squared_disp"] = np.linalg.norm(displacement_fem, axis=1) ** 2
-    volume_integral.point_data["squared_error_stress"] = np.linalg.norm(tensor_cauchy_stress_pred_on_fem_mesh - tensor_cauchy_stress_fem, axis=(1,2), ord="fro") ** 2
-    volume_integral.point_data["squared_stress"] = np.linalg.norm(tensor_cauchy_stress_fem, axis=(1,2), ord="fro") ** 2
-    volume_integral = volume_integral.integrate_data()
-    l2_iteration.append(train_state.step)
-    rel_err_l2_disp.append(np.sqrt(volume_integral.point_data["squared_error_disp"][0] / volume_integral.point_data["squared_disp"][0]))
-    print(f"Relative L2 error for displacement:   {rel_err_l2_disp[-1]}")
-    rel_err_l2_stress.append(np.sqrt(volume_integral.point_data["squared_error_stress"][0] / volume_integral.point_data["squared_stress"][0]))
-    print(f"Relative L2 error for stress:         {rel_err_l2_stress[-1]}")
+            # Compute L2-error
+            volume_integral = fem_reference.copy()
+            volume_integral.point_data["squared_error_disp"] = np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem, axis=1) ** 2
+            volume_integral.point_data["squared_disp"] = np.linalg.norm(displacement_fem, axis=1) ** 2
+            volume_integral.point_data["squared_error_stress"] = np.linalg.norm(tensor_cauchy_stress_pred_on_fem_mesh - tensor_cauchy_stress_fem, axis=(1,2), ord="fro") ** 2
+            volume_integral.point_data["squared_stress"] = np.linalg.norm(tensor_cauchy_stress_fem, axis=(1,2), ord="fro") ** 2
+            volume_integral = volume_integral.integrate_data()
+            l2_iteration.append(train_state.step)
+            rel_err_l2_disp.append(np.sqrt(volume_integral.point_data["squared_error_disp"][0] / volume_integral.point_data["squared_disp"][0]))
+            print(f"Relative L2 error for displacement:   {rel_err_l2_disp[-1]}")
+            rel_err_l2_stress.append(np.sqrt(volume_integral.point_data["squared_error_stress"][0] / volume_integral.point_data["squared_stress"][0]))
+            print(f"Relative L2 error for stress:         {rel_err_l2_stress[-1]}")
 
-    # Compute mean absolute error
-    print(f"Mean absolute error for displacement: {np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem)/len(displacement_fem)}")
-    print(f"Mean absolute error for stress:       {np.mean(np.linalg.norm(tensor_cauchy_stress_pred_on_fem_mesh - tensor_cauchy_stress_fem, axis=(1,2), ord="fro"))}")
-    time_dict["simulation_prediction"].append(time.time())
+            # Compute mean absolute error
+            print(f"Mean absolute error for displacement: {np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem)/len(displacement_fem)}")
+            print(f"Mean absolute error for stress:       {np.mean(np.linalg.norm(tensor_cauchy_stress_pred_on_fem_mesh - tensor_cauchy_stress_fem, axis=(1,2), ord="fro"))}")
 
-# Create output with relative pointwise errors
-fem_reference.point_data["displacement_prediction"] = displacement_pred_on_fem_mesh
-fem_reference.point_data["cauchy_stresses_prediction"] = cauchy_stress_pred_on_fem_mesh
-fem_reference.point_data["absolute_displacement_error"] = abs(displacement_pred_on_fem_mesh - displacement_fem)
-fem_reference.point_data["absolute_cauchy_stress_error"] = abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem)
-fem_reference.point_data["relative_displacement_error"] = np.divide(np.abs(displacement_pred_on_fem_mesh - displacement_fem), np.abs(displacement_fem), out=np.zeros_like(displacement_fem, dtype=float), where=displacement_fem!=0)
-fem_reference.point_data["relative_cauchy_stress_error"] = np.divide(np.abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem), np.abs(cauchy_stress_fem), out=np.zeros_like(cauchy_stress_fem, dtype=float), where=cauchy_stress_fem!=0)
-file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_fem_compare_{int(max_displacement_bc * 1000):04}")
-fem_reference.save(f"{file_path_fem_compare}.vtu")
+            # Create output with relative pointwise errors
+            fem_reference.point_data["displacement_prediction"] = displacement_pred_on_fem_mesh
+            fem_reference.point_data["cauchy_stresses_prediction"] = cauchy_stress_pred_on_fem_mesh
+            fem_reference.point_data["absolute_displacement_error"] = abs(displacement_pred_on_fem_mesh - displacement_fem)
+            fem_reference.point_data["absolute_cauchy_stress_error"] = abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem)
+            fem_reference.point_data["relative_displacement_error"] = np.divide(np.abs(displacement_pred_on_fem_mesh - displacement_fem), np.abs(displacement_fem), out=np.zeros_like(displacement_fem, dtype=float), where=displacement_fem!=0)
+            fem_reference.point_data["relative_cauchy_stress_error"] = np.divide(np.abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem), np.abs(cauchy_stress_fem), out=np.zeros_like(cauchy_stress_fem, dtype=float), where=cauchy_stress_fem!=0)
+            file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_fem_compare_{int(displacement_bc * 1000):04}_uzawa_loop_{j+1}")
+            fem_reference.save(f"{file_path_fem_compare}.vtu")
 
-file_path = os.path.join(model_path, f"{simulation_case}_{int(max_displacement_bc * 1000):04}")
-grid.save(f"{file_path}.vtu")
-np.save(f"{model_path}/{simulation_case}_violations", violations)
+        file_path = os.path.join(model_path, f"{simulation_case}_{int(displacement_bc * 1000):04}_uzawa_loop_{j+1}")
+        grid.save(f"{file_path}.vtu")
+        np.save(f"{model_path}/{simulation_case}_violations", violations)
+        time_dict["simulation_prediction"].append(time.time())
 
 model.save(f"{model_path}/{simulation_case}")
 dde.saveplot(
@@ -360,15 +391,21 @@ with open(f"{model_path}/{simulation_case}-{train_state.step}_times.txt", "w") a
     print(f"==============================================", file=text_file)
     print(f"Meshing:                              {(time_dict["meshing"][1] - time_dict["meshing"][0]):8.3f}", file=text_file)
     print(f"Building element information:         {(time_dict["element_information"][1] - time_dict["element_information"][0]):8.3f}", file=text_file)
-    if lagrange_loops > 1:
-        for j in range(lagrange_loops):
-            print(f"----------------------------------------------", file=text_file)
-            print(f"   Load step {(j+1):2d} compilation (adam):   {(time_dict["simulation_compiling_adam"][(2*j)+1] - time_dict["simulation_compiling_adam"][2*j]):8.3f}", file=text_file)
-            print(f"   Load step {(j+1):2d} training (adam):      {(time_dict["simulation_training_adam"][(2*j)+1] - time_dict["simulation_training_adam"][2*j]):8.3f}", file=text_file)
-            if lbfgs_iterations > 0:
-                print(f"   Load step {(j+1):2d} compilation (L-BFGS): {(time_dict["simulation_compiling_lbfgs"][(2*j)+1] - time_dict["simulation_compiling_lbfgs"][2*j]):8.3f}", file=text_file)
-                print(f"   Load step {(j+1):2d} training (L-BFGS):    {(time_dict["simulation_training_lbfgs"][(2*j)+1] - time_dict["simulation_training_lbfgs"][2*j]):8.3f}", file=text_file)
-            print(f"   Load step {(j+1):2d} prediction:           {(time_dict["simulation_prediction"][(2*j)+1] - time_dict["simulation_prediction"][2*j]):8.3f}", file=text_file)
+    if relaxation:
+        print(f"Relaxation compilation (adam):        {(time_dict["relaxation_compiling"][1] - time_dict["relaxation_compiling"][0]):8.3f}", file=text_file)
+        print(f"Relaxation training (adam):           {(time_dict["relaxation_training"][1] - time_dict["relaxation_training"][0]):8.3f}", file=text_file)
+        print(f"Relaxation compilation (L-BFGS):      {(time_dict["relaxation_compiling"][3] - time_dict["relaxation_compiling"][2]):8.3f}", file=text_file)
+        print(f"Relaxation training (L-BFGS):         {(time_dict["relaxation_training"][3] - time_dict["relaxation_training"][2]):8.3f}", file=text_file)
+    if steps > 1:
+        for i in range(steps):
+            for j in range(lagrange_loops):
+                print(f"----------------------------------------------", file=text_file)
+                print(f"   Load step {(i+1):2d}, Uzawa {(j+1):2d} compilation (adam):   {(time_dict["simulation_compiling_adam"][2*(i*lagrange_loops+j)+1] - time_dict["simulation_compiling_adam"][2*(i*lagrange_loops+j)]):8.3f}", file=text_file)
+                print(f"   Load step {(i+1):2d}, Uzawa {(j+1):2d} training (adam):      {(time_dict["simulation_training_adam"][2*(i*lagrange_loops+j)+1] - time_dict["simulation_training_adam"][2*(i*lagrange_loops+j)]):8.3f}", file=text_file)
+                if lbfgs_iterations > 0:
+                    print(f"   Load step {(i+1):2d}, Uzawa {(j+1):2d} compilation (L-BFGS): {(time_dict["simulation_compiling_lbfgs"][2*(i*lagrange_loops+j)+1] - time_dict["simulation_compiling_lbfgs"][2*(i*lagrange_loops+j)]):8.3f}", file=text_file)
+                    print(f"   Load step {(i+1):2d}, Uzawa {(j+1):2d} training (L-BFGS):    {(time_dict["simulation_training_lbfgs"][2*(i*lagrange_loops+j)+1] - time_dict["simulation_training_lbfgs"][2*(i*lagrange_loops+j)]):8.3f}", file=text_file)
+                print(f"   Load step {(i+1):2d}, Uzawa {(j+1):2d} prediction:           {(time_dict["simulation_prediction"][2*(i*lagrange_loops+j)+1] - time_dict["simulation_prediction"][2*(i*lagrange_loops+j)]):8.3f}", file=text_file)
         print(f"==============================================", file=text_file)
     print(f"Total compilation (adam):         {(sum(time_dict["simulation_compiling_adam"][1::2]) - (sum(time_dict["simulation_compiling_adam"][::2]))):12.3f}", file=text_file)
     print(f"Total training (adam):            {(sum(time_dict["simulation_training_adam"][1::2]) - (sum(time_dict["simulation_training_adam"][::2]))):12.3f}", file=text_file)

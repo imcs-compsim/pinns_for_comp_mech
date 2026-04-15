@@ -133,7 +133,7 @@ def potential_energy(X,
     cofF = J * FinvT
     current_normals = torch.nn.functional.normalize(torch.einsum("bij,bj->bi", FinvT, mapped_normal_boundary_t), dim=1)
     gap_n = calculate_gap_in_normal_direction_deep_energy(inputs[beg_boundary:], outputs[beg_boundary:], X, current_normals, cond)
-    epsilon=1e4
+    epsilon=1E5
     contact_force_density = 1 / 2 * epsilon * bkd.relu(-gap_n) ** 2
     cofF_n = torch.einsum("bij,bj->bi", cofF, mapped_normal_boundary_t)
     int_transf_factor = torch.linalg.norm(cofF_n, dim=1, keepdim=True)
@@ -196,21 +196,29 @@ rel_err_l2_stress = []
 l2_iteration = []
 violations = np.empty((steps,5))
 relaxation_adam_iterations = 0 # just to not get any errors when not using it (undefined variable in naming)
-relaxation = False
+relaxation_lbfgs_iterations = 0 # just to not get any errors when not using it (undefined variable in naming)
+relaxation = True
 earlystopping = True
 earlystopping_choice = "weightsbiases" # "loss" or "weightsbiases"
 time_dict["setup"].append(time.time())
 
 if relaxation:
     time_dict["relaxation_compiling"].append(time.time())
-    relaxation_epsilon = 1e0
-    relaxation_adam_iterations = 5000
-    print(f"\nRelaxation step using a factor of {relaxation_epsilon} of the step width with {relaxation_adam_iterations} iterations.\n")
-    displacement_bc = relaxation_epsilon * max_displacement_bc / steps
+    displacement_bc = max_displacement_bc / steps
+    relaxation_adam_iterations = 3000
+    print(f"\nRelaxation step for initial load of {displacement_bc}.\n")
     model.compile("adam", lr=learning_rate_adam)
     time_dict["relaxation_compiling"].append(time.time())
     time_dict["relaxation_training"].append(time.time())
     losshistory, train_state = model.train(iterations=relaxation_adam_iterations, display_every=100)
+    time_dict["relaxation_training"].append(time.time())
+    time_dict["relaxation_compiling"].append(time.time())
+    relaxation_lbfgs_iterations = 1000
+    dde.optimizers.config.set_LBFGS_options(maxiter=relaxation_lbfgs_iterations)
+    model.compile("L-BFGS")
+    time_dict["relaxation_compiling"].append(time.time())
+    time_dict["relaxation_training"].append(time.time())
+    losshistory, train_state = model.train(display_every=1000)
     time_dict["relaxation_training"].append(time.time())
 
 if earlystopping:
@@ -370,8 +378,10 @@ with open(f"{model_path}/{simulation_case}-{train_state.step}_times.txt", "w") a
     print(f"Meshing:                              {(time_dict["meshing"][1] - time_dict["meshing"][0]):8.3f}", file=text_file)
     print(f"Building element information:         {(time_dict["element_information"][1] - time_dict["element_information"][0]):8.3f}", file=text_file)
     if relaxation:
-        print(f"Relaxation compilation:               {(time_dict["relaxation_compiling"][1] - time_dict["relaxation_compiling"][0]):8.3f}", file=text_file)
-        print(f"Relaxation training:                  {(time_dict["relaxation_training"][1] - time_dict["relaxation_training"][0]):8.3f}", file=text_file)
+        print(f"Relaxation compilation (adam):        {(time_dict["relaxation_compiling"][1] - time_dict["relaxation_compiling"][0]):8.3f}", file=text_file)
+        print(f"Relaxation training (adam):           {(time_dict["relaxation_training"][1] - time_dict["relaxation_training"][0]):8.3f}", file=text_file)
+        print(f"Relaxation compilation (L-BFGS):      {(time_dict["relaxation_compiling"][3] - time_dict["relaxation_compiling"][2]):8.3f}", file=text_file)
+        print(f"Relaxation training (L-BFGS):         {(time_dict["relaxation_training"][3] - time_dict["relaxation_training"][2]):8.3f}", file=text_file)
     if steps > 1:
         for i in range(steps):
             print(f"----------------------------------------------", file=text_file)

@@ -252,4 +252,4 @@ class UpdateLagrangeParameters(Callback):
         lagrange_parameter = torch.as_tensor(self.model.data.geom.lagrange_parameter, device=device, dtype=dtype)
         lagrange_parameter[cond] = torch.relu(lagrange_parameter[cond] - self.epsilon * gap_n)
         self.model.data.geom.lagrange_parameter = lagrange_parameter.detach().cpu().numpy()
-        print(f"Updating lagrange parameters.")
+        print(f"Updating lagrange parameters. Current length of lagrange parameter vector: {np.linalg.norm(lagrange_parameter.detach().cpu().numpy())}")
