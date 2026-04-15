@@ -226,8 +226,8 @@ for i in range(steps):
 
     ## Compare with FEM reference
     if any(abs(shear_load * 1000 - i) <= 1e-12 for i in range(1, 11)):
-        fem_path = str(Path(__file__).parent.parent)
-        fem_reference = pv.read(fem_path+f"/fem_reference/fem_reference_2d_bending_beam_{int(round(shear_load * 1E3)):02}.vtu")
+        fem_path = str(Path(__file__).parent.parent.parent.parent) + "/paper-epinn"
+        fem_reference = pv.read(fem_path+f"/2d_bending_beam/fem_reference_2d_bending_beam_{int(round(shear_load * 1E3)):02}.vtu")
         points_fem = fem_reference.points
         displacement_fem = fem_reference.point_data["displacement"]
         cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]

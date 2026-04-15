@@ -1,0 +1,3 @@
+[submodule "paper-epinn"]
+	path = paper-epinn
+	url = https://github.com/imcs-compsim/paper-epinn/
