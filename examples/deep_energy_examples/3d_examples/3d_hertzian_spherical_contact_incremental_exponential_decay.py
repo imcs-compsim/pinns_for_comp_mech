@@ -261,7 +261,7 @@ for i in range(steps):
 
     ## Compare with FEM reference
     if ((ext_traction * 10) % 2 == 0) & (ext_traction <= max_ext_traction):
-        fem_path = str(Path(__file__).parent.parent.parent.parent) + "/paper-epinn"
+        fem_path = str(Path(__file__).parent.parent.parent.parent) + "/fem_references/paper-epinn-data-reference"
         fem_reference = pv.read(fem_path+f"/3d_contact_sphere/3d_sphere_contact_fem_reference_{int((ext_traction * 10)):02}.vtu")
         points_fem = fem_reference.points
         displacement_fem = fem_reference.point_data["displacement"]

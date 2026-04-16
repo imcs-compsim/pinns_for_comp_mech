@@ -297,7 +297,7 @@ for i in range(steps):
 
     ## Compare with FEM reference
     if (theta_deg % 15 == 0) & (theta_deg <= torsion_angle):
-        fem_path = str(Path(__file__).parent.parent.parent.parent) + "/paper-epinn"
+        fem_path = str(Path(__file__).parent.parent.parent.parent) + "/fem_references/paper-epinn-data-reference"
         fem_reference = pv.read(fem_path+f"/3d_torsion_prism/fem_reference_3d_block_torsion_angle_{compare_choice}_{int(theta_deg):03}.vtu")
         points_fem = fem_reference.points
         displacement_fem = fem_reference.point_data["displacement"]
