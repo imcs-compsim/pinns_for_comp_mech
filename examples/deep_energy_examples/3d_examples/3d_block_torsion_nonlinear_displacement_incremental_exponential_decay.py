@@ -297,8 +297,8 @@ for i in range(steps):
 
     ## Compare with FEM reference
     if (theta_deg % 15 == 0) & (theta_deg <= torsion_angle):
-        fem_path = str(Path(__file__).parent.parent)
-        fem_reference = pv.read(fem_path+f"/fem_reference/fem_reference_3d_block_torsion_angle_{compare_choice}_{int(theta_deg):03}.vtu")
+        fem_path = str(Path(__file__).parent.parent.parent.parent) + "/fem_references/paper-epinn-data-reference"
+        fem_reference = pv.read(fem_path+f"/3d_torsion_prism/fem_reference_3d_block_torsion_angle_{compare_choice}_{int(theta_deg):03}.vtu")
         points_fem = fem_reference.points
         displacement_fem = fem_reference.point_data["displacement"]
         cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
@@ -342,7 +342,7 @@ for i in range(steps):
         fem_reference.save(f"{file_path_fem_compare}.vtu")
 
         # Look at results at gauss points
-        fem_gp_reference = pv.read(fem_path+f"/fem_reference/fem_reference_3d_block_torsion_angle_gp_info_{compare_choice}_{int(theta_deg):03}.vtu")
+        fem_gp_reference = pv.read(fem_path+f"/3d_torsion_prism/fem_reference_3d_block_torsion_angle_gp_info_{compare_choice}_{int(theta_deg):03}.vtu")
         points_fem_gp = fem_gp_reference.points
         displacement_fem_gp = fem_gp_reference.point_data["displacement"]
         cauchy_stress_fem_gp = fem_gp_reference.point_data["cauchy_stress_gp"]
