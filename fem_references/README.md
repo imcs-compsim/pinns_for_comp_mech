@@ -7,8 +7,8 @@ This folder contains Git submodules used by the main repository for specific ref
 A submodule is a reference from the main repository to a specific commit of another repository.
 
 That means:
-- the code in this folder belongs to a separate Git repository
-- the main repository only stores a pointer to a specific commit of that repository
+- the code contained in the subdirectories of this folder belongs to separate Git repositories
+- the main repository only stores pointers to a specific commit of those repositories
 - updating a submodule requires committing changes in both the submodule and the main repository
 
 ## Cloning the repository
@@ -18,7 +18,7 @@ To clone the main repository together with all submodules:
 ```bash
 $ git clone --recurse-submodules <https://github.com/imcs-compsim/pinns_for_comp_mech.git>
 ```
-If you alredy cloned the repository without the submodules, you can get them with this:
+If you alredy cloned the repository without the submodules, you can get them by running the following command in the top-level folder:
 ```bash
 $ git submodule update --init --recursive
 ```
