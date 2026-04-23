@@ -35,12 +35,14 @@ my_context = None
 def setup(context):
     global geom, model, mesh, my_context
     # Load mesh from 4C output
-    with open(context, "rb") as f:
-        my_context = pickle.load(f)
+    # with open(context, "rb") as f:
+    #     my_context = pickle.load(f)
+
+    my_context = context
 
     # Generate mesh for EPINN
-    problem_dim = my_context["problem_dim"]
-    FourCgeometry = APIGeometry(problem_dim, my_context["mesh"])
+    problem_dim = my_context.problem_dim
+    FourCgeometry = APIGeometry(problem_dim, my_context.mesh)
     gmsh_model = FourCgeometry.generateGmshModel(visualize_mesh=False)
 
     # Generate quadratures for EPINN
@@ -235,7 +237,7 @@ def compute(state):
     lbfgs_iterations = 3000
 
     max_shear_load = 1e-2
-    shear_load = state["time"] * max_shear_load
+    shear_load = state.time * max_shear_load
     print(f"\nTraining for a load of {shear_load}.\n")
     model.compile("adam", lr=learning_rate_adam)
     losshistory, train_state = model.train(
@@ -292,9 +294,7 @@ def compute(state):
     output_to_4C = output.flatten()
 
     # for now, just pass the state back to 4C
-    result = {
-        "dis_np": output_to_4C,
-        "vel_np": np.zeros_like(state["dis_n"]),
-        "acc_np": state["acc_n"],
-    }
-    return result
+    state.dis_np = output_to_4C
+    state.vel_np = np.zeros_like(state.vel_n)
+    state.acc_np = np.zeros_like(state.acc_n)
+    

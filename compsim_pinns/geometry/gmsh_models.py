@@ -1925,10 +1925,10 @@ class APIGeometry(object):
         """
         gmsh.initialize(sys.argv)
         gmsh_model = gmsh.model
-        coords = np.asarray(self.mesh_info["coordinates"])
-        node_ids = np.asarray(self.mesh_info["node_ids"], dtype=np.int64)
-        elem_ids = np.asarray(self.mesh_info["element_ids"], dtype=np.int64)
-        conn = np.asarray(self.mesh_info["connectivity"], dtype=np.int64)
+        coords = np.asarray(self.mesh_info.coordinates)
+        node_ids = np.asarray(self.mesh_info.node_ids, dtype=np.int64)
+        elem_ids = np.asarray(self.mesh_info.element_ids, dtype=np.int64)
+        conn = np.asarray(self.mesh_info.connectivity, dtype=np.int64)
 
         # Make Gmsh-compliant tags (1-based)
         node_tags = node_ids + 1  # node numbering offset from 4C
