@@ -60,7 +60,6 @@ width = 1
 seed_l = 41 # number of nodes along x
 seed_h = 11 # number of nodes along y
 seed_w = 11 # number of nodes along z
-refinement = 1
 origin = [0, -0.5, -0.5]
 
 # The applied pressure 
@@ -70,7 +69,7 @@ Block_3D_obj = Block_3D_hex(origin=origin,
                             length=length,
                             height=height,
                             width=width,
-                            divisions=[int(seed_l*refinement), int(seed_h*refinement), int(seed_w*refinement)])
+                            divisions=[seed_l, seed_h, seed_w])
 
 gmsh_model = Block_3D_obj.generateGmshModel(visualize_mesh=False)
 time_dict["meshing"].append(time.time())

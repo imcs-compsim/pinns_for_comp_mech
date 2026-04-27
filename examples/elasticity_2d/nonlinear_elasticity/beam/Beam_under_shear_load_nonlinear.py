@@ -159,44 +159,10 @@ def neumman_free_surface_y(x, y, X):
 
     return p_yy
 
-def momentum_x_x_left(x, y, X):
-    dux_x = dde.grad.jacobian(y, x, i=0, j=0)
-    return dux_x
-
-def momentum_y_x_left(x, y, X):
-    duy_x = dde.grad.jacobian(y, x, i=1, j=0)
-    return duy_x
-
-def shear_momentum_x_right(x, y, X):
-    _, _, _, p_yx = first_piola_stress_tensor_2D(x,y)
-    p_yx_y = dde.grad.jacobian(p_yx, x, i=0, j=1)
-    return p_yx_y
-
-def shear_momentum_y_right(x, y, X):
-    p_xx, _, _, _ = first_piola_stress_tensor_2D(x,y)
-    p_xx_y = dde.grad.jacobian(p_xx, x, i=0, j=1)
-    return p_xx_y
-
-def shear_momentum_x_free_surface(x, y, X):
-    _, _, p_xy, _ = first_piola_stress_tensor_2D(x,y)
-    p_xy_x = dde.grad.jacobian(p_xy, x, i=0, j=0)
-    return p_xy_x
-
-def shear_momentum_y_free_surface(x, y, X):
-    _, p_yy, _, _ = first_piola_stress_tensor_2D(x,y)
-    p_yy_x = dde.grad.jacobian(p_yy, x, i=0, j=0)
-    return p_yy_x
-
-bc1  = dde.OperatorBC(geom, neumman_right_shear_x, boundary_right)
-bc2  = dde.OperatorBC(geom, neumman_right_shear_y, boundary_right)
-bc3  = dde.OperatorBC(geom, neumman_free_surface_x, boundary_free_surf)
-bc4  = dde.OperatorBC(geom, neumman_free_surface_y, boundary_free_surf)
-bc5  = dde.OperatorBC(geom, momentum_x_x_left, boundary_left)
-bc6  = dde.OperatorBC(geom, momentum_y_x_left, boundary_left)
-bc7  = dde.OperatorBC(geom, shear_momentum_x_right, boundary_right)
-bc8  = dde.OperatorBC(geom, shear_momentum_y_right, boundary_right)
-bc9  = dde.OperatorBC(geom, shear_momentum_x_free_surface, boundary_free_surf)
-bc10 = dde.OperatorBC(geom, shear_momentum_y_free_surface, boundary_free_surf)
+bc1 = dde.OperatorBC(geom, neumman_right_shear_x, boundary_right)
+bc2 = dde.OperatorBC(geom, neumman_right_shear_y, boundary_right)
+bc3 = dde.OperatorBC(geom, neumman_free_surface_x, boundary_free_surf)
+bc4 = dde.OperatorBC(geom, neumman_free_surface_y, boundary_free_surf)
 
 # change global variables in elasticity_utils
 hyperelasticity_utils.lame = 2.78
@@ -223,7 +189,7 @@ n_dummy = 1
 data = dde.data.PDE(
     geom,
     momentum_nonlinear_2d,
-    [bc1, bc2, bc3, bc4, bc5, bc6, bc7, bc8, bc9, bc10],
+    [bc1, bc2, bc3, bc4],
     num_domain=n_dummy,
     num_boundary=n_dummy,
     num_test=None,
@@ -293,9 +259,7 @@ if earlystopping:
 # Weights
 w_pde_1,w_pde_2 = 1E0,1E0
 w_neumman_right_shear_x, w_neumman_right_shear_y, w_neumman_free_surface_x, w_neumman_free_surface_y = 1E0,1E0,1E0,1E0
-w_add_1, w_add_2, w_add_3, w_add_4, w_add_5, w_add_6 = 1E0,1E0,1E0,1E0,1E0,1E0
-loss_weights = [w_pde_1,w_pde_2,w_neumman_right_shear_x, w_neumman_right_shear_y, w_neumman_free_surface_x, w_neumman_free_surface_y,
-                w_add_1, w_add_2, w_add_3, w_add_4, w_add_5, w_add_6]
+loss_weights = [w_pde_1,w_pde_2,w_neumman_right_shear_x, w_neumman_right_shear_y, w_neumman_free_surface_x, w_neumman_free_surface_y]
 
 # Incremental loop
 for i in range(steps):
@@ -343,8 +307,8 @@ for i in range(steps):
 
     ## Compare with FEM reference
     if any(abs(shear_load * 1000 - i) <= 1e-12 for i in range(1, 11)):
-        fem_path = str(Path(__file__).parent.parent)
-        fem_reference = pv.read(fem_path+f"../../../deep_energy_examples/fem_reference/fem_reference_2d_bending_beam_{int(round(shear_load * 1E3)):02}.vtu")
+        reference_path = str(Path(__file__).parent.parent.parent.parent.parent) + "/fem_references/paper-epinn-data-reference/2d_bending_beam"
+        fem_reference = pv.read(reference_path + f"/fem_reference_2d_bending_beam_{int(round(shear_load * 1E3)):02}.vtu")
         points_fem = fem_reference.points
         displacement_fem = fem_reference.point_data["displacement"]
         cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
