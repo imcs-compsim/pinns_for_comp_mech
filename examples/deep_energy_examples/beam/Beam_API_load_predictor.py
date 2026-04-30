@@ -1,9 +1,7 @@
-import pickle
 from pathlib import Path
 
 import deepxde as dde
 import numpy as np
-import pyvista as pv
 from deepxde import backend as bkd
 
 from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
@@ -11,7 +9,6 @@ from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
 from compsim_pinns.geometry.gmsh_models import APIGeometry
 from compsim_pinns.hyperelasticity import hyperelasticity_utils
 from compsim_pinns.hyperelasticity.hyperelasticity_utils import (
-    cauchy_stress_2D,
     strain_energy_neo_hookean_2d,
 )
 from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
@@ -253,48 +250,18 @@ def compute(state):
         2, -1, includeBoundary=True
     )
     points, _, _ = geom.order_coordinates(node_coords, node_tags)
-    element_types, _, node_tags_per_element = geom.gmsh_model.mesh.getElements(2, -1)
-    element_type = element_types[0]
-    _, _, _, n_nodes_per_cell, _, _ = geom.gmsh_model.mesh.getElementProperties(
-        element_type
-    )
-    elements = node_tags_per_element[0].reshape(-1, n_nodes_per_cell) - 1
-    vtk_cell_type_map = {2: 5, 3: 9}
-    cell_types = np.full(
-        elements.shape[0], vtk_cell_type_map[element_type], dtype=np.uint8
-    )
-    n_nodes_per_cell = elements.shape[1]
-    n_cells = elements.shape[0]
-    n_points = points.shape[0]
-    cells = np.hstack([np.insert(elem, 0, n_nodes_per_cell) for elem in elements])
-    cells = np.array(cells, dtype=np.int64)
-    cell_types = np.array(cell_types, dtype=np.uint8)
-    grid = pv.UnstructuredGrid(
-        cells, cell_types, np.c_[points, np.zeros((n_points, 1))]
-    )
+    
     output = model.predict(points)
-    displacement_pred = np.column_stack((output[:, 0:1], output[:, 1:2]))
-    sigma_xx, sigma_yy, sigma_xy, sigma_yx = model.predict(
-        points, operator=cauchy_stress_2D
-    )
-    cauchy_stress_pred = np.column_stack((sigma_xx, sigma_yy, sigma_xy))
-    grid.point_data["pred_displacement"] = np.c_[
-        displacement_pred, np.zeros((n_points, 1))
-    ]
-    grid.point_data["pred_cauchy_stress"] = np.column_stack(
-        (
-            cauchy_stress_pred[:, 0],
-            cauchy_stress_pred[:, 1],
-            np.zeros((n_points, 1)),
-            cauchy_stress_pred[:, 2],
-            np.zeros((n_points, 1)),
-            np.zeros((n_points, 1)),
-        )
-    )
     output_to_4C = output.flatten()
 
+    if output_to_4C.size != state.dis_np.size:
+        raise ValueError(
+            f"Predictor output has {output_to_4C.size} entries, "
+            f"but 4C expects {state.dis_np.size} displacement DOFs."
+        )
+
     # for now, just pass the state back to 4C
-    state.dis_np = output_to_4C
-    state.vel_np = np.zeros_like(state.vel_n)
-    state.acc_np = np.zeros_like(state.acc_n)
+    state.dis_np[:] = output_to_4C[:]
+    state.vel_np[:] = np.zeros_like(state.vel_n)
+    state.acc_np[:] = np.zeros_like(state.acc_n)
     
