@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import deepxde as dde
 import numpy as np
 from deepxde import backend as bkd
@@ -19,27 +17,29 @@ from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
 # global variables that will be persistent during the simulation and in between calls to python
 geom = None
-model = None
-mesh = None
-my_context = None
+num_load_steps = None
+points = None
 
 #############
 # FUNCTIONS #
 #############
 
-
 # executed once, optional
 def setup(context):
-    global geom, model, mesh, my_context
+    global geom, num_load_steps, points
     # Load mesh from 4C output
     # with open(context, "rb") as f:
     #     my_context = pickle.load(f)
 
-    my_context = context
+    # store the number of load steps to be performed
+    num_load_steps = context.step_max
+
+    # store the global points for evaluation in the compute function
+    points = context.mesh.coordinates
 
     # Generate mesh for EPINN
-    problem_dim = my_context.problem_dim
-    FourCgeometry = APIGeometry(problem_dim, my_context.mesh)
+    problem_dim = context.problem_dim
+    FourCgeometry = APIGeometry(problem_dim, context.mesh)
     gmsh_model = FourCgeometry.generateGmshModel(visualize_mesh=False)
 
     # Generate quadratures for EPINN
@@ -108,7 +108,7 @@ def setup(context):
 
 # executed in every step, mandatory
 def compute(state):
-    global geom, model, mesh, my_context
+    global geom, num_load_steps, points
 
     def potential_energy(
         X,
@@ -225,10 +225,7 @@ def compute(state):
     net.apply_output_transform(output_transform)
     model = dde.Model(data, net)
 
-    # get number of steps
-    steps = 10
-    # model parameters
-    model_path = str(Path(__file__).parent)
+    # Training parameters
     learning_rate_adam = 1e-3
     adam_iterations = 2000
     lbfgs_iterations = 3000
@@ -245,13 +242,8 @@ def compute(state):
         dde.optimizers.config.set_LBFGS_options(maxiter=lbfgs_iterations)
         model.compile("L-BFGS")
         losshistory, train_state = model.train(display_every=1000)
-
-    node_tags, node_coords, _ = geom.gmsh_model.mesh.getNodes(
-        2, -1, includeBoundary=True
-    )
-    points, _, _ = geom.order_coordinates(node_coords, node_tags)
-    
-    output = model.predict(points)
+  
+    output = model.predict(points[:, :2])
     output_to_4C = output.flatten()
 
     if output_to_4C.size != state.dis_np.size:
@@ -262,6 +254,5 @@ def compute(state):
 
     # for now, just pass the state back to 4C
     state.dis_np[:] = output_to_4C[:]
-    state.vel_np[:] = np.zeros_like(state.vel_n)
-    state.acc_np[:] = np.zeros_like(state.acc_n)
-    
+    state.vel_np.fill(0.0)
+    state.acc_np.fill(0.0)
