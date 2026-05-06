@@ -10,7 +10,7 @@ from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
 from compsim_pinns.geometry.gmsh_models import APIGeometry
 from compsim_pinns.hyperelasticity import hyperelasticity_utils
 from compsim_pinns.hyperelasticity.hyperelasticity_utils import (
-    strain_energy_neo_hookean_3d,
+    compute_elastic_properties, strain_energy_neo_hookean_3d
 )
 from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
@@ -73,6 +73,7 @@ def setup(context):
     # compute elastic properties
     hyperelasticity_utils.youngs_modulus = 1.33
     hyperelasticity_utils.nu = 0.33
+    compute_elastic_properties()
 
     boundary_selection_map = []
 
