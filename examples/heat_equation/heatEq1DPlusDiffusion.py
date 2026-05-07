@@ -196,6 +196,4 @@ model.compile("L-BFGS", loss_weights=lw)
 losshistory, train_state = model.train()
 
 # # Plot/print the results
-# dde.saveplot(losshistory, train_state, issave=True, isplot=True)
-
 compareModelPredictionAndAnalyticalSolution(model, analytical_solution)

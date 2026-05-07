@@ -92,12 +92,12 @@ boundary_selection_map = [
 
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=2, ngp=2
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=1, ngp=6
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -118,7 +118,6 @@ hyperelasticity_utils.youngs_modulus = 50
 hyperelasticity_utils.nu = 0.3
 hyperelasticity_utils.stress_state = "plane_strain"
 nu, lame, shear, youngs_modulus = compute_elastic_properties()
-
 
 # zero neumann BC functions need the geom variable to be
 elasticity_utils.geom = geom
@@ -186,13 +185,6 @@ def potential_energy(
     # get the external work
     # select the points where external force is applied
     if model.data.current_epoch is not None:
-        # if model.data.current_epoch == 0:
-        #     shear_load_chunk = 0
-        #     print(shear_load_chunk)
-        # else:
-        # current_epoch = model.data.current_epoch
-        # chunk = current_epoch//((epochs+1)/steps)
-        # shear_load_chunk = (chunk + 1)*shear_load/steps
         if stabilization_model_epoch is not None:
             current_epoch = model.data.current_epoch - stabilization_model_epoch
         else:
@@ -200,10 +192,6 @@ def potential_energy(
         step_size = epochs / steps  # e.g., 10
         current_step = int(current_epoch // step_size)
         step_load = (current_step + 1) * ext_traction / steps
-        # print(shear_load_chunk)
-        # if (current_epoch % 2) == 0:
-        #     print(shear_load_chunk)
-        # if current_epoch//
     else:
         step_load = 0
 
@@ -223,8 +211,7 @@ def potential_energy(
     gap_n = calculate_gap_in_normal_direction_deep_energy(
         inputs[beg_boundary:], outputs[beg_boundary:], X, mapped_normal_boundary_t, cond
     )
-    # gap_y = inputs[:,1:2][beg_boundary:][cond] + outputs[:,1:2][beg_boundary:][cond] + radius
-    # gap_n = tf.math.divide_no_nan(gap_y, tf.math.abs(mapped_normal_boundary_t[:,1:2][cond]))
+
     eta = 3e4
     contact_force_density = 1 / 2 * eta * bkd.relu(-gap_n) * bkd.relu(-gap_n)
     contact_work = (
@@ -233,28 +220,7 @@ def potential_energy(
         * jacobian_boundary_t[cond]
     )
 
-    ####################################################################################################################
-    # Reshape energy-work terms and sum over the gauss points
-    # internal_energy_reshaped = bkd.sum(bkd.reshape(internal_energy, (n_e, n_gp)), dim=1)
-    # external_work_reshaped = bkd.sum(bkd.reshape(external_work, (n_e_boundary_external, n_gp_boundary)), dim=1)
-    # contact_work_reshaped = bkd.sum(bkd.reshape(contact_work, (n_e_boundary_contact, n_gp_boundary)), dim=1)
-    # sum over the elements and get the overall loss
-    # total_energy = bkd.reduce_sum(internal_energy_reshaped) - bkd.reduce_sum(external_work_reshaped) + bkd.reduce_sum(contact_work_reshaped)
-
     return [internal_energy, -external_work, contact_work]
-
-
-def points_at_top(x):
-    """Compute points at top for this example setup.
-
-    Args:
-        x: Input coordinates used to evaluate the function.
-
-    Returns:
-        Any: Computed value returned by `points_at_top`.
-    """
-    cond_points_top = np.isclose(x, 0)
-    return cond_points_top
 
 
 n_dummy = 1
@@ -296,7 +262,9 @@ losshistory, train_state = model.train(
     epochs=stabilization_model_epoch, display_every=100
 )
 
-file_path = os.path.join(os.getcwd(), "deep_energy_hertzian_normal_contact_nonlinear")
+file_path = os.path.join(
+    os.getcwd(), "Hertzian_normal_contact_nonlinear_incremental_penalty"
+)
 epoch_tracker = EpochTracker()
 model_saver_incremental = SaveModelVTU(
     op=cauchy_stress_2D,
@@ -309,10 +277,6 @@ model.compile("adam", lr=0.001)
 losshistory, train_state = model.train(
     epochs=epochs, callbacks=[epoch_tracker, model_saver_incremental], display_every=100
 )
-
-# model.compile("L-BFGS")
-# model.train_step.optimizer_kwargs["options"]['maxiter']=1000
-# losshistory, train_state = model.train(display_every=200)
 
 
 def polar_transformation_2d_tensor(T_xx, T_yy, T_xy, T_yx, X):
@@ -384,13 +348,8 @@ y = X[:, 1].flatten()
 z = np.zeros(y.shape)
 triangles = tri.Triangulation(x, y)
 
-# # predictions
-# start_time_calc = time.time()
+# predictions
 output = model.predict(X)
-# end_time_calc = time.time()
-# final_time = f'Prediction time: {(end_time_calc - start_time_calc):.3f} seconds'
-# print(final_time)
-
 u_pred, v_pred = output[:, 0], output[:, 1]
 sigma_xx_pred, sigma_yy_pred, sigma_xy_pred, sigma_yx_pred = model.predict(
     X, operator=cauchy_stress_2D
@@ -498,8 +457,6 @@ error_polar_stress_xy = abs(
 combined_error_polar_stress = tuple(
     np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy))
 )
-
-file_path = os.path.join(os.getcwd(), "deep_energy_hertzian_normal_contact_nonlinear")
 
 dol_triangles = triangles.triangles
 offset = np.arange(

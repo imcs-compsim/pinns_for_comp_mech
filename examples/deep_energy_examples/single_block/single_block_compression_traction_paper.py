@@ -44,12 +44,12 @@ block_2d = Block_2D(
 
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=2, ngp=4
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=1, ngp=8
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -166,11 +166,6 @@ def potential_energy(
         * jacobian_boundary_t[cond]
     )
 
-    # internal_energy_reshaped = bkd.reshape(internal_energy, (n_e, n_gp))
-    # external_work_reshaped = bkd.reshape(external_work, (n_e_boundary, n_gp_boundary))
-
-    # total_energy = bkd.reduce_sum(bkd.sum(internal_energy_reshaped, dim=1)) - bkd.reduce_sum(bkd.sum(external_work_reshaped, dim=1)) #+ bkd.reduce_sum(bkd.sum(internal_energy_reshaped, dim=1))
-
     return [internal_energy, -external_work]
 
 
@@ -224,12 +219,8 @@ losshistory, train_state = model.train(display_every=200)
 X, offset, cell_types, dol_triangles = geom.get_mesh()
 nu, lame, shear, youngs_modulus = problem_parameters()
 
-# start_time_calc = time.time()
+# prediction
 output = model.predict(X)
-# end_time_calc = time.time()
-# final_time = f'Prediction time: {(end_time_calc - start_time_calc):.3f} seconds'
-# print(final_time)
-
 u_x_pred, u_y_pred = output[:, 0], output[:, 1]
 u_pred, v_pred = output[:, 0], output[:, 1]
 sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_strain)
@@ -240,15 +231,11 @@ combined_stress = tuple(
 )
 
 
-file_path = os.path.join(
-    os.getcwd(), "deep_energy_single_block_compression_traction_paper"
-)
+file_path = os.path.join(os.getcwd(), "single_block_compression_traction_paper")
 
 x = X[:, 0].flatten()
 y = X[:, 1].flatten()
 z = np.zeros(y.shape)
-
-# np.savetxt("Lame_inverse_large", X=np.hstack((X,output[:,0:2])))
 
 unstructuredGridToVTK(
     file_path,

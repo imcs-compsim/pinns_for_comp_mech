@@ -63,11 +63,6 @@ center_inner = [quarter_circle_with_hole.center[0], quarter_circle_with_hole.cen
 radius_outer = quarter_circle_with_hole.outer_radius
 center_outer = [quarter_circle_with_hole.center[0], quarter_circle_with_hole.center[1]]
 
-
-# change global variables in elasticity_utils
-# elasticity_utils.lame = 1153.846
-# elasticity_utils.shear = 769.23
-
 # The applied pressure
 pressure_inlet = 1
 
@@ -135,10 +130,9 @@ def boundary_inner(x, on_boundary):
     Returns:
         bool: Result of the `boundary_inner` evaluation.
     """
-    return (
-        on_boundary
-        and np.isclose(np.linalg.norm(x - center_inner, axis=-1), radius_inner)
-    )  # and ~np.logical_and(np.isclose(x[0],1),np.isclose(x[1],0)) and ~np.logical_and(np.isclose(x[0],0),np.isclose(x[1],1))
+    return on_boundary and np.isclose(
+        np.linalg.norm(x - center_inner, axis=-1), radius_inner
+    )
 
 
 def boundary_two_points(x, on_boundary):

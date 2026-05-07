@@ -90,10 +90,6 @@ def calculate_gap_in_normal_direction(x, y, X):
 
     # calculate the boundary normals
     normals, cond = calculate_boundary_normals(X, geom)
-
-    # Here is the idea to calculate gap_n:
-    # gap_n/|n| = gap_y/|ny| --> since n is unit vector |n|=1
-    # gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
     num = gap_y[cond]
     den = torch.abs(normals[:, 1:2])
     gap_n = torch.zeros_like(num)
@@ -285,7 +281,6 @@ def output_transform(x, y):
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
 
-    # return torch.cat([u*(-x_loc), ext_dips + v*(-y_loc), sigma_xx, sigma_yy, sigma_xy*(x_loc)*(y_loc)], axis=1)
     return torch.cat(
         [
             u * (-x_loc) / youngs_modulus,

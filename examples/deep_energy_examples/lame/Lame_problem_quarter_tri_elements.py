@@ -43,17 +43,15 @@ gmsh_model = quarter_circle_with_hole.generateGmshModel()
 
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", element_type="simplex", dimension=2, ngp=3
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=1, ngp=4
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
-
-gmsh_model = quarter_circle_with_hole.generateGmshModel(visualize_mesh=False)
 
 radius_inner = quarter_circle_with_hole.inner_radius
 center_inner = [quarter_circle_with_hole.center[0], quarter_circle_with_hole.center[1]]
@@ -162,18 +160,8 @@ def potential_energy(
     # get the external work
     # select the points where external force is applied
     cond = boundary_selection_tag["boundary_inner"]
-    n_e_boundary_external = int(cond.sum() / n_gp_boundary)
     nx = mapped_normal_boundary_t[:, 0:1][cond]
     ny = mapped_normal_boundary_t[:, 1:2][cond]
-
-    # #sigma_xx_n_x = sigma_xx[beg_boundary:][cond]*nx
-    # #sigma_xy_n_y = sigma_xy[beg_boundary:][cond]*ny
-
-    # sigma_yx_n_x = sigma_xy[beg_boundary:][cond]*nx
-    # sigma_yy_n_y = sigma_yy[beg_boundary:][cond]*ny
-
-    # #t_x = sigma_xx_n_x + sigma_xy_n_y
-    # t_y = sigma_yx_n_x + sigma_yy_n_y
 
     u_x = outputs[:, 0:1][beg_boundary:][cond]
     u_y = outputs[:, 1:2][beg_boundary:][cond]
@@ -184,13 +172,6 @@ def potential_energy(
         * (external_force_density)
         * jacobian_boundary_t[cond]
     )
-
-    ####################################################################################################################
-    # Reshape energy-work terms and sum over the gauss points
-    # internal_energy_reshaped = bkd.sum(bkd.reshape(internal_energy, (n_e, n_gp)), dim=1)
-    # external_work_reshaped = bkd.sum(bkd.reshape(external_work, (n_e_boundary_external, n_gp_boundary)), dim=1)
-    # sum over the elements and get the overall loss
-    # total_energy = bkd.reduce_sum(internal_energy_reshaped) #- bkd.reduce_sum(external_work_reshaped)
 
     return [internal_energy, -external_work]
 
@@ -234,7 +215,6 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
-# if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
 model.compile("adam", lr=0.001)
 losshistory, train_state = model.train(epochs=5000, display_every=100)
 
@@ -357,7 +337,7 @@ combined_stress_polar = tuple(
     )
 )
 
-file_path = os.path.join(os.getcwd(), "Lame_quarter_gmsh")
+file_path = os.path.join(os.getcwd(), "Lame_problem_quarter_tri_elements")
 
 x = X[:, 0].flatten()
 y = X[:, 1].flatten()

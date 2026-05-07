@@ -85,7 +85,7 @@ quad_rule = GaussQuadratureRule(
     dimension=domain_dimension,
     ngp=4,
     element_type="simplex",
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 boundary_dimension = 2
@@ -94,7 +94,7 @@ quad_rule_boundary_integral = GaussQuadratureRule(
     dimension=boundary_dimension,
     ngp=4,
     element_type="simplex",
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -193,14 +193,6 @@ def potential_energy(
         * jacobian_boundary_t[cond]
     )
 
-    ####################################################################################################################
-    # Reshape energy-work terms and sum over the gauss points
-    # internal_energy_reshaped = bkd.sum(bkd.reshape(internal_energy, (n_e, n_gp)), dim=1)
-    # external_work_reshaped = bkd.sum(bkd.reshape(external_work, (n_e_boundary_external, n_gp_boundary)), dim=1)
-    # contact_work_reshaped = bkd.sum(bkd.reshape(contact_work, (n_e_boundary_contact, n_gp_boundary)), dim=1)
-    # sum over the elements and get the overall loss
-    # total_energy = bkd.reduce_sum(internal_energy_reshaped) - bkd.reduce_sum(external_work_reshaped) + bkd.reduce_sum(contact_work_reshaped)
-
     return [internal_energy, contact_work]
 
 
@@ -246,23 +238,12 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
-
-# model.compile("adam", lr=0.001)
-# losshistory, train_state = model.train(epochs=stabilization_model_epoch, display_every=100)
-
 model.compile("adam", lr=0.001)
 losshistory, train_state = model.train(epochs=5000, display_every=100)
-# if you want to save the model, run the following
-# losshistory, train_state = model.train(epochs=5000, display_every=100, model_save_path=model_path)
-
-# For pytorch
-# LBFGS_options["iter_per_step"] = 1
-# LBFGS_options["maxiter"] = 500
 
 LBFGS_options["maxiter"] = 1000
 model.compile("L-BFGS")
 losshistory, train_state = model.train(display_every=100)
-# losshistory, train_state = model.train(display_every=100, model_save_path=model_path)
 
 # Get mesh data from your class
 points, _, cell_types, elements = geom.get_mesh()
@@ -305,4 +286,4 @@ displacement = np.column_stack((output[:, 0:1], output[:, 1:2], output[:, 2:3]))
 grid.point_data["pred_displacement"] = displacement
 grid.point_data["pred_cauchy_stress"] = cauchy_stress
 
-grid.save("deep_energy_3d_contact_ring_instability_quarter_torus.vtu")
+grid.save("3d_contact_ring_instability_quarter_torus.vtu")

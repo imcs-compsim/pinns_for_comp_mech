@@ -154,10 +154,9 @@ def boundary_inner(x, on_boundary):
     Returns:
         bool: Result of the `boundary_inner` evaluation.
     """
-    return (
-        on_boundary
-        and np.isclose(np.linalg.norm(x - center_inner, axis=-1), radius_inner)
-    )  # and ~np.logical_and(np.isclose(x[0],1),np.isclose(x[1],0)) and ~np.logical_and(np.isclose(x[0],0),np.isclose(x[1],1))
+    return on_boundary and np.isclose(
+        np.linalg.norm(x - center_inner, axis=-1), radius_inner
+    )
 
 
 def boundary_left(x, on_boundary):
@@ -311,7 +310,7 @@ def compareModelPredictionAndAnalyticalSolution(model):
     axs[1].grid()
     fig.tight_layout()
 
-    plt.savefig("Lame_quarter_gmsh_nondimensionalized")
+    plt.savefig("Lame_quarter_gmsh_nondim")
     plt.show()
 
 

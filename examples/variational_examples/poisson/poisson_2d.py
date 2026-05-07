@@ -56,8 +56,8 @@ block_2d = Block_2D(
 )
 
 quad_rule = GaussQuadratureRule(
-    rule_name="gauss_labotto", dimension=2, ngp=3
-)  # gauss_legendre gauss_labotto
+    rule_name="gauss_lobatto", dimension=2, ngp=3
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 n_test_func = 10
@@ -99,7 +99,7 @@ def pde(x, y):
     # Use tf.sin for backend tensorflow.compat.v1 or tensorflow
     x = deepxde_utils.to_numpy(x)  # convert to numpy
 
-    return -dy_xx  # - np.pi ** 2 * torch.sin(np.pi * x)
+    return -dy_xx
 
 
 def weak_form(

@@ -47,9 +47,6 @@ seed_h = 10
 seed_w = 10
 origin = [0, 0, 0]
 
-# The applied pressure
-pressure = -0.1
-
 Block_3D_obj = Block_3D_hex(
     origin=origin,
     length=length,
@@ -63,13 +60,13 @@ gmsh_model = Block_3D_obj.generateGmshModel(visualize_mesh=False)
 domain_dimension = 3
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=domain_dimension, ngp=1
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 boundary_dimension = 2
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=boundary_dimension, ngp=2
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -83,7 +80,7 @@ def on_top(x):
         x (array-like): Coordinates of points, where x[1] represents the y-coordinate (height).
 
     Returns:
-        array-like: True for points where the y-coordinate equals the height value,
+        bool: True for points where the y-coordinate equals the height value,
             False otherwise. Uses np.isclose for floating-point comparison tolerance.
     """
     return np.isclose(x[1], height)
@@ -102,21 +99,11 @@ geom = GmshGeometryElementDeepEnergy(
     boundary_selection_map=boundary_selection_map,
 )
 
-# export_normals_tangentials_to_vtk(geom, save_folder_path=str(Path(__file__).parent.parent.parent.parent), file_name="block_boundary_normals")# # change global variables in elasticity_utils
-# hyperelasticity_utils.youngs_modulus = 1.33
-# hyperelasticity_utils.nu = 0.3
-# nu,lame,shear,youngs_modulus = compute_elastic_properties()
-
-# # change global variables in elasticity_utils
-# elasticity_utils.lame = lame
-# elasticity_utils.shear = shear
-
 # The applied pressure
+pressure = 0.1
 elasticity_utils.lame = 115.38461538461539
 elasticity_utils.shear = 76.92307692307692
 nu, lame, shear, youngs_modulus = problem_parameters()
-pressure = 0.1
-applied_disp_y = -pressure / youngs_modulus * (1 - nu**2) * 1
 
 
 def potential_energy(
@@ -191,21 +178,10 @@ def potential_energy(
     # get the external energy
     # select the points where external force is applied
     cond = boundary_selection_tag["on_top"]
-    # n_e_boundary = int(cond.sum()/n_gp_boundary)
-    # nx = mapped_normal_boundary_t[:,0:1][cond]
-    # ny = mapped_normal_boundary_t[:,1:2][cond]
 
-    # #sigma_xx_n_x = sigma_xx[beg_boundary:][cond]*nx
-    # #sigma_xy_n_y = sigma_xy[beg_boundary:][cond]*ny
-
-    # sigma_yx_n_x = sigma_xy[beg_boundary:][cond]*nx
-    # sigma_yy_n_y = sigma_yy[beg_boundary:][cond]*ny
-
-    # #t_x = sigma_xx_n_x + sigma_xy_n_y
-    # t_y = sigma_yx_n_x + sigma_yy_n_y
-
-    # u_x = outputs[:,0:1][beg_boundary:][cond]
+    # u_x = outputs[:, 0:1][beg_boundary:][cond]
     u_y = outputs[:, 1:2][beg_boundary:][cond]
+    # u_z = outputs[:, 2:3][beg_boundary:][cond]
 
     external_force_density = -pressure * u_y
     external_work = (
@@ -214,11 +190,6 @@ def potential_energy(
         * (external_force_density)
         * jacobian_boundary_t[cond]
     )
-
-    # internal_energy_reshaped = bkd.reshape(internal_energy, (n_e, n_gp))
-    # external_work_reshaped = bkd.reshape(external_work, (n_e_boundary, n_gp_boundary))
-
-    # total_energy = bkd.reduce_sum(bkd.sum(internal_energy_reshaped, dim=1)) - bkd.reduce_sum(bkd.sum(external_work_reshaped, dim=1)) #+ bkd.reduce_sum(bkd.sum(internal_energy_reshaped, dim=1))
 
     return [internal_energy, -external_work]
 
@@ -245,6 +216,7 @@ def output_transform(x, y):
     Returns:
         Any: Computed value returned by `output_transform`.
     """
+    # displacement field (u, v, w)
     u = y[:, 0:1]
     v = y[:, 1:2]
     w = y[:, 2:3]
@@ -296,7 +268,6 @@ sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz = model.predict(
     X, operator=get_stress_tensor
 )
 
-
 # .tolist() is applied to remove datatype
 u_pred, v_pred, w_pred = (
     output[:, 0].tolist(),
@@ -324,7 +295,7 @@ x = X[:, 0].flatten()
 y = X[:, 1].flatten()
 z = X[:, 2].flatten()
 
-file_path = os.path.join(os.getcwd(), "deep_energy_single_block_compression_3d")
+file_path = os.path.join(os.getcwd(), "3d_block_under_compression")
 
 unstructuredGridToVTK(
     file_path,
