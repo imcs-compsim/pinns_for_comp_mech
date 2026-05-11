@@ -1049,6 +1049,76 @@ class Cylinder_hertzian(object):
 
         return gmsh_model
 
+class CylinderCan(object):
+    def __init__(
+        self,
+        inner_radius,
+        outer_radius,
+        height,
+        n_circumference,
+        n_height,
+        center_bottom=[0, 0, 0],
+        axis=[0, 1, 0],
+        gmsh_options=None
+    ):
+        self.inner_radius = inner_radius
+        self.outer_radius = outer_radius
+        self.height = height
+        self.center_bottom = center_bottom
+        self.axis = axis
+        self.n_circumference = n_circumference
+        self.n_height = n_height
+        self.gmsh_options = gmsh_options
+
+    def generateGmshModel(self, visualize_mesh=False):
+        gmsh.initialize()
+        gmsh.model.add("StructuredHollowCylinder")
+
+        if self.gmsh_options:
+            for key, value in self.gmsh_options.items():
+                gmsh.option.setNumber(key, value)
+
+        model = gmsh.model
+        occ = model.occ
+        x0, y0, z0 = self.center_bottom
+        ri = self.inner_radius
+        ro = self.outer_radius
+
+        ax, ay, az = self.axis
+        norm = np.sqrt(ax**2 + ay**2 + az**2)
+
+        if norm == 0:
+            raise ValueError("axis vector must not be zero")
+
+        ax /= norm
+        ay /= norm
+        az /= norm
+        axis = [ax, ay, az]
+
+        dx = self.height * ax
+        dy = self.height * ay
+        dz = self.height * az
+
+        # Full inner and outer circular curves
+        inner_circle = occ.addCircle(x0, y0, z0, ri,zAxis=axis)
+        outer_circle = occ.addCircle(x0, y0, z0, ro,zAxis=axis)
+        outer_loop = occ.addCurveLoop([outer_circle])
+        inner_loop = occ.addCurveLoop([inner_circle])
+        annulus = occ.addPlaneSurface([outer_loop, inner_loop])
+        occ.synchronize()
+        gmsh.model.mesh.setTransfiniteCurve(inner_circle, self.n_circumference)
+        gmsh.model.mesh.setTransfiniteCurve(outer_circle, self.n_circumference)
+        gmsh.model.mesh.setRecombine(2, annulus)
+        # Extrude along chosen axis
+        occ.extrude([(2, annulus)], dx, dy, dz, numElements=[self.n_height], recombine=True)
+        occ.synchronize()
+
+        gmsh.model.mesh.generate(3)
+        if visualize_mesh:
+            gmsh.fltk.run()
+
+        return gmsh.model
+
 class Block_3D_hex(object):
     def __init__(self, origin, length, height, width, divisions, gmsh_options=None):
         '''
@@ -1458,7 +1528,126 @@ class Rectangle_4PointBendingCentered(object):
                 gmsh.fltk.run()
 
         return gmsh_model
-    
+
+class CooksCantilever(object):
+    def __init__(self,
+                 origin=[0.0, 0.0, 0.0],
+                 length=0.048,
+                 web_height=0.044,
+                 load_height=0.016,
+                 thickness=0.001,
+                 divisions=[48, 16, 1],
+                 mesh_size=None,
+                 gmsh_options=None):
+        '''
+        Generates Cooks cantilever according to the 3D-geometry in https://doi.org/10.1007/s11831-020-09477-3.
+        Dimensions are in SI units.
+        '''
+        self.origin = origin
+        self.length = length
+        self.web_height = web_height
+        self.load_height = load_height
+        self.thickness = thickness
+        self.divisions = divisions
+        self.mesh_size = mesh_size
+        self.gmsh_options = gmsh_options
+
+    def generateGmshModel(self, visualize_mesh=False):
+        '''
+        Generates a structured 3D tapered beam mesh with hexahedral elements.
+
+        Parameters
+        ----------
+        visualize_mesh : bool
+            Whether to open the mesh in the Gmsh GUI after generation.
+
+        Returns
+        -------
+        gmsh_model: Object
+            Gmsh model.
+        '''
+        nx, ny, nz = self.divisions
+        x0, y0, z_mid = self.origin
+        x1 = x0 + self.length
+        y_web = y0 + self.web_height
+        y_tip = y_web + self.load_height
+        z0 = z_mid - self.thickness / 2
+
+        lcar = self.mesh_size
+        if lcar is None:
+            lcar = min(self.length / nx, self.web_height / ny, self.thickness / nz)
+
+        gmsh.initialize(sys.argv)
+        gmsh_model = gmsh.model
+        factory = gmsh_model.occ
+        mesh = gmsh_model.mesh
+        gmsh_model.add("CooksCantilever")
+
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMin", lcar)
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMax", lcar)
+        gmsh.option.setNumber("Mesh.RecombineAll", 1)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if isinstance(value, str):
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+
+        # Create the lower z-face with OCC and extrude it through the thickness.
+        # The OCC extrusion gives Gmsh explicit CAD ownership for all six faces,
+        # which avoids normal-orientation warnings when getNormal() is queried.
+        p1 = factory.addPoint(x0, y0, z0, lcar)
+        p2 = factory.addPoint(x1, y_web, z0, lcar)
+        p3 = factory.addPoint(x1, y_tip, z0, lcar)
+        p4 = factory.addPoint(x0, y_web, z0, lcar)
+
+        l1 = factory.addLine(p1, p2)
+        l2 = factory.addLine(p2, p3)
+        l3 = factory.addLine(p3, p4)
+        l4 = factory.addLine(p4, p1)
+
+        front = factory.addPlaneSurface([factory.addCurveLoop([-l4, -l3, -l2, -l1])])
+        factory.extrude([(2, front)], 0, 0, self.thickness, numElements=[nz], recombine=True)
+        factory.synchronize()
+
+        def curve_point_coords(curve_tag):
+            point_tags = [
+                point_tag
+                for _, point_tag in gmsh_model.getBoundary([(1, curve_tag)], oriented=False, recursive=False)
+            ]
+            return [
+                np.array(gmsh_model.getValue(0, point_tag, []))
+                for point_tag in point_tags
+            ]
+
+        for _, curve in gmsh_model.getEntities(1):
+            point_a, point_b = curve_point_coords(curve)
+            delta = np.abs(point_b - point_a)
+
+            if np.isclose(delta[2], self.thickness):
+                mesh.setTransfiniteCurve(curve, nz + 1)
+            elif np.isclose(delta[0], 0.0):
+                mesh.setTransfiniteCurve(curve, ny + 1)
+            else:
+                mesh.setTransfiniteCurve(curve, nx + 1)
+
+        for _, surface in gmsh_model.getEntities(2):
+            mesh.setTransfiniteSurface(surface)
+            mesh.setRecombine(2, surface)
+
+        for _, volume in gmsh_model.getEntities(3):
+            mesh.setTransfiniteVolume(volume)
+            mesh.setRecombine(3, volume)
+
+        mesh.generate(3)
+
+        if visualize_mesh:
+            if '-nopopup' not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model
+
 class QuarterDisc(object):
     def __init__(self, radius, center, angle=None, refine_times=None, mesh_size=0.15, gmsh_options=None):
         self.radius = radius
