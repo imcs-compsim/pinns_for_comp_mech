@@ -42,7 +42,7 @@ class GaussQuadratureRule:
 
     def generate_tensor(self):
         """
-        Generate quadrature points and weights based on the tensor product rule.
+        Generate quadrature points and weights for tensor-product-like elements.
         """
         rule_dic = {
             "gauss_lobatto": self.gauss_lobatto,
@@ -57,7 +57,7 @@ class GaussQuadratureRule:
 
     def generate_simplex(self):
         """
-        Generate quadrature points and weights based on the simplex rule.
+        Generate quadrature points and weights for simplex-type elements.
         """
         if self.dimension == 2:
             return self.triangle_rule()
@@ -70,7 +70,7 @@ class GaussQuadratureRule:
 
     def triangle_rule(self):
         """
-        Generate quadrature points and weights based on the triangle (2D) rule according to the number of gauss points.
+        Generate quadrature points and weights for 2D triangular elements according to the number of gauss points.
         """
         if self.ngp == 1:
             # 1-point centroid rule
@@ -135,7 +135,7 @@ class GaussQuadratureRule:
 
     def tetrahedron_rule(self):
         """
-        Generate quadrature points and weights based on the tetrahedron (3D) rule according to the number of gauss points.
+        Generate quadrature points and weights for 3D tetrahedral elements according to the number of gauss points.
         """
         if self.ngp == 1:
             # 1-point quadrature: centroid
@@ -173,7 +173,7 @@ class GaussQuadratureRule:
 
     def gauss_legendre(self):
         """
-        Generate quadrature points and weights according to the gauss legendre rule.
+        Generate quadrature points and weights according to the Gauss-Legendre rule.
         """
 
         if self.dimension == 1:
@@ -231,7 +231,7 @@ class GaussQuadratureRule:
 
     def gauss_lobatto(self):
         """
-        Generate quadrature points and weights according to the gauss lobatto rule.
+        Generate quadrature points and weights according to the Gauss-Lobatto rule.
         """
 
         if self.ngp < 3:
@@ -337,7 +337,7 @@ class GaussQuadratureRule:
 
     @staticmethod
     def jacobi_polynomial_derivative(n, a, b, x, k):
-        """return derivative of order k."""
+        """return k-th derivative of the Jacobi polynomial."""
         ctemp = gamma(a + b + n + 1 + k) / (2**k) / gamma(a + b + n + 1)
 
         return ctemp * jacobi(n - k, a + k, b + k)(x)
