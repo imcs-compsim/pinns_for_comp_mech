@@ -49,6 +49,12 @@ class GaussQuadratureRule:
             "gauss_legendre": self.gauss_legendre,
         }
 
+        if self.rule_name not in rule_dic:
+            raise ValueError(
+                f"Unknown quadrature rule '{self.rule_name}'. "
+                f"Supported tensor rules are: {', '.join(rule_dic)}"
+            )
+
         coord_quadrature, weight_quadrature = rule_dic[self.rule_name]()
 
         return coord_quadrature.reshape(-1, self.dimension), weight_quadrature.reshape(
@@ -344,15 +350,8 @@ class GaussQuadratureRule:
 
 
 def get_test_function_properties(n_test, coord_quadrature, approach="2"):
-    """_summary_
-
-    Args:
-        n_test (_type_): _description_
-        coord_quadrature (_type_): _description_
-        approach (str, optional): _description_. Defaults to "approach_2".
-
-    Returns:
-        _type_: _description_
+    """
+    Generate the test functions and their derivatives based on the specified approach.
     """
 
     dict_legendre = {"1": modified_legendre, "2": modified_legendre_2}
@@ -378,7 +377,7 @@ def get_test_function_properties(n_test, coord_quadrature, approach="2"):
 
 def modified_legendre(n, x):
     """
-    Generate quadrature points and weights according to the modified gauss legendre rule based on VPINNs paper.
+    Generate modified Gauss-Legendre polynomial based on VPINNs paper.
     """
     return GaussQuadratureRule.jacobi_polynomial(
         n + 1, 0, 0, x
