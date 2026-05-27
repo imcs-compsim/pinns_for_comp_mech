@@ -45,8 +45,8 @@ quarter_circle_with_hole = QuarterCirclewithHole(
 )
 
 quad_rule = GaussQuadratureRule(
-    rule_name="gauss_labotto", dimension=2, ngp=3
-)  # gauss_legendre gauss_labotto
+    rule_name="gauss_lobatto", dimension=2, ngp=3
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 n_test_func = 5
@@ -290,10 +290,9 @@ def boundary_inner(x, on_boundary):
     Returns:
         bool: Result of the `boundary_inner` evaluation.
     """
-    return (
-        on_boundary
-        and np.isclose(np.linalg.norm(x - center_inner, axis=-1), radius_inner)
-    )  # and ~np.logical_and(np.isclose(x[0],1),np.isclose(x[1],0)) and ~np.logical_and(np.isclose(x[0],0),np.isclose(x[1],1))
+    return on_boundary and np.isclose(
+        np.linalg.norm(x - center_inner, axis=-1), radius_inner
+    )
 
 
 bc1 = dde.OperatorBC(geom, pressure_inner_x, boundary_inner)

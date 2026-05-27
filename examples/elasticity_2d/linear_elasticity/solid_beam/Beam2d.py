@@ -104,7 +104,7 @@ def neumann_y(x, y, X):
 
     return sigma_yx_n_x + shear_y / (2 * Inertia) * (y_loc - h / 2) * (
         y_loc + h / 2
-    ) * (-1)  # *normals[:,0:1]
+    ) * (-1)
 
 
 nu, lame, shear, youngs_modulus = problem_parameters()
@@ -224,14 +224,6 @@ def output_transform(x, y):
     x_loc = x[:, 0:1]
     return tf.concat([u * 0.01, v * 0.001], axis=1)
 
-
-# in case hard Dirichlet is desired (no scaling!! so it must be tested)
-# def output_transform(x, y):
-#     x_loc = x[:,0:1]
-#     y_loc = x[:,1:2]
-#     u_x_analy = y[:,0:1]*shear_y*y_loc/(6*youngs_modulus*Inertia)*((6*l-3*x_loc)*x_loc + (2+nu)*(y_loc**2-h**2/4))
-#     u_y_analy = -y[:,1:2]*shear_y/(6*youngs_modulus*Inertia)*(3*nu*y_loc**2*(l-x_loc) + (4+5*nu)*h**2*x_loc/4 + (3*l-x_loc)*x_loc**2)
-#     return tf.concat([ u_x_analy, u_y_analy], axis=1)
 
 # two inputs x and y, output is ux and uy
 layer_size = [2] + [50] * 3 + [2]

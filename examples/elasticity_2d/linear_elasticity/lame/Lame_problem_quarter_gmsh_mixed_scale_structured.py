@@ -138,10 +138,9 @@ def boundary_inner(x, on_boundary):
     Returns:
         bool: Result of the `boundary_inner` evaluation.
     """
-    return (
-        on_boundary
-        and np.isclose(np.linalg.norm(x - center_inner, axis=-1), radius_inner)
-    )  # and ~np.logical_and(np.isclose(x[0],1),np.isclose(x[1],0)) and ~np.logical_and(np.isclose(x[0],0),np.isclose(x[1],1))
+    return on_boundary and np.isclose(
+        np.linalg.norm(x - center_inner, axis=-1), radius_inner
+    )
 
 
 def boundary_left(x, on_boundary):
@@ -344,7 +343,6 @@ def compareModelPredictionAndAnalyticalSolution(model):
         markersize=5,
         markevery=5,
     )
-    # axs[0].scatter(r/radius_inner, sigma_rr/radius_inner, label = r"Predicted $\sigma_{rr}/R_i$", s=10, c="tab:blue", marker='o', edgecolors="tab:orange")
     axs[0].plot(
         r / radius_inner,
         sigma_theta_analytical / radius_inner,

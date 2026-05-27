@@ -235,14 +235,6 @@ def output_transform(x, y):
     return tf.concat([u * 0.01, v * 0.001], axis=1)
 
 
-# in case hard Dirichlet is desired (no scaling!! so it must be tested)
-# def output_transform(x, y):
-#     x_loc = x[:,0:1]
-#     y_loc = x[:,1:2]
-#     u_x_analy = y[:,0:1]*shear_y*y_loc/(6*youngs_modulus*Inertia)*((6*l-3*x_loc)*x_loc + (2+nu)*(y_loc**2-h**2/4))
-#     u_y_analy = -y[:,1:2]*shear_y/(6*youngs_modulus*Inertia)*(3*nu*y_loc**2*(l-x_loc) + (4+5*nu)*h**2*x_loc/4 + (3*l-x_loc)*x_loc**2)
-#     return tf.concat([ u_x_analy, u_y_analy], axis=1)
-
 # three inputs x, y and force; two outputs are ux and uy
 layer_size = [3] + [50] * 3 + [2]
 activation = "tanh"

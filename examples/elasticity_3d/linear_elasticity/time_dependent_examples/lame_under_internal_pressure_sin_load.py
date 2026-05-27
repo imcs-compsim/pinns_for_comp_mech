@@ -400,11 +400,9 @@ model = dde.Model(data, net)
 
 model.compile("adam", lr=0.001)
 losshistory, train_state = model.train(epochs=2000, display_every=100)
-# losshistory, train_state = model.train(epochs=2000, display_every=200, model_save_path=model_path) # use if you want to save the model
 
 model.compile("L-BFGS")
 losshistory, train_state = model.train(display_every=100)
-# losshistory, train_state = model.train(display_every=200, model_save_path=model_path) # same as above
 
 solutionFieldOnMeshToVtkSpaceTime(
     geom,
@@ -594,7 +592,6 @@ def compareModelPredictionAndAnalyticalSolution(model):
 
     fig.tight_layout()
     plt.savefig("lame_3d_time_result.png", dpi=300, bbox_inches="tight")
-    # plt.show()
 
 
 compareModelPredictionAndAnalyticalSolution(model)

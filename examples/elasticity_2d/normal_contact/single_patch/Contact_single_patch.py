@@ -111,9 +111,6 @@ method_list = [
 ]
 method_name = "fischer_burmeister"
 
-# Karush-Kuhn-Tucker conditions for frictionless contact
-# gn>=0 (positive_normal_gap), On<=0 (negative_normal_traction), Tt=0 (zero_tangential_traction) and gn.On=0 (zero_complimentary)
-
 bc_zero_tangential_traction = dde.OperatorBC(
     geom, zero_tangential_traction, boundary_contact
 )
@@ -353,8 +350,6 @@ file_path = os.path.join(os.getcwd(), output_file_name)
 x = X[:, 0].flatten()
 y = X[:, 1].flatten()
 z = np.zeros(y.shape)
-
-# np.savetxt("Lame_inverse_large", X=np.hstack((X,output[:,0:2])))
 
 unstructuredGridToVTK(
     file_path,

@@ -44,9 +44,6 @@ seed_h = 10
 seed_w = 10
 origin = [0, 0, 0]
 
-# The applied pressure
-pressure = -0.1
-
 Block_3D_obj = Block_3D_hex(
     origin=origin,
     length=length,
@@ -60,13 +57,13 @@ gmsh_model = Block_3D_obj.generateGmshModel(visualize_mesh=False)
 domain_dimension = 3
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=domain_dimension, ngp=2
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 boundary_dimension = 2
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=boundary_dimension, ngp=2
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -80,7 +77,7 @@ def on_top(x):
         x (array-like): Coordinates of points, where x[1] represents the y-coordinate (height).
 
     Returns:
-        array-like: True for points where the y-coordinate equals the height value,
+        bool: True for points where the y-coordinate equals the height value,
             False otherwise. Uses np.isclose for floating-point comparison tolerance.
     """
     return np.isclose(x[1], height)
@@ -99,17 +96,7 @@ geom = GmshGeometryElementDeepEnergy(
     boundary_selection_map=boundary_selection_map,
 )
 
-# export_normals_tangentials_to_vtk(geom, save_folder_path=str(Path(__file__).parent.parent.parent.parent), file_name="block_boundary_normals")# # change global variables in elasticity_utils
-# hyperelasticity_utils.youngs_modulus = 1.33
-# hyperelasticity_utils.nu = 0.3
-# nu,lame,shear,youngs_modulus = compute_elastic_properties()
-
-# # change global variables in elasticity_utils
-# elasticity_utils.lame = lame
-# elasticity_utils.shear = shear
-
 # The applied pressure
-
 pressure = 1
 # hyperelasticity_utils.lame = 115.38461538461539
 # hyperelasticity_utils.shear = 76.92307692307692
@@ -117,7 +104,6 @@ hyperelasticity_utils.youngs_modulus = 20
 hyperelasticity_utils.nu = 0.3
 
 nu, lame, shear, youngs_modulus = compute_elastic_properties()
-applied_disp_y = -pressure / youngs_modulus * (1 - nu**2) * 1
 
 
 def potential_energy(
@@ -179,31 +165,27 @@ def potential_energy(
     # get the external energy
     # select the points where external force is applied
     cond = boundary_selection_tag["on_top"]
-    # n_e_boundary = int(cond.sum()/n_gp_boundary)
-    # nx = mapped_normal_boundary_t[:,0:1][cond]
-    # ny = mapped_normal_boundary_t[:,1:2][cond]
 
-    x_coord = inputs[:, 0:1][beg_boundary:][cond]
+    # x_coord = inputs[:, 0:1][beg_boundary:][cond]
     y_coord = inputs[:, 1:2][beg_boundary:][cond]
+    # z_coord = inputs[:, 2:3][beg_boundary:][cond]
 
-    u_x = outputs[:, 0:1][beg_boundary:][cond]
+    # u_x = outputs[:, 0:1][beg_boundary:][cond]
     u_y = outputs[:, 1:2][beg_boundary:][cond]
+    # u_z = outputs[:, 2:3][beg_boundary:][cond]
 
-    phi_x = u_x + x_coord
+    # phi_x = u_x + x_coord
     phi_y = u_y + y_coord
+    # phi_z = u_z + z_coord
 
     external_force_density = -pressure * phi_y
+
     external_work = (
         global_weights_boundary_t[:, 0:1][cond]
         * global_weights_boundary_t[:, 1:2][cond]
         * (external_force_density)
         * jacobian_boundary_t[cond]
     )
-
-    # internal_energy_reshaped = bkd.reshape(internal_energy, (n_e, n_gp))
-    # external_work_reshaped = bkd.reshape(external_work, (n_e_boundary, n_gp_boundary))
-
-    # total_energy = bkd.reduce_sum(bkd.sum(internal_energy_reshaped, dim=1)) - bkd.reduce_sum(bkd.sum(external_work_reshaped, dim=1)) #+ bkd.reduce_sum(bkd.sum(internal_energy_reshaped, dim=1))
 
     return [internal_energy, -external_work]
 
@@ -230,6 +212,7 @@ def output_transform(x, y):
     Returns:
         Any: Computed value returned by `output_transform`.
     """
+    # displacement field (u, v, w)
     u = y[:, 0:1]
     v = y[:, 1:2]
     w = y[:, 2:3]
@@ -270,9 +253,6 @@ loss_weights = None
 model = dde.Model(data, net)
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
 losshistory, train_state = model.train(epochs=8000, display_every=200)
-
-# model.compile("L-BFGS", loss_weights=loss_weights)
-# losshistory, train_state = model.train(display_every=200)
 
 X, offset, cell_types, elements = geom.get_mesh()
 
@@ -331,9 +311,7 @@ x = X[:, 0].flatten()
 y = X[:, 1].flatten()
 z = X[:, 2].flatten()
 
-file_path = os.path.join(
-    os.getcwd(), "deep_energy_single_block_compression_3d_large_deformation"
-)
+file_path = os.path.join(os.getcwd(), "3d_block_under_compression_nonlinear")
 
 unstructuredGridToVTK(
     file_path,

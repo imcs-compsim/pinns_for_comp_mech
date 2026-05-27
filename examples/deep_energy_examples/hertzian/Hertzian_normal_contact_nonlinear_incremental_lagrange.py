@@ -88,12 +88,12 @@ boundary_selection_map = [
 
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=2, ngp=2
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=1, ngp=6
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -130,7 +130,6 @@ steps = 10
 
 # stabilization model epoch
 stabilization_model_epoch = None
-
 increment_tracker = steps * [True]
 
 
@@ -187,13 +186,6 @@ def potential_energy(
     # get the external work
     # select the points where external force is applied
     if model.data.current_epoch is not None:
-        # if model.data.current_epoch == 0:
-        #     shear_load_chunk = 0
-        #     print(shear_load_chunk)
-        # else:
-        # current_epoch = model.data.current_epoch
-        # chunk = current_epoch//((epochs+1)/steps)
-        # shear_load_chunk = (chunk + 1)*shear_load/steps
         if stabilization_model_epoch is not None:
             current_epoch = model.data.current_epoch - stabilization_model_epoch
         else:
@@ -201,10 +193,6 @@ def potential_energy(
         step_size = epochs / steps  # e.g., 10
         current_step = int(current_epoch // step_size)
         step_load = (current_step + 1) * ext_traction / steps
-        # print(shear_load_chunk)
-        # if (current_epoch % 2) == 0:
-        #     print(shear_load_chunk)
-        # if current_epoch//
     else:
         step_load = 0
 
@@ -241,29 +229,14 @@ def potential_energy(
     # update lambda
     if model.data.current_epoch is not None:
         if not (current_epoch == 0) and not (current_epoch == 1):
-            # previous_step = int((current_epoch-1) // step_size)
             if ((current_epoch + 1) % step_size) == 0:
                 # The first increment is for the test data, however we dont want to to that
                 if increment_tracker[current_step]:
                     lagrange_parameter_boundary[cond] = -eta * bkd.relu(-gap_n)
-                    # print("update")
                 if increment_tracker[current_step] == True:
                     increment_tracker[current_step] = False
 
     return [internal_energy, -external_work, contact_work], lagrange_parameter_boundary
-
-
-def points_at_top(x):
-    """Compute points at top for this example setup.
-
-    Args:
-        x: Input coordinates used to evaluate the function.
-
-    Returns:
-        Any: Computed value returned by `points_at_top`.
-    """
-    cond_points_top = np.isclose(x, 0)
-    return cond_points_top
 
 
 n_dummy = 1
@@ -300,11 +273,8 @@ net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
 
-# model.compile("adam", lr=0.001)
-# losshistory, train_state = model.train(epochs=stabilization_model_epoch, display_every=100)
-
 file_path = os.path.join(
-    os.getcwd(), "deep_energy_hertzian_normal_contact_nonlinear_lagrange"
+    os.getcwd(), "Hertzian_normal_contact_nonlinear_incremental_lagrange"
 )
 epoch_tracker = EpochTracker()
 model_saver_incremental = SaveModelVTU(
@@ -318,114 +288,3 @@ model.compile("adam", lr=0.001)
 losshistory, train_state = model.train(
     epochs=epochs, callbacks=[epoch_tracker, model_saver_incremental], display_every=100
 )
-
-# # model.compile("L-BFGS")
-# # model.train_step.optimizer_kwargs["options"]['maxiter']=1000
-# # losshistory, train_state = model.train(display_every=200)
-
-# def polar_transformation_2d_tensor(T_xx, T_yy, T_xy, T_yx, X):
-#     '''
-#     Transforms a general 2nd-order 2D tensor (not necessarily symmetric) from Cartesian to polar coordinates.
-
-#     Parameters
-#     ----------
-#     X : numpy array, shape (N, 2)
-#         Coordinates of points.
-#     T_xx, T_yy, T_xy, T_yx : numpy arrays
-#         Components of the tensor in Cartesian coordinates.
-
-#     Returns
-#     -------
-#     T_rr, T_rtheta, T_thetar, T_thetatheta : numpy arrays
-#         Components of the tensor in polar coordinates.
-#     '''
-
-#     theta = np.arctan2(X[:, 1], X[:, 0])  # in radians
-#     cos_theta = np.cos(theta)
-#     sin_theta = np.sin(theta)
-
-#     # Rotation matrix components
-#     Q11 = cos_theta.reshape(-1,1)
-#     Q12 = sin_theta.reshape(-1,1)
-#     Q21 = -sin_theta.reshape(-1,1)
-#     Q22 = cos_theta.reshape(-1,1)
-
-#     # Perform the transformation using Einstein summation convention
-#     # T'_ij = Q_ip Q_jq T_pq
-#     T_rr = Q11 * (Q11 * T_xx + Q12 * T_yx) + Q12 * (Q11 * T_xy + Q12 * T_yy)
-#     T_rtheta = Q11 * (Q21 * T_xx + Q22 * T_yx) + Q12 * (Q21 * T_xy + Q22 * T_yy)
-#     T_thetar = Q21 * (Q11 * T_xx + Q12 * T_yx) + Q22 * (Q11 * T_xy + Q12 * T_yy)
-#     T_thetatheta = Q21 * (Q21 * T_xx + Q22 * T_yx) + Q22 * (Q21 * T_xy + Q22 * T_yy)
-
-#     return T_rr.astype(np.float32), T_rtheta.astype(np.float32), T_thetar.astype(np.float32), T_thetatheta.astype(np.float32)
-
-# fem_path = str(Path(__file__).parent.parent.parent)+"/elasticity_2d/Hertzian_fem/Hertzian_fem_fine_mesh.csv"
-# df = pd.read_csv(fem_path)
-# fem_results = df[["Points_0","Points_1","displacement_0","displacement_1","nodal_cauchy_stresses_xyz_0","nodal_cauchy_stresses_xyz_1","nodal_cauchy_stresses_xyz_3"]]
-# fem_results = fem_results.to_numpy()
-# node_coords_xy = fem_results[:,0:2]
-# displacement_fem = fem_results[:,2:4]
-# stress_fem = fem_results[:,4:7]
-
-# X = node_coords_xy
-# x = X[:,0].flatten()
-# y = X[:,1].flatten()
-# z = np.zeros(y.shape)
-# triangles = tri.Triangulation(x, y)
-
-# # # predictions
-# # start_time_calc = time.time()
-# output = model.predict(X)
-# # end_time_calc = time.time()
-# # final_time = f'Prediction time: {(end_time_calc - start_time_calc):.3f} seconds'
-# # print(final_time)
-
-# u_pred, v_pred = output[:,0], output[:,1]
-# sigma_xx_pred, sigma_yy_pred, sigma_xy_pred, sigma_yx_pred = model.predict(X, operator=cauchy_stress_2D)
-# sigma_rr_pred, sigma_rtheta_pred, sigma_theta_r_pred, sigma_theta_pred = polar_transformation_2d_tensor(sigma_xx_pred, sigma_yy_pred, sigma_xy_pred, sigma_yx_pred, X)
-
-# combined_disp_pred = tuple(np.vstack((np.array(u_pred.tolist()),np.array(v_pred.tolist()),np.zeros(u_pred.shape[0]))))
-# combined_stress_pred = tuple(np.vstack((np.array(sigma_xx_pred.flatten().tolist()),np.array(sigma_yy_pred.flatten().tolist()),np.array(sigma_xy_pred.flatten().tolist()))))
-# combined_stress_polar_pred = tuple(np.vstack((np.array(sigma_rr_pred.flatten().tolist()),np.array(sigma_theta_pred.flatten().tolist()),np.array(sigma_rtheta_pred.flatten().tolist()))))
-
-# # fem
-# u_fem, v_fem = displacement_fem[:,0], displacement_fem[:,1]
-# sigma_xx_fem, sigma_yy_fem, sigma_xy_fem = stress_fem[:,0:1], stress_fem[:,1:2], stress_fem[:,2:3]
-# sigma_rr_fem, sigma_rtheta_fem, sigma_theta_r_fem, sigma_theta_fem= polar_transformation_2d_tensor(sigma_xx_fem, sigma_yy_fem, sigma_xy_fem, sigma_xy_fem, X)
-
-# combined_disp_fem = tuple(np.vstack((np.array(u_fem.tolist()),np.array(v_fem.tolist()),np.zeros(u_fem.shape[0]))))
-# combined_stress_fem = tuple(np.vstack((np.array(sigma_xx_fem.flatten().tolist()),np.array(sigma_yy_fem.flatten().tolist()),np.array(sigma_xy_fem.flatten().tolist()))))
-# combined_stress_polar_fem = tuple(np.vstack((np.array(sigma_rr_fem.flatten().tolist()),np.array(sigma_theta_fem.flatten().tolist()),np.array(sigma_rtheta_fem.flatten().tolist()))))
-
-# # error
-# error_disp_x = abs(np.array(u_pred.tolist()) - u_fem.flatten())
-# error_disp_y =  abs(np.array(v_pred.tolist()) - v_fem.flatten())
-# combined_error_disp = tuple(np.vstack((error_disp_x, error_disp_y,np.zeros(error_disp_x.shape[0]))))
-
-# error_stress_x = abs(np.array(sigma_xx_pred.flatten().tolist()) - sigma_xx_fem.flatten())
-# error_stress_y =  abs(np.array(sigma_yy_pred.flatten().tolist()) - sigma_yy_fem.flatten())
-# error_stress_xy =  abs(np.array(sigma_xy_pred.flatten().tolist()) - sigma_xy_fem.flatten())
-# combined_error_stress = tuple(np.vstack((error_stress_x, error_stress_y, error_stress_xy)))
-
-# error_polar_stress_x = abs(np.array(sigma_rr_pred.flatten().tolist()) - sigma_rr_fem.flatten())
-# error_polar_stress_y =  abs(np.array(sigma_theta_pred.flatten().tolist()) - sigma_theta_fem.flatten())
-# error_polar_stress_xy =  abs(np.array(sigma_rtheta_pred.flatten().tolist()) - sigma_rtheta_fem.flatten())
-# combined_error_polar_stress = tuple(np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy)))
-
-# file_path = os.path.join(os.getcwd(), "deep_energy_hertzian_normal_contact_nonlinear")
-
-# dol_triangles = triangles.triangles
-# offset = np.arange(3,dol_triangles.shape[0]*dol_triangles.shape[1]+1,dol_triangles.shape[1]).astype(dol_triangles.dtype)
-# cell_types = np.ones(dol_triangles.shape[0])*5
-
-# unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset,
-#                       cell_types, pointData = {"displacement_pred" : combined_disp_pred,
-#                                                "displacement_fem" : combined_disp_fem,
-#                                                "stress_pred" : combined_stress_pred,
-#                                                "stress_fem" : combined_stress_fem,
-#                                                "polar_stress_pred" : combined_stress_polar_pred,
-#                                                "polar_stress_fem" : combined_stress_polar_fem,
-#                                                "error_disp" : combined_error_disp,
-#                                                "error_stress" : combined_error_stress,
-#                                                "error_polar_stress" : combined_error_polar_stress
-#                                             })

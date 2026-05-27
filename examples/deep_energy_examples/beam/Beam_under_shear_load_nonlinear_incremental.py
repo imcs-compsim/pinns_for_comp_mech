@@ -48,12 +48,12 @@ gmsh_model = block_2d.generateGmshModel(visualize_mesh=False)
 
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=2, ngp=2
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=1, ngp=4
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -168,13 +168,6 @@ def potential_energy(
     u_y = outputs[:, 1:2][beg_boundary:][cond]
 
     if model.data.current_epoch is not None:
-        # if model.data.current_epoch == 0:
-        #     shear_load_chunk = 0
-        #     print(shear_load_chunk)
-        # else:
-        # current_epoch = model.data.current_epoch
-        # chunk = current_epoch//((epochs+1)/steps)
-        # shear_load_chunk = (chunk + 1)*shear_load/steps
         if stabilization_model_epoch is not None:
             current_epoch = model.data.current_epoch - stabilization_model_epoch
         else:
@@ -182,10 +175,6 @@ def potential_energy(
         step_size = epochs / steps  # e.g., 10
         current_step = int(current_epoch // step_size)
         shear_load_chunk = (current_step + 1) * shear_load / steps
-        # print(shear_load_chunk)
-        # if (current_epoch % 2) == 0:
-        #     print(shear_load_chunk)
-        # if current_epoch//
     else:
         if not apply_load:
             shear_load_chunk = 0
@@ -198,13 +187,6 @@ def potential_energy(
         * (external_force_density)
         * jacobian_boundary_t[cond]
     )
-
-    ####################################################################################################################
-    # Reshape energy-work terms and sum over the gauss points
-    # internal_energy_reshaped = bkd.sum(bkd.reshape(internal_energy, (n_e, n_gp)), dim=1)
-    # external_work_reshaped = bkd.sum(bkd.reshape(external_work, (n_e_boundary_external, n_gp_boundary)), dim=1)
-    # sum over the elements and get the overall loss
-    # total_energy = bkd.reduce_sum(internal_energy_reshaped) #- bkd.reduce_sum(external_work_reshaped)
 
     return [internal_energy, -external_work]
 
@@ -283,10 +265,6 @@ model.compile("adam", lr=0.001)
 losshistory, train_state = model.train(
     epochs=10000, callbacks=[model_saver], display_every=100
 )
-
-# model.compile("L-BFGS")
-# # model.train_step.optimizer_kwargs["options"]['maxiter']=2000
-# model.train()
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################

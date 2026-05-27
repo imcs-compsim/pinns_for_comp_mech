@@ -60,12 +60,12 @@ gmsh_model = block_2d.generateGmshModel(visualize_mesh=False)
 
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=2, ngp=2
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=1, ngp=4
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -186,13 +186,6 @@ def potential_energy(
         * jacobian_boundary_t[cond]
     )
 
-    ####################################################################################################################
-    # Reshape energy-work terms and sum over the gauss points
-    # internal_energy_reshaped = bkd.sum(bkd.reshape(internal_energy, (n_e, n_gp)), dim=1)
-    # external_work_reshaped = bkd.sum(bkd.reshape(external_work, (n_e_boundary_external, n_gp_boundary)), dim=1)
-    # sum over the elements and get the overall loss
-    # total_energy = bkd.reduce_sum(internal_energy_reshaped) #- bkd.reduce_sum(external_work_reshaped)
-
     return [internal_energy, -external_work]
 
 
@@ -234,11 +227,8 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
 
 file_path = os.path.join(os.getcwd(), "Beam_under_shear_load_nonlinear")
-# stabilization_model_epoch = 100
-# model_saver = SaveModelVTU(op=cauchy_stress_2D, period=1000, stabilization_epoch=stabilization_model_epoch, filename=file_path)
 
 model = dde.Model(data, net)
-# if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
 
 restore_model = True
 model_path = (
@@ -247,24 +237,14 @@ model_path = (
 )
 
 if not restore_model:
-    # model.compile("adam", lr=0.001)
-    # losshistory, train_state = model.train(epochs=stabilization_model_epoch, display_every=100)
-
     apply_load = True
 
     model.compile("adam", lr=0.001)
     losshistory, train_state = model.train(epochs=5000, display_every=100)
-    # if you want to save the model, run the following
-    # losshistory, train_state = model.train(epochs=5000, display_every=100, model_save_path=model_path)
-
-    # For pytorch
-    # LBFGS_options["iter_per_step"] = 1
-    # LBFGS_options["maxiter"] = 500
 
     LBFGS_options["maxiter"] = 1500
     model.compile("L-BFGS")
     losshistory, train_state = model.train(display_every=100)
-    # losshistory, train_state = model.train(display_every=100, model_save_path=model_path)
 
     dde.saveplot(losshistory, train_state, issave=True, isplot=False)
 else:
@@ -326,20 +306,3 @@ error_stress = abs((stress_fem[:, columns] - cauchy_stress))
 data.point_data["pointwise_cauchystress_error"] = error_stress
 
 data.save(f"{save_file_path}.vtu")
-
-# X, offset, cell_types, dol_triangles = geom.get_mesh()
-
-# displacement = model.predict(X)
-# sigma_xx, sigma_yy, sigma_xy, sigma_yx = model.predict(X, operator=cauchy_stress_2D)
-
-# combined_disp = tuple(np.vstack((np.array(displacement[:,0].tolist()),np.array(displacement[:,1].tolist()),np.zeros(displacement[:,0].shape[0]))))
-# combined_stress = tuple(np.vstack((np.array(sigma_xx.flatten().tolist()),np.array(sigma_yy.flatten().tolist()),np.array(sigma_xy.flatten().tolist()))))
-
-# file_path = os.path.join(os.getcwd(), "Beam_under_shear_load_nonlinear")
-
-# x = X[:,0].flatten()
-# y = X[:,1].flatten()
-# z = np.zeros(y.shape)
-
-# unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset,
-#                       cell_types, pointData = { "displacement" : combined_disp,"stress" : combined_stress})
