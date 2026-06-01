@@ -125,25 +125,11 @@ def setup(context):
         )
 
 
-    def on_top(x):
-        """Compute on top for this example setup.
-
-        Args:
-            x: Input coordinates used to evaluate the function.
-
-        Returns:
-            bool: Result of the `on_top` evaluation.
-        """
-        return np.isclose(x[1], 0)
-
-
     boundary_selection_map = [
         {
             "boundary_function": on_boundary_circle_contact,
             "tag": "on_boundary_circle_contact",
-        },
-        {"boundary_function": on_top, "tag": "on_top"},
-    ]
+        }]
 
     geom = GmshGeometryElementDeepEnergy(
         gmsh_model,
@@ -169,6 +155,9 @@ def compute(state):
     with nvtx_range("PROFILE_4C_ML_STEP"):
         with nvtx_range(f"ML predictor step {state.step}"):
             with nvtx_range("build DeepXDE model"):
+                n_line = 100
+                controlpoints = np.column_stack((np.zeros(n_line), np.linspace(-1, 0, n_line)))
+                observe_v = dde.PointSetBC(controlpoints, np.zeros_like(controlpoints[:, 0:1]), component=1)
                 def potential_energy(
                     X,
                     inputs,
@@ -216,21 +205,6 @@ def compute(state):
                         * (internal_energy_density[beg_pde:beg_boundary])
                         * jacobian_t
                     )
-                    # get the external work
-                    # select the points where external force is applied
-                    cond = boundary_selection_tag["on_top"]
-                    nx = mapped_normal_boundary_t[:, 0:1][cond]
-                    ny = mapped_normal_boundary_t[:, 1:2][cond]
-
-                    u_x = outputs[:, 0:1][beg_boundary:][cond]
-                    u_y = outputs[:, 1:2][beg_boundary:][cond]
-
-                    external_force_density = shear_load * u_y
-                    external_work = (
-                        global_weights_boundary_t[cond]
-                        * (external_force_density)
-                        * jacobian_boundary_t[cond]
-                    )
                     # contact work
                     cond = boundary_selection_tag["on_boundary_circle_contact"]
 
@@ -245,17 +219,18 @@ def compute(state):
                         * jacobian_boundary_t[cond]
                     )
 
-                    return [internal_energy, -external_work, contact_work]
+                    return [internal_energy, contact_work]
 
                 n_dummy = 1
                 data = DeepEnergyPDE(
                     geom,
                     potential_energy,
-                    [],
+                    [observe_v],
                     num_domain=n_dummy,
                     num_boundary=n_dummy,
                     num_test=None,
                     train_distribution="Sobol",
+                    anchors=controlpoints
                 )
 
                 def output_transform(x, y):
@@ -270,10 +245,14 @@ def compute(state):
                     """
                     u = y[:, 0:1]
                     v = y[:, 1:2]
+
                     x_loc = x[:, 0:1]
                     y_loc = x[:, 1:2]
 
-                    return bkd.concat([u / hyperelasticity_utils.youngs_modulus, v / hyperelasticity_utils.youngs_modulus], axis=1)
+                    u_out = u / hyperelasticity_utils.youngs_modulus
+                    v_out = v * -y_loc / hyperelasticity_utils.youngs_modulus + prescribed_displacement
+
+                    return bkd.concat([u_out, v_out], axis=1)
 
                 # two inputs x and y, output is ux and uy
                 layer_size = [2] + [64] * 5 + [2]
@@ -286,12 +265,12 @@ def compute(state):
             with nvtx_range("train NN - Adam"):
                 # Training parameters
                 learning_rate_adam = 1e-3
-                adam_iterations = 2000
-                lbfgs_iterations = 3000
+                adam_iterations = 3000
+                lbfgs_iterations = 1000
 
-                max_shear_load = -5
-                shear_load = state.time * max_shear_load
-                print(f"\nTraining for a load of {shear_load}.\n")
+                max_prescribed_displacement = -0.2
+                prescribed_displacement = state.time * max_prescribed_displacement
+                print(f"\nTraining for a displacement of {prescribed_displacement}.\n")
                 model.compile("adam", lr=learning_rate_adam)
                 losshistory, train_state = model.train(
                     iterations=adam_iterations, display_every=100
@@ -316,6 +295,9 @@ def compute(state):
                 )
 
             with nvtx_range("copy prediction to 4C state"):
+                alpha = 1 # control factor how much of the predicted displacement to apply in this step, can be used for gradual application of the load
+                output_to_4C = alpha * output_to_4C + (1 - alpha) * state.dis_np.flatten()
+
                 # for now, just pass the state back to 4C
                 state.dis_np[:] = output_to_4C[:]
                 state.vel_np.fill(0.0)
