@@ -1,40 +1,43 @@
 """
-2D Linear Elasticity PINNs for Cantilever Beam under Shear Loading
+2D Linear Elasticity PINN for Cantilever Beam Under Shear Load
 
-This module implements a Physics-Informed Neural Network (PINN) for solving
-2D plane stress linear elasticity problems. It models a cantilever beam subjected
-to shear loading and compares the PINN predictions with analytical solutions.
+This module implements a Physics-Informed Neural Network (PINN) to solve a 2D linear
+elasticity problem for a cantilever beam subjected to distributed shear loading. The solution
+is non-dimensionalized using characteristic length, stress, and displacement scales.
 
-The problem is solved using non-dimensionalized variables to improve numerical
-stability. The geometry is generated using Gmsh, and results are visualized
-using VTK output format.
+The beam is fixed at the left end and has traction-free boundary conditions on the top and
+bottom surfaces, with applied shear on the right end. The PINN learns to predict displacement
+and stress fields by satisfying equilibrium equations and constitutive relations in the domain,
+along with Dirichlet and Neumann boundary conditions.
 
 Reference solution:
 https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.504.4507&rep=rep1&type=pdf
+
+Reference for PINNs formulation:
+A physics-informed deep learning framework for inversion and surrogate modeling in solid mechanics
 
 @author: tsahin
 """
 
 import os
 
+os.environ["DDE_BACKEND"] = "tensorflow.compat.v1"
+
+import os
+
 import deepxde as dde
-import deepxde.backend as bkd
 import numpy as np
+from deepxde.backend import tf
 from pyevtk.hl import unstructuredGridToVTK
 
 from compsim_pinns.elasticity import elasticity_utils
 from compsim_pinns.elasticity.elasticity_utils import (
-    momentum_2d_plane_stress,
     problem_parameters,
     stress_plane_stress,
-    zero_neumman_plane_stress_x,
-    zero_neumman_plane_stress_y,
 )
 from compsim_pinns.geometry.custom_geometry import GmshGeometry2D
 from compsim_pinns.geometry.geometry_utils import calculate_boundary_normals
 from compsim_pinns.geometry.gmsh_models import Block_2D
-
-dde.config.set_default_float("float64")
 
 gmsh_options = {"General.Terminal": 1, "Mesh.Algorithm": 6}
 block_2d = Block_2D(
@@ -68,13 +71,11 @@ nu_analy, lame_analy, shear_analy, youngs_modulus_analy = (
 )  # with dimensions, will be used for analytical solution
 
 # applied shear
-shear_y = 1
+shear_y = 0.01
 
 # characteristic quantities which are used for non-dimensionalization
 characteristic_nu = elasticity_utils.shear  # characteristic shear modulus
-characteristic_disp = (
-    1 / youngs_modulus_analy * shear_y * 100
-)  # characteristic displacement
+characteristic_disp = 1 / youngs_modulus_analy  # characteristic displacement
 characteristic_length = 4  # characteristic length
 characteristic_stress = characteristic_nu * characteristic_disp / characteristic_length
 
@@ -92,12 +93,102 @@ Inertia = 1 / 12 * h**3
 elasticity_utils.geom = geom
 
 
+def pde_stress(x, y):
+    # governing equation
+    """Compute the residual of `pde_stress` for the governing equation.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        y: Field values or model outputs associated with `x`.
+
+    Returns:
+        Any: Computed value returned by `pde_stress`.
+    """
+    sigma_xx_x = dde.grad.jacobian(y, x, i=2, j=0)
+    sigma_yy_y = dde.grad.jacobian(y, x, i=3, j=1)
+    sigma_xy_x = dde.grad.jacobian(y, x, i=4, j=0)
+    sigma_xy_y = dde.grad.jacobian(y, x, i=4, j=1)
+
+    momentum_x = sigma_xx_x + sigma_xy_y
+    momentum_y = sigma_yy_y + sigma_xy_x
+
+    # material law
+    term_x, term_y, term_xy = lin_iso_elasticity_plane_stress(x, y)
+
+    return [momentum_x, momentum_y, term_x, term_y, term_xy]
+
+
+def lin_iso_elasticity_plane_stress(x, y):
+    """Compute lin iso elasticity plane stress for this example setup.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        y: Field values or model outputs associated with `x`.
+
+    Returns:
+        Any: Computed value returned by `lin_iso_elasticity_plane_stress`.
+    """
+    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x, y)
+
+    term_x = sigma_xx - y[:, 2:3]
+    term_y = sigma_yy - y[:, 3:4]
+    term_xy = sigma_xy - y[:, 4:5]
+
+    return term_x, term_y, term_xy
+
+
+def zero_neumann_x(x, y, X):
+    """Compute zero neumann x for this example setup.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        y: Field values or model outputs associated with `x`.
+        X: Input coordinates used by this callback.
+
+    Returns:
+        Any: Computed value returned by `zero_neumann_x`.
+    """
+    sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5]
+
+    normals, cond = calculate_boundary_normals(X, geom)
+
+    sigma_xx_n_x = sigma_xx[cond] * normals[:, 0:1]
+    sigma_xy_n_y = sigma_xy[cond] * normals[:, 1:2]
+
+    traction_x = sigma_xx_n_x + sigma_xy_n_y
+
+    return traction_x
+
+
+def zero_neumann_y(x, y, X):
+    """Compute zero neumann y for this example setup.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        y: Field values or model outputs associated with `x`.
+        X: Input coordinates used by this callback.
+
+    Returns:
+        Any: Computed value returned by `zero_neumann_y`.
+    """
+    sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5]
+
+    normals, cond = calculate_boundary_normals(X, geom)
+
+    sigma_yx_n_x = sigma_xy[cond] * normals[:, 0:1]
+    sigma_yy_n_y = sigma_yy[cond] * normals[:, 1:2]
+
+    traction_y = sigma_yx_n_x + sigma_yy_n_y
+
+    return traction_y
+
+
 def neumann_x(x, y, X):
     """
     Represents the x component of the applied pressure
     """
 
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x, y)
+    sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5]
 
     normals, cond = calculate_boundary_normals(X, geom)
 
@@ -109,7 +200,7 @@ def neumann_y(x, y, X):
     Represents the y component of the applied pressure
     """
 
-    sigma_xx, sigma_yy, sigma_xy = stress_plane_stress(x, y)
+    sigma_xx, sigma_yy, sigma_xy = y[:, 2:3], y[:, 3:4], y[:, 4:5]
 
     normals, cond = calculate_boundary_normals(X, geom)
 
@@ -119,7 +210,7 @@ def neumann_y(x, y, X):
 
     return sigma_yx_n_x + shear_y_norm / (2 * Inertia) * (y_loc - h / 2) * (
         y_loc + h / 2
-    ) * (-1)
+    ) * (-1)  # *normals[:,0:1]
 
 
 nu, lame, shear, youngs_modulus = problem_parameters()
@@ -207,19 +298,19 @@ def right(x, on_boundary):
 
 bc1 = dde.DirichletBC(geom, fun_u_x, left, component=0)
 bc2 = dde.DirichletBC(geom, fun_u_y, left, component=1)
-bc3 = dde.OperatorBC(geom, zero_neumman_plane_stress_x, top_bottom)
-bc4 = dde.OperatorBC(geom, zero_neumman_plane_stress_y, top_bottom)
+bc3 = dde.OperatorBC(geom, zero_neumann_x, top_bottom)
+bc4 = dde.OperatorBC(geom, zero_neumann_y, top_bottom)
 bc5 = dde.OperatorBC(geom, neumann_x, right)
 bc6 = dde.OperatorBC(geom, neumann_y, right)
 
 n_dummy = 1
 data = dde.data.PDE(
     geom,
-    momentum_2d_plane_stress,
-    [bc1, bc2, bc3, bc4, bc5, bc6],
+    pde_stress,
+    [bc1, bc2, bc5, bc6],
     num_domain=n_dummy,
     num_boundary=n_dummy,
-    num_test=None,
+    num_test=n_dummy,
     train_distribution="Sobol",
 )
 
@@ -234,24 +325,54 @@ def input_transform(x):
     Returns:
         Any: Computed value returned by `input_transform`.
     """
-    return bkd.concat(
-        (x[:, 0:1] / characteristic_length, x[:, 1:2] / characteristic_length), axis=1
+    return tf.concat(
+        [x[:, 0:1] / characteristic_length, x[:, 1:2] / characteristic_length], axis=1
     )
 
 
+def output_transform(x, y):
+    """Compute output transform for this example setup.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        y: Field values or model outputs associated with `x`.
+
+    Returns:
+        Any: Computed value returned by `output_transform`.
+    """
+    u = y[:, 0:1]
+    v = y[:, 1:2]
+    sigma_xx = y[:, 2:3]
+    sigma_yy = y[:, 3:4]
+    sigma_xy = y[:, 4:5]
+    x_loc = x[:, 0:1]
+    y_loc = x[:, 1:2]
+
+    return tf.concat(
+        [
+            u,
+            v,
+            sigma_xx,
+            sigma_yy * (-h / 2 + y_loc) * (h / 2 + y_loc),
+            sigma_xy * (-h / 2 + y_loc) * (h / 2 + y_loc),
+        ],
+        axis=1,
+    )  # [ u*1e-2, v*1e-3]
+
+
 # two inputs x and y, output is ux and uy
-layer_size = [2] + [50] * 3 + [2]
+layer_size = [2] + [50] * 4 + [5]
 activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_feature_transform(input_transform)
-loss_weights = [1, 1, 1e0, 1e0, 1, 1, 1, 1]
+net.apply_output_transform(output_transform)
 model = dde.Model(data, net)
 
-model.compile("adam", lr=0.001, loss_weights=loss_weights)
-losshistory, train_state = model.train(iterations=5000, display_every=200)
+model.compile("adam", lr=0.001)
+losshistory, train_state = model.train(epochs=5000, display_every=200)
 
-model.compile("L-BFGS", loss_weights=loss_weights)
+model.compile("L-BFGS")
 model.train()
 
 ###################################################################################
@@ -260,16 +381,20 @@ model.train()
 
 X, offset, cell_types, dol_triangles = geom.get_mesh()
 
-displacement = model.predict(X) * characteristic_disp / characteristic_length
-sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_stress)
+output = model.predict(X)
+u_pred, v_pred = (
+    output[:, 0] * characteristic_disp / characteristic_length,
+    output[:, 1] * characteristic_disp / characteristic_length,
+)
 sigma_xx, sigma_yy, sigma_xy = (
-    sigma_xx * characteristic_stress,
-    sigma_yy * characteristic_stress,
-    sigma_xy * characteristic_stress,
+    output[:, 2] * characteristic_stress,
+    output[:, 3] * characteristic_stress,
+    output[:, 4] * characteristic_stress,
 )
 
 x = X[:, 0:1]
 y = X[:, 1:2]
+Inertia = 1 / 12 * h**3
 
 u_x_analy = (
     shear_y
@@ -294,23 +419,23 @@ sigma_xy_analy = shear_y / (2 * Inertia) * (y - h / 2) * (y + h / 2)
 combined_disp = tuple(
     np.vstack(
         (
-            np.array(displacement[:, 0].tolist()),
-            np.array(displacement[:, 1].tolist()),
-            np.zeros(displacement[:, 0].shape[0]),
+            np.array(u_pred.tolist()),
+            np.array(v_pred.tolist()),
+            np.zeros(u_pred.shape[0]),
+        )
+    )
+)
+combined_stress = tuple(
+    np.vstack(
+        (
+            np.array(sigma_xx.tolist()),
+            np.array(sigma_yy.tolist()),
+            np.array(sigma_xy.tolist()),
         )
     )
 )
 combined_disp_analy = tuple(
     np.vstack((u_x_analy.flatten(), u_y_analy.flatten(), np.zeros(u_x_analy.shape[0])))
-)
-combined_stress = tuple(
-    np.vstack(
-        (
-            np.array(sigma_xx.flatten().tolist()),
-            np.array(sigma_yy.flatten().tolist()),
-            np.array(sigma_xy.flatten().tolist()),
-        )
-    )
 )
 combined_stress_analy = tuple(
     np.vstack(
@@ -318,12 +443,12 @@ combined_stress_analy = tuple(
     )
 )
 
-error_x = abs(np.array(displacement[:, 0].tolist()) - u_x_analy.flatten())
-error_y = abs(np.array(displacement[:, 1].tolist()) - u_y_analy.flatten())
+error_x = abs(np.array(u_pred.tolist()) - u_x_analy.flatten())
+error_y = abs(np.array(v_pred.tolist()) - u_y_analy.flatten())
 combined_error = tuple(np.vstack((error_x, error_y, np.zeros(error_x.shape[0]))))
 
 
-file_path = os.path.join(os.getcwd(), "Beam2D_nondim")
+file_path = os.path.join(os.getcwd(), "Beam2D_nondim_mixed")
 
 x = X[:, 0].flatten()
 y = X[:, 1].flatten()
@@ -342,6 +467,6 @@ unstructuredGridToVTK(
         "disp_analy": combined_disp_analy,
         "stress": combined_stress,
         "stress_analy": combined_stress_analy,
-        "error": combined_error,
+        "disp_error": combined_error,
     },
 )
