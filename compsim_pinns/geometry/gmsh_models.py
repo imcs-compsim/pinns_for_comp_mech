@@ -1648,6 +1648,532 @@ class CooksCantilever(object):
 
         return gmsh_model
 
+class leguan_bridge_quarter(object):
+    def __init__(
+        self,
+        step_1_length_x=0.192,
+        step_2_length_x=0.029,
+        target_total_length_x=13.0,
+        wedge_length_y=0.045,
+        step_1_angle_deg=3.5,
+        step_2_angle_deg=22.0,
+        y_min_coordinate=0.013,
+        z_origin_at_current_z=0.001,
+        thickness=0.001,
+        plate_length_x=0.006,
+        plate_thickness_z=0.001,
+        side_plate_width_y=0.006,
+        far_xz_plate_shift_to_y0=0.0015,
+        c_section_extension_thickness_y=0.003,
+        c_section_extension_height_z=0.0075,
+        c_section_top_thickness_z=0.002,
+        c_section_side_extrusion_x_range=(0.022, 0.026),
+        c_section_side_extrusion_z_range=(0.015, 0.021),
+        rectangular_side_extrusion_center_x=0.133,
+        rectangular_side_extrusion_center_z=0.014,
+        rectangular_side_extrusion_size=0.0015,
+        side_plate_connection_length_x=0.075,
+        side_plate_z_min=0.001,
+        side_plate_z_max=0.0025,
+        x_normal_plate_x_ranges=((0.024, 0.025), (0.066, 0.067), (0.107, 0.108)),
+        x_normal_plate_to_lower_plate_x_range=(0.147, 0.148),
+        x_normal_plate_height_z=0.009,
+        base_mesh_size=0.0055,
+        gmsh_options=None,
+    ):
+        self.step_1_length_x = step_1_length_x
+        self.step_2_length_x = step_2_length_x
+        self.target_total_length_x = target_total_length_x
+        self.wedge_length_y = wedge_length_y
+        self.step_1_angle_deg = step_1_angle_deg
+        self.step_2_angle_deg = step_2_angle_deg
+        self.y_min_coordinate = y_min_coordinate
+        self.z_origin_at_current_z = z_origin_at_current_z
+        self.thickness = thickness
+        self.plate_length_x = plate_length_x
+        self.plate_thickness_z = plate_thickness_z
+        self.side_plate_width_y = side_plate_width_y
+        self.far_xz_plate_shift_to_y0 = far_xz_plate_shift_to_y0
+        self.c_section_extension_thickness_y = c_section_extension_thickness_y
+        self.c_section_extension_height_z = c_section_extension_height_z
+        self.c_section_top_thickness_z = c_section_top_thickness_z
+        self.c_section_side_extrusion_x_range = c_section_side_extrusion_x_range
+        self.c_section_side_extrusion_z_range = c_section_side_extrusion_z_range
+        self.rectangular_side_extrusion_center_x = rectangular_side_extrusion_center_x
+        self.rectangular_side_extrusion_center_z = rectangular_side_extrusion_center_z
+        self.rectangular_side_extrusion_size = rectangular_side_extrusion_size
+        self.side_plate_connection_length_x = side_plate_connection_length_x
+        self.side_plate_z_min = side_plate_z_min
+        self.side_plate_z_max = side_plate_z_max
+        self.x_normal_plate_x_ranges = x_normal_plate_x_ranges
+        self.x_normal_plate_to_lower_plate_x_range = (
+            x_normal_plate_to_lower_plate_x_range
+        )
+        self.x_normal_plate_height_z = x_normal_plate_height_z
+        self.base_mesh_size = base_mesh_size
+        self.gmsh_options = {"Mesh.Algorithm3D": 10}
+        if gmsh_options:
+            self.gmsh_options.update(gmsh_options)
+
+    def _add_wedge(self, origin, length_y, mesh_size):
+        x0, y0, z0 = origin
+        half_y = 0.5 * length_y
+        y_min = y0 - half_y
+
+        x1 = x0 + self.step_1_length_x
+        x2 = x1 + self.step_2_length_x
+        step_1_drop = self.step_1_length_x * np.tan(np.radians(self.step_1_angle_deg))
+        step_2_drop = self.step_2_length_x * np.tan(np.radians(self.step_2_angle_deg))
+        z1 = z0 + step_2_drop
+        z2 = z0 + step_1_drop + step_2_drop
+
+        points = [
+            gmsh.model.occ.addPoint(x0, y_min, z0, mesh_size),
+            gmsh.model.occ.addPoint(x1, y_min, z0, mesh_size),
+            gmsh.model.occ.addPoint(x2, y_min, z0, mesh_size),
+            gmsh.model.occ.addPoint(x1, y_min, z1, mesh_size),
+            gmsh.model.occ.addPoint(x0, y_min, z2, mesh_size),
+        ]
+
+        lines = [
+            gmsh.model.occ.addLine(start, end)
+            for start, end in zip(points, points[1:] + points[:1])
+        ]
+
+        profile_loop = gmsh.model.occ.addCurveLoop(lines)
+        profile_surface = gmsh.model.occ.addPlaneSurface([profile_loop])
+        extruded_entities = gmsh.model.occ.extrude(
+            [(2, profile_surface)], 0, length_y, 0
+        )
+
+        return next(tag for dim, tag in extruded_entities if dim == 3)
+
+    def _wedge_top_z(self, x, origin):
+        x0, _, z0 = origin
+        x1 = x0 + self.step_1_length_x
+        z1 = z0 + self.step_2_length_x * np.tan(np.radians(self.step_2_angle_deg))
+        z2 = z1 + self.step_1_length_x * np.tan(np.radians(self.step_1_angle_deg))
+
+        if x <= x1:
+            return z2 + (z1 - z2) * (x - x0) / self.step_1_length_x
+
+        return z1 + (z0 - z1) * (x - x1) / self.step_2_length_x
+
+    def _add_side_plate(
+        self,
+        x_start,
+        x_end,
+        y_start,
+        length_y,
+        z_min,
+        z_max,
+        top_origin,
+        mesh_size,
+    ):
+        eps = 1e-12
+        x1 = top_origin[0] + self.step_1_length_x
+        x_coordinates = [x_start, x_end]
+        if x_start < x1 < x_end:
+            x_coordinates.append(x1)
+
+        x_segments = sorted(x_coordinates)
+        for level in [z_min, z_max]:
+            for xa, xb in zip(x_segments, x_segments[1:]):
+                za = self._wedge_top_z(xa, top_origin)
+                zb = self._wedge_top_z(xb, top_origin)
+                if (za - level) * (zb - level) < -eps:
+                    x_coordinates.append(xa + (level - za) * (xb - xa) / (zb - za))
+
+        upper_points = []
+        for x in sorted(set(x_coordinates)):
+            top_z = self._wedge_top_z(x, top_origin)
+            if top_z >= z_min - eps:
+                if abs(top_z - z_min) <= eps:
+                    top_z = z_min
+                if abs(top_z - z_max) <= eps:
+                    top_z = z_max
+                upper_points.append((x, min(z_max, max(z_min, top_z))))
+
+        profile_points = [(upper_points[0][0], z_min), (upper_points[-1][0], z_min)]
+        for x, z in reversed(upper_points):
+            profile_points.append((x, z))
+
+        filtered_profile_points = []
+        for x, z in profile_points:
+            if not filtered_profile_points:
+                filtered_profile_points.append((x, z))
+                continue
+
+            last_x, last_z = filtered_profile_points[-1]
+            if abs(x - last_x) > eps or abs(z - last_z) > eps:
+                filtered_profile_points.append((x, z))
+
+        if (
+            len(filtered_profile_points) > 1
+            and abs(filtered_profile_points[0][0] - filtered_profile_points[-1][0])
+            <= eps
+            and abs(filtered_profile_points[0][1] - filtered_profile_points[-1][1])
+            <= eps
+        ):
+            filtered_profile_points.pop()
+
+        point_tags = [
+            gmsh.model.occ.addPoint(x, y_start, z, mesh_size)
+            for x, z in filtered_profile_points
+        ]
+        line_tags = [
+            gmsh.model.occ.addLine(start, end)
+            for start, end in zip(point_tags, point_tags[1:] + point_tags[:1])
+        ]
+
+        profile_loop = gmsh.model.occ.addCurveLoop(line_tags)
+        profile_surface = gmsh.model.occ.addPlaneSurface([profile_loop])
+        extruded_entities = gmsh.model.occ.extrude(
+            [(2, profile_surface)], 0, length_y, 0
+        )
+
+        return next(tag for dim, tag in extruded_entities if dim == 3)
+
+    def _add_x_normal_plate(
+        self,
+        x_start,
+        x_end,
+        y_start,
+        length_y,
+        base_origin,
+        mesh_size,
+        height_z=None,
+        z_min=None,
+    ):
+        z_start_max = self._wedge_top_z(x_start, base_origin)
+        z_end_max = self._wedge_top_z(x_end, base_origin)
+
+        if z_min is None:
+            z_start_min = z_start_max - height_z
+            z_end_min = z_end_max - height_z
+        else:
+            z_start_min = z_min
+            z_end_min = z_min
+
+        points = [
+            gmsh.model.occ.addPoint(x_start, y_start, z_start_min, mesh_size),
+            gmsh.model.occ.addPoint(x_end, y_start, z_end_min, mesh_size),
+            gmsh.model.occ.addPoint(x_end, y_start, z_end_max, mesh_size),
+            gmsh.model.occ.addPoint(x_start, y_start, z_start_max, mesh_size),
+        ]
+        lines = [
+            gmsh.model.occ.addLine(start, end)
+            for start, end in zip(points, points[1:] + points[:1])
+        ]
+
+        profile_loop = gmsh.model.occ.addCurveLoop(lines)
+        profile_surface = gmsh.model.occ.addPlaneSurface([profile_loop])
+        extruded_entities = gmsh.model.occ.extrude(
+            [(2, profile_surface)], 0, length_y, 0
+        )
+
+        return next(tag for dim, tag in extruded_entities if dim == 3)
+
+    def generateGmshModel(self, visualize_mesh=False):
+        """
+        Generates the leguan bridge quarter geometry and meshes it.
+
+        Parameters
+        ----------
+        visualize_mesh : bool
+            Whether to open the mesh in the Gmsh GUI after generation.
+
+        Returns
+        -------
+        gmsh_model : Object
+            The Gmsh model instance.
+        slope_corner_points : numpy.ndarray
+            Coordinates of points 1, 21, 27, 37, 36, and 2 after scaling.
+        seating_corner_points : numpy.ndarray
+            Coordinates of points 25, 26, 91, and 90 after scaling.
+        """
+        step_1_length_x = self.step_1_length_x
+        step_2_length_x = self.step_2_length_x
+        geometry_scale = self.target_total_length_x / (
+            step_1_length_x + step_2_length_x
+        )
+        wedge_length_y = self.wedge_length_y
+        y_min_coordinate = self.y_min_coordinate
+        z_origin_at_current_z = self.z_origin_at_current_z
+        origin = [
+            0.0,
+            y_min_coordinate + 0.5 * wedge_length_y,
+            -z_origin_at_current_z,
+        ]
+        thickness = self.thickness
+        plate_length_x = self.plate_length_x
+        plate_thickness_z = self.plate_thickness_z
+        side_plate_width_y = self.side_plate_width_y
+        far_xz_plate_shift_to_y0 = self.far_xz_plate_shift_to_y0
+        c_section_extension_thickness_y = self.c_section_extension_thickness_y
+        c_section_extension_height_z = self.c_section_extension_height_z
+        c_section_top_thickness_z = self.c_section_top_thickness_z
+        c_section_side_extrusion_x_range = self.c_section_side_extrusion_x_range
+        c_section_side_extrusion_z_range = self.c_section_side_extrusion_z_range
+        rectangular_side_extrusion_center_x = self.rectangular_side_extrusion_center_x
+        rectangular_side_extrusion_center_z = self.rectangular_side_extrusion_center_z
+        rectangular_side_extrusion_size = self.rectangular_side_extrusion_size
+        side_plate_connection_length_x = self.side_plate_connection_length_x
+        side_plate_z_min = self.side_plate_z_min
+        side_plate_z_max = self.side_plate_z_max
+        x_normal_plate_x_ranges = self.x_normal_plate_x_ranges
+        x_normal_plate_to_lower_plate_x_range = (
+            self.x_normal_plate_to_lower_plate_x_range
+        )
+        x_normal_plate_height_z = self.x_normal_plate_height_z
+        mesh_size = self.base_mesh_size * geometry_scale
+
+        gmsh.initialize(sys.argv)
+        gmsh_model = gmsh.model
+        gmsh_model.add("leguan_bridge_quarter")
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMin", mesh_size)
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMax", mesh_size)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if isinstance(value, str):
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+
+        geometry_length_y = wedge_length_y
+        geometry_origin = origin
+        outer_origin = [
+            geometry_origin[0],
+            geometry_origin[1],
+            geometry_origin[2] + thickness,
+        ]
+        outer_volume = self._add_wedge(
+            outer_origin,
+            geometry_length_y,
+            mesh_size,
+        )
+        cutout_volume = self._add_wedge(
+            geometry_origin,
+            geometry_length_y + 2 * thickness,
+            mesh_size,
+        )
+        cut_entities, _ = gmsh.model.occ.cut(
+            [(3, outer_volume)],
+            [(3, cutout_volume)],
+            removeObject=True,
+            removeTool=True,
+        )
+        tip_x = geometry_origin[0] + step_1_length_x + step_2_length_x
+        y_min = geometry_origin[1] - 0.5 * geometry_length_y
+        y_max = geometry_origin[1] + 0.5 * geometry_length_y
+        plate_x = tip_x - plate_length_x
+        plate_volume = gmsh.model.occ.addBox(
+            plate_x,
+            y_min,
+            geometry_origin[2],
+            plate_length_x,
+            geometry_length_y,
+            plate_thickness_z,
+        )
+        side_plate_length_x = tip_x - geometry_origin[0]
+        side_plate_volumes = [
+            self._add_side_plate(
+                geometry_origin[0],
+                geometry_origin[0] + side_plate_length_x,
+                y_min,
+                side_plate_width_y,
+                geometry_origin[2] + side_plate_z_min,
+                geometry_origin[2] + side_plate_z_max,
+                outer_origin,
+                mesh_size,
+            ),
+            self._add_side_plate(
+                geometry_origin[0],
+                geometry_origin[0] + side_plate_length_x,
+                y_max - side_plate_width_y,
+                side_plate_width_y,
+                geometry_origin[2] + side_plate_z_min,
+                geometry_origin[2] + side_plate_z_max,
+                outer_origin,
+                mesh_size,
+            ),
+        ]
+        side_plate_connection_volume = self._add_side_plate(
+            tip_x - side_plate_connection_length_x,
+            tip_x,
+            y_min,
+            geometry_length_y,
+            geometry_origin[2] + side_plate_z_min,
+            geometry_origin[2] + side_plate_z_max,
+            outer_origin,
+            mesh_size,
+        )
+        c_section_top_z = (
+            geometry_origin[2] + side_plate_z_min + c_section_extension_height_z
+        )
+        c_section_top_z_min = c_section_top_z - c_section_top_thickness_z
+        near_xz_web_volumes = [
+            self._add_side_plate(
+                geometry_origin[0],
+                tip_x,
+                y_min,
+                thickness,
+                geometry_origin[2] + side_plate_z_min,
+                geometry_origin[2] + side_plate_z_max,
+                outer_origin,
+                mesh_size,
+            ),
+            self._add_side_plate(
+                geometry_origin[0],
+                tip_x,
+                y_min,
+                thickness,
+                c_section_top_z,
+                1.0,
+                outer_origin,
+                mesh_size,
+            ),
+        ]
+        far_xz_web_volume = self._add_side_plate(
+            geometry_origin[0],
+            tip_x,
+            y_max - thickness - far_xz_plate_shift_to_y0,
+            thickness,
+            geometry_origin[2] + side_plate_z_min,
+            1.0,
+            outer_origin,
+            mesh_size,
+        )
+        c_section_extension_volume = self._add_side_plate(
+            geometry_origin[0],
+            tip_x,
+            y_min + side_plate_width_y - c_section_extension_thickness_y,
+            c_section_extension_thickness_y,
+            geometry_origin[2] + side_plate_z_min,
+            geometry_origin[2] + side_plate_z_min + c_section_extension_height_z,
+            outer_origin,
+            mesh_size,
+        )
+        c_section_top_volume = self._add_side_plate(
+            geometry_origin[0],
+            tip_x,
+            y_min,
+            side_plate_width_y,
+            c_section_top_z_min,
+            c_section_top_z,
+            outer_origin,
+            mesh_size,
+        )
+        c_section_side_extrusion_volume = gmsh.model.occ.addBox(
+            geometry_origin[0] + c_section_side_extrusion_x_range[0],
+            0.0,
+            c_section_side_extrusion_z_range[0],
+            c_section_side_extrusion_x_range[1] - c_section_side_extrusion_x_range[0],
+            y_min,
+            c_section_side_extrusion_z_range[1] - c_section_side_extrusion_z_range[0],
+        )
+        rectangular_side_extrusion_volume = gmsh.model.occ.addBox(
+            geometry_origin[0]
+            + rectangular_side_extrusion_center_x
+            - 0.5 * rectangular_side_extrusion_size,
+            0.0,
+            rectangular_side_extrusion_center_z - 0.5 * rectangular_side_extrusion_size,
+            rectangular_side_extrusion_size,
+            y_min,
+            rectangular_side_extrusion_size,
+        )
+        far_xz_web_y_min = y_max - thickness - far_xz_plate_shift_to_y0
+        x_normal_plate_length_y = far_xz_web_y_min - y_min
+        x_normal_plate_volumes = [
+            self._add_x_normal_plate(
+                geometry_origin[0] + x_min,
+                geometry_origin[0] + x_max,
+                y_min,
+                x_normal_plate_length_y,
+                geometry_origin,
+                mesh_size,
+                height_z=x_normal_plate_height_z,
+            )
+            for x_min, x_max in x_normal_plate_x_ranges
+        ]
+        x_normal_plate_to_lower_plate_y_segments = [
+            (
+                y_min + thickness,
+                side_plate_width_y - thickness,
+                c_section_top_z,
+            ),
+            (
+                y_min + side_plate_width_y,
+                far_xz_web_y_min - (y_min + side_plate_width_y),
+                geometry_origin[2] + side_plate_z_max,
+            ),
+        ]
+        x_normal_plate_to_lower_plate_volumes = [
+            self._add_x_normal_plate(
+                geometry_origin[0] + x_normal_plate_to_lower_plate_x_range[0],
+                geometry_origin[0] + x_normal_plate_to_lower_plate_x_range[1],
+                y_start,
+                length_y,
+                geometry_origin,
+                mesh_size,
+                z_min=z_min,
+            )
+            for y_start, length_y, z_min in x_normal_plate_to_lower_plate_y_segments
+        ]
+        shell_volumes = [(dim, tag) for dim, tag in cut_entities if dim == 3]
+        bridge_entities, _ = gmsh.model.occ.fuse(
+            shell_volumes,
+            [
+                (3, plate_volume),
+                (3, side_plate_connection_volume),
+                (3, far_xz_web_volume),
+                (3, c_section_extension_volume),
+                (3, c_section_top_volume),
+                (3, c_section_side_extrusion_volume),
+                (3, rectangular_side_extrusion_volume),
+            ]
+            + [(3, tag) for tag in near_xz_web_volumes]
+            + [(3, tag) for tag in side_plate_volumes]
+            + [(3, tag) for tag in x_normal_plate_volumes]
+            + [(3, tag) for tag in x_normal_plate_to_lower_plate_volumes],
+            removeObject=True,
+            removeTool=True,
+        )
+        gmsh.model.occ.dilate(
+            bridge_entities,
+            0.0,
+            0.0,
+            0.0,
+            geometry_scale,
+            geometry_scale,
+            geometry_scale,
+        )
+        gmsh.model.occ.synchronize()
+        slope_corner_points = np.array(
+            [
+                gmsh.model.getValue(0, point_tag, [])
+                for point_tag in (1, 21, 27, 37, 36, 2)
+            ]
+        )
+        seating_corner_points = np.array(
+            [gmsh.model.getValue(0, point_tag, []) for point_tag in (25, 26, 91, 90)]
+        )
+
+        volume_group = gmsh.model.addPhysicalGroup(
+            3,
+            [tag for dim, tag in bridge_entities if dim == 3],
+        )
+        gmsh.model.setPhysicalName(3, volume_group, "leguan_bridge_quarter")
+
+        gmsh.model.mesh.generate(3)
+
+        if visualize_mesh:
+            if "-nopopup" not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model, slope_corner_points, seating_corner_points
+
 class QuarterDisc(object):
     def __init__(self, radius, center, angle=None, refine_times=None, mesh_size=0.15, gmsh_options=None):
         self.radius = radius
