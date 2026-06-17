@@ -97,7 +97,7 @@ class GmshGeometry3D(Geometry):
         if self.external_dim_size:
             node_coords_xyz_inside = self.add_external_dim(node_coords_xyz_inside)
 
-        return self.is_in_tolerance(x, node_coords_xyz_inside)
+        return _is_in_tolerance(x, node_coords_xyz_inside)
 
     def on_boundary(self, x):
         """Check if x is on the geometry boundary."""
@@ -117,12 +117,7 @@ class GmshGeometry3D(Geometry):
         if self.external_dim_size:
             node_coords_xyz_boundary = self.add_external_dim(node_coords_xyz_boundary)
 
-        return self.is_in_tolerance(x, node_coords_xyz_boundary)
-
-    def is_in_tolerance(self, provided, target):
-        """Check whether provided points match any target point within tolerance."""
-
-        return _is_in_tolerance(provided, target)
+        return _is_in_tolerance(x, node_coords_xyz_boundary)
 
     def boundary_normal(self, x):
         """Slice the unit normal at x for Neumann or Robin boundary conditions."""
@@ -1059,7 +1054,7 @@ class GmshGeometryElement(Geometry):
         if self.external_dim_size:
             node_coords_x_inside = self.add_external_dim(node_coords_x_inside)
 
-        return self.is_in_tolerance(x, node_coords_x_inside)
+        return _is_in_tolerance(x, node_coords_x_inside)
 
     def on_boundary(self, x):
         """Check if x is on the geometry boundary."""
@@ -1081,12 +1076,7 @@ class GmshGeometryElement(Geometry):
         if self.external_dim_size:
             node_coords_xyz_boundary = self.add_external_dim(node_coords_xyz_boundary)
 
-        return self.is_in_tolerance(x, node_coords_xyz_boundary)
-
-    def is_in_tolerance(self, provided, target):
-        """Check whether provided points match any target point within tolerance."""
-
-        return _is_in_tolerance(provided, target)
+        return _is_in_tolerance(x, node_coords_xyz_boundary)
 
     def boundary_normal(self, x):
         """Slice the unit normal at x for Neumann or Robin boundary conditions."""
@@ -1648,7 +1638,7 @@ class GmshGeometryElementDeepEnergy(Geometry):
         if self.external_dim_size:
             node_coords_x_inside = self.add_external_dim(node_coords_x_inside)
 
-        return self.is_in_tolerance(x, node_coords_x_inside)
+        return _is_in_tolerance(x, node_coords_x_inside)
 
     def on_boundary(self, x):
         """Check if x is on the geometry boundary."""
@@ -1670,12 +1660,7 @@ class GmshGeometryElementDeepEnergy(Geometry):
         if self.external_dim_size:
             node_coords_xyz_boundary = self.add_external_dim(node_coords_xyz_boundary)
 
-        return self.is_in_tolerance(x, node_coords_xyz_boundary)
-
-    def is_in_tolerance(self, provided, target):
-        """Check whether provided points match any target point within tolerance."""
-
-        return _is_in_tolerance(provided, target)
+        return _is_in_tolerance(x, node_coords_xyz_boundary)
 
     def boundary_normal(self, x):
         """Slice the unit normal at x for Neumann or Robin boundary conditions."""
