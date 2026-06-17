@@ -2151,10 +2151,12 @@ class GmshGeometryElementDeepEnergy(Geometry):
     def get_flat_boundary_face_normals(self, edge_coordinate_list, coordinate_list):
         """Compute repeated outward normals for a flat boundary edge or face."""
 
+        # Collect face and element centers
         face_coordinates = np.vstack(edge_coordinate_list)
         element_center = np.mean(np.vstack(coordinate_list), axis=0)
         face_center = np.mean(face_coordinates, axis=0)
 
+        # Build a normal from the boundary edge or face orientation
         if self.dim == 2:
             tangent = face_coordinates[1] - face_coordinates[0]
             normal = np.array([tangent[1], -tangent[0]])
@@ -2163,14 +2165,18 @@ class GmshGeometryElementDeepEnergy(Geometry):
                 face_coordinates[1] - face_coordinates[0],
                 face_coordinates[2] - face_coordinates[0],
             )
+
+        # Skip degenerate edges or faces
         normal_norm = np.linalg.norm(normal)
         if np.isclose(normal_norm, 0):
             return np.zeros((self.n_gp_boundary, self.dim))
 
+        # Normalize and orient away from the element center
         normal = normal / normal_norm
         if np.dot(normal, face_center - element_center) < 0:
             normal = -normal
 
+        # Use the same flat normal at every boundary Gauss point
         return np.repeat(normal.reshape(1, -1), self.n_gp_boundary, axis=0)
 
     def get_element_info(self):
