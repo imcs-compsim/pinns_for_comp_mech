@@ -18,12 +18,12 @@ To clone the main repository together with all submodules:
 ```bash
 $ git clone --recurse-submodules <https://github.com/imcs-compsim/pinns_for_comp_mech.git>
 ```
-If you alredy cloned the repository without the submodules, you can get them by running the following command in the top-level folder:
+If you already cloned the repository without the submodules, you can get them by running the following command in the top-level folder:
 ```bash
 $ git submodule update --init --recursive
 ```
 ## Commit, pushing and pulling
-As the main repo and the submodules are separate repositories you also have to take care of their respective commit structures and branches. This explicity means that when changing something in the submodule you have to update the reference of the main repository to point to the respective commit hash of the submodule repository. To do so
+As the main repo and the submodules are separate repositories you also have to take care of their respective commit structures and branches. This explicitly means that when changing something in the submodule you have to update the reference of the main repository to point to the respective commit hash of the submodule repository. To do so
 ```bash
 $ git pull --recurse-submodules
 ```
