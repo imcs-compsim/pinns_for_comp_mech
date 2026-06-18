@@ -649,6 +649,123 @@ class Rectangle_4PointBendingCentered(object):
         return gmsh_model
 
 
+class CooksCantilever2D(object):
+    def __init__(
+        self,
+        origin=[0.0, 0.0],
+        length=0.048,
+        web_height=0.044,
+        load_height=0.016,
+        divisions=[48, 16],
+        mesh_size=None,
+        gmsh_options=None,
+    ):
+        """
+        Initializes Cook's cantilever geometry definition in 2D.
+
+        The geometry follows https://doi.org/10.1007/s11831-020-09477-3.
+        Dimensions are in SI units.
+
+        Parameters
+        ----------
+        origin : list or tuple of float, optional
+            Coordinates of the beam origin as [x0, y0].
+        length : float, optional
+            Beam length in the x-direction.
+        web_height : float, optional
+            Height of the left-side web.
+        load_height : float, optional
+            Height of the loaded end face.
+        divisions : list or tuple of int, optional
+            Structured mesh divisions along [x, y].
+        mesh_size : float, optional
+            Target mesh size. If omitted, it is derived from dimensions and divisions.
+        gmsh_options : dict, optional
+            Additional Gmsh options applied before mesh generation.
+        """
+        self.origin = origin
+        self.length = length
+        self.web_height = web_height
+        self.load_height = load_height
+        self.divisions = divisions
+        self.mesh_size = mesh_size
+        self.gmsh_options = gmsh_options
+
+    def generateGmshModel(self, visualize_mesh=False):
+        """
+        Generates Cook's cantilever in 2D with a structured quadrilateral mesh.
+
+        The geometry follows https://doi.org/10.1007/s11831-020-09477-3.
+        Dimensions are in SI units.
+
+        Parameters
+        ----------
+        visualize_mesh : boolean
+            A boolean value whether to open the mesh in the Gmsh GUI after generation (defaults to false).
+
+        Returns
+        -------
+        gmsh_model: Object
+            Gmsh model
+        """
+        nx, ny = self.divisions
+        x0, y0 = self.origin
+        z0 = 0.0
+        x1 = x0 + self.length
+        y_web = y0 + self.web_height
+        y_tip = y_web + self.load_height
+
+        lcar = self.mesh_size
+        if lcar is None:
+            lcar = min(self.length / nx, self.web_height / ny)
+
+        gmsh.initialize(sys.argv)
+        gmsh_model = gmsh.model
+        factory = gmsh_model.occ
+        mesh = gmsh_model.mesh
+        gmsh_model.add("CooksCantilever2D")
+
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMin", lcar)
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMax", lcar)
+        gmsh.option.setNumber("Mesh.RecombineAll", 1)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if isinstance(value, str):
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+
+        p1 = factory.addPoint(x0, y0, z0, lcar)
+        p2 = factory.addPoint(x1, y_web, z0, lcar)
+        p3 = factory.addPoint(x1, y_tip, z0, lcar)
+        p4 = factory.addPoint(x0, y_web, z0, lcar)
+
+        l1 = factory.addLine(p1, p2)
+        l2 = factory.addLine(p2, p3)
+        l3 = factory.addLine(p3, p4)
+        l4 = factory.addLine(p4, p1)
+
+        curve_loop = factory.addCurveLoop([l1, l2, l3, l4])
+        surface = factory.addPlaneSurface([curve_loop])
+        factory.synchronize()
+
+        mesh.setTransfiniteCurve(l1, nx + 1)
+        mesh.setTransfiniteCurve(l3, nx + 1)
+        mesh.setTransfiniteCurve(l2, ny + 1)
+        mesh.setTransfiniteCurve(l4, ny + 1)
+        mesh.setTransfiniteSurface(surface, cornerTags=[p1, p2, p3, p4])
+        mesh.setRecombine(2, surface)
+
+        mesh.generate(2)
+
+        if visualize_mesh:
+            if "-nopopup" not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model
+
+
 class QuarterDisc(object):
     def __init__(
         self,
@@ -1686,7 +1803,7 @@ class QuarterTorus3D(object):
         return gmsh_model
 
 
-class CooksCantilever(object):
+class CooksCantilever3D(object):
     def __init__(
         self,
         origin=[0.0, 0.0, 0.0],
@@ -1699,7 +1816,7 @@ class CooksCantilever(object):
         gmsh_options=None,
     ):
         """
-        Initializes Cook's cantilever geometry definition.
+        Initializes Cook's cantilever geometry definition in 3D.
 
         The geometry follows https://doi.org/10.1007/s11831-020-09477-3.
         Dimensions are in SI units.
@@ -1734,7 +1851,7 @@ class CooksCantilever(object):
 
     def generateGmshModel(self, visualize_mesh=False):
         """
-        Generates Cook's cantilever with a structured hexahedral mesh.
+        Generates Cook's cantilever in 3D with a structured hexahedral mesh.
 
         The geometry follows https://doi.org/10.1007/s11831-020-09477-3.
         Dimensions are in SI units.
@@ -1764,7 +1881,7 @@ class CooksCantilever(object):
         gmsh_model = gmsh.model
         factory = gmsh_model.occ
         mesh = gmsh_model.mesh
-        gmsh_model.add("CooksCantilever")
+        gmsh_model.add("CooksCantilever3D")
 
         gmsh.option.setNumber("Mesh.CharacteristicLengthMin", lcar)
         gmsh.option.setNumber("Mesh.CharacteristicLengthMax", lcar)

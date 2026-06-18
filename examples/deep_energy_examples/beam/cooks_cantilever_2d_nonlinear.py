@@ -15,7 +15,7 @@ from compsim_pinns.postprocess.custom_callbacks import (
     WeightsBiasPlateauStopping,
 )
 
-dde.config.set_default_float("float64")  # use double precision (needed for L-BFGS)
+dde.config.set_default_float("float32")  # use double precision (needed for L-BFGS)
 seed = 17
 np.random.seed(seed)
 torch.manual_seed(seed)
@@ -27,16 +27,15 @@ if torch.cuda.is_available():
 Torsion test for a 3D block, done with an incremental approach.
 """
 
-
 from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
 from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-from compsim_pinns.geometry.gmsh_models import CooksCantilever3D
+from compsim_pinns.geometry.gmsh_models import CooksCantilever2D
 from compsim_pinns.hyperelasticity import hyperelasticity_utils
 from compsim_pinns.hyperelasticity.hyperelasticity_utils import (
     bkd_log,
     compute_elastic_properties,
-    deformation_gradient_3D,
-    matrix_determinant_3D,
+    deformation_gradient_2D,
+    matrix_determinant_2D,
 )
 from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
@@ -59,22 +58,19 @@ time_dict["meshing"].append(time.time())
 length = 0.048
 web_height = 0.044
 load_height = 0.016
-thickness = 0.001
 n_elements_length = 48  # 48
 n_elements_height = 16  # 16
-n_elements_thickness = 1
-Cantilever = CooksCantilever3D(
+Cantilever = CooksCantilever2D(
     length=length,
     web_height=web_height,
     load_height=load_height,
-    thickness=thickness,
-    divisions=[n_elements_length, n_elements_height, n_elements_thickness],
+    divisions=[n_elements_length, n_elements_height],
 )
 gmsh_model = Cantilever.generateGmshModel(visualize_mesh=False)
 time_dict["meshing"].append(time.time())
 time_dict["element_information"].append(time.time())
 
-domain_dimension = 3
+domain_dimension = 2
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=domain_dimension, ngp=2
 )  # gauss_legendre gauss_labotto
@@ -110,28 +106,32 @@ geom = GmshGeometryElementDeepEnergy(
 time_dict["element_information"].append(time.time())
 time_dict["setup"].append(time.time())
 
-hyperelasticity_utils.lame = 432.099
-hyperelasticity_utils.shear = 185.185
+hyperelasticity_utils.lame = 80.194e6
+hyperelasticity_utils.shear = 120.291e6
 
-nu, lame, shear, e_modul = compute_elastic_properties()
+nu, lame, shear, youngs_modulus = compute_elastic_properties()
 
 
-def strain_energy_neo_hookean_3d_modified(x, y):
-    # Deformation gradient (3x3)
-    f_xx, f_yy, f_zz, f_xy, f_yx, f_xz, f_zx, f_yz, f_zy = deformation_gradient_3D(x, y)
+def strain_energy_neo_hookean_2D_modified(x, y):
+    # Deformation gradient (2x2)
+    f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y)
 
     # Construct C = F^T F (right Cauchy-Green tensor)
-    C_xx = f_xx * f_xx + f_yx * f_yx + f_zx * f_zx
-    C_yy = f_xy * f_xy + f_yy * f_yy + f_zy * f_zy
-    C_zz = f_xz * f_xz + f_yz * f_yz + f_zz * f_zz
+    C_xx = f_xx * f_xx + f_yx * f_yx
+    C_yy = f_xy * f_xy + f_yy * f_yy
 
-    I_1 = C_xx + C_yy + C_zz  # first invariant of C
+    I_1 = C_xx + C_yy  # first invariant of C
 
     # Determinant of F
-    det_f = matrix_determinant_3D(f_xx, f_xy, f_xz, f_yx, f_yy, f_yz, f_zx, f_zy, f_zz)
+    det_f = matrix_determinant_2D(
+        f_xx,
+        f_xy,
+        f_yx,
+        f_yy,
+    )
     # Strain energy
     W = (
-        0.5 * shear * (I_1 - 3)
+        0.5 * shear * (I_1 - 2)
         + lame / 4 * (det_f**2 - 1)
         - (lame / 2 + shear) * bkd_log(det_f)
     )
@@ -139,32 +139,29 @@ def strain_energy_neo_hookean_3d_modified(x, y):
     return W
 
 
-def cauchy_stress_3D_modified(x, y):
-    f_xx, f_yy, f_zz, f_xy, f_yx, f_xz, f_zx, f_yz, f_zy = deformation_gradient_3D(x, y)
-    det_f = matrix_determinant_3D(f_xx, f_xy, f_xz, f_yx, f_yy, f_yz, f_zx, f_zy, f_zz)
+def cauchy_stress_2D_modified(x, y):
+    f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y)
+    det_f = matrix_determinant_2D(
+        f_xx,
+        f_xy,
+        f_yx,
+        f_yy,
+    )
 
     factor_1 = (lame * (det_f**2 - 1) - 2 * shear) / (2 * det_f)
     factor_2 = shear / det_f
 
-    # Right Cauchy-Green tensor C = F^T * F
-    C_xx = f_xx**2 + f_yx**2 + f_zx**2
-    C_yy = f_xy**2 + f_yy**2 + f_zy**2
-    C_zz = f_xz**2 + f_yz**2 + f_zz**2
-    C_xy = f_xx * f_xy + f_yx * f_yy + f_zx * f_zy
-    C_xz = f_xx * f_xz + f_yx * f_yz + f_zx * f_zz
-    C_yz = f_xy * f_xz + f_yy * f_yz + f_zy * f_zz
+    # Left Cauchy-Green tensor b = F * F^T
+    b_xx = f_xx * f_xx + f_xy * f_xy
+    b_yy = f_yx * f_yx + f_yy * f_yy
+    b_xy = f_xx * f_yx + f_xy * f_yy
 
-    T_xx = factor_1 + factor_2 * C_xx
-    T_yy = factor_1 + factor_2 * C_yy
-    T_zz = factor_1 + factor_2 * C_zz
-    T_xy = factor_2 * C_xy
+    T_xx = factor_1 + factor_2 * b_xx
+    T_yy = factor_1 + factor_2 * b_yy
+    T_xy = factor_2 * b_xy
     T_yx = T_xy
-    T_xz = factor_2 * C_xz
-    T_zx = T_xz
-    T_yz = factor_2 * C_yz
-    T_zy = T_yz
 
-    return T_xx, T_yy, T_zz, T_xy, T_yx, T_xz, T_zx, T_yz, T_zy
+    return T_xx, T_yy, T_xy, T_yx
 
 
 def potential_energy(
@@ -185,14 +182,13 @@ def potential_energy(
     boundary_selection_tag,
 ):
 
-    internal_energy_density = strain_energy_neo_hookean_3d_modified(inputs, outputs)[
+    internal_energy_density = strain_energy_neo_hookean_2D_modified(inputs, outputs)[
         beg_pde:beg_boundary
     ]
 
     internal_energy = (
         global_element_weights_t[:, 0:1]
         * global_element_weights_t[:, 1:2]
-        * global_element_weights_t[:, 2:3]
         * (internal_energy_density)
         * jacobian_t
     )
@@ -204,7 +200,6 @@ def potential_energy(
     external_force_density = shear_force * u_y
     external_work = (
         global_weights_boundary_t[:, 0:1][cond]
-        * global_weights_boundary_t[:, 1:2][cond]
         * (external_force_density)
         * jacobian_boundary_t[cond]
     )
@@ -228,24 +223,19 @@ def output_transform(x, y):
     # displacement field (u, v, w)
     u = y[:, 0:1]
     v = y[:, 1:2]
-    w = y[:, 2:3]
 
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
-    z_loc = x[:, 2:3]
 
-    u_out = x_loc * u
-    v_out = x_loc * v
-    w_out = (
-        x_loc * (thickness / 2 - z_loc) * (thickness / 2 + z_loc) * w
-    )  # needed due to the weird normal implementation
+    u_out = x_loc * u / youngs_modulus
+    v_out = x_loc * v / youngs_modulus
 
-    return bkd.concat([u_out, v_out, w_out], axis=1)
+    return bkd.concat([u_out, v_out], axis=1)
 
 
 # 3 inputs, 3 outputs for 3D
-layer_size = [3] + [50] * 5 + [3]  # also try [3] + [50] * 10 + [3]
-activation = "tanh"  # also try "gelu"
+layer_size = [2] + [50] * 5 + [2]
+activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
@@ -255,9 +245,9 @@ model = dde.Model(data, net)
 
 # Model parameters
 steps = 1
-max_shear_force = 20
+max_shear_force = 8e6
 model_path = str(Path(__file__).parent)
-simulation_case = f"3d_cooks_cantilever_nonlinear"
+simulation_case = f"cooks_cantilever_2d_nonlinear"
 learning_rate_adam = 1e-3
 learning_rate_total_decay = 1e-3
 adam_iterations = 5000
@@ -270,15 +260,15 @@ l2_iteration = []
 relaxation_adam_iterations = (
     0  # just to not get any errors when not using it (undefined variable in naming)
 )
-relaxation = False
+relaxation = True
 earlystopping = False
 earlystopping_choice = "weightsbiases"  # "loss" or "weightsbiases"
 time_dict["setup"].append(time.time())
 
 if relaxation:
     time_dict["relaxation_compiling"].append(time.time())
-    shear_force = max_shear_force / steps
-    relaxation_adam_iterations = 3000
+    shear_force = max_shear_force / steps * 1e-6
+    relaxation_adam_iterations = 1000
     print(f"\nRelaxation step for initial shear force of {shear_force}.\n")
     model.compile(
         "adam", lr=learning_rate_adam, loss_weights=[energy_scale, energy_scale]
@@ -339,33 +329,35 @@ for i in range(steps):
     points, _, cell_types, elements = geom.get_mesh()
     n_nodes_per_cell = elements.shape[1]
     n_cells = elements.shape[0]
+    n_points = points.shape[0]
     cells = np.hstack([np.insert(elem, 0, n_nodes_per_cell) for elem in elements])
     cells = np.array(cells, dtype=np.int64)
     cell_types = np.array(cell_types, dtype=np.uint8)
-    grid = pv.UnstructuredGrid(cells, cell_types, points)
+    grid = pv.UnstructuredGrid(
+        cells, cell_types, np.c_[points, np.zeros((n_points, 1))]
+    )
     output = model.predict(points)
-    displacement_pred = np.column_stack(
-        (output[:, 0:1], output[:, 1:2], output[:, 2:3])
+    displacement_pred = np.column_stack((output[:, 0:1], output[:, 1:2]))
+    sigma_xx, sigma_yy, sigma_xy, sigma_yx = model.predict(
+        points, operator=cauchy_stress_2D_modified
     )
-    (
-        sigma_xx,
-        sigma_yy,
-        sigma_zz,
-        sigma_xy,
-        sigma_yx,
-        sigma_xz,
-        sigma_zx,
-        sigma_yz,
-        sigma_zy,
-    ) = model.predict(points, operator=cauchy_stress_3D_modified)
-    cauchy_stress_pred = np.column_stack(
-        (sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz)
+    cauchy_stress_pred = np.column_stack((sigma_xx, sigma_yy, sigma_xy))
+    grid.point_data["pred_displacement"] = np.c_[
+        displacement_pred, np.zeros((n_points, 1))
+    ]
+    grid.point_data["pred_cauchy_stress"] = np.column_stack(
+        (
+            cauchy_stress_pred[:, 0],
+            cauchy_stress_pred[:, 1],
+            np.zeros((n_points, 1)),
+            cauchy_stress_pred[:, 2],
+            np.zeros((n_points, 1)),
+            np.zeros((n_points, 1)),
+        )
     )
-    grid.point_data["pred_displacement"] = displacement_pred
-    grid.point_data["pred_cauchy_stress"] = cauchy_stress_pred
 
     # print Displacement of Point A
-    point_A = np.array([[0.048, 0.060, 0.0]])
+    point_A = np.array([[0.048, 0.060]])
     displacement_A = model.predict(point_A)
     print(
         f"The predicted y-displacement in point A is {displacement_A[:, 1][0] * 1e3} mm."
