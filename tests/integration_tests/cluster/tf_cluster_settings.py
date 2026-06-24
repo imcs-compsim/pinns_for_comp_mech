@@ -1,9 +1,9 @@
 from deepxde.backend import tf
-import os 
+import os
 
-'''
+"""
 This script is used to set tf parameters for the cluster
-'''
+"""
 
 tf.config.threading.set_intra_op_parallelism_threads(
     int(os.environ["TF_NUM_INTRAOP_THREADS"])
