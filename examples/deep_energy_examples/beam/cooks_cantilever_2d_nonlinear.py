@@ -2,7 +2,6 @@ import os
 import time
 from pathlib import Path
 
-# os.environ["DDE_BACKEND"] = "pytorch"
 import deepxde as dde
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,7 +14,7 @@ from compsim_pinns.postprocess.custom_callbacks import (
     WeightsBiasPlateauStopping,
 )
 
-dde.config.set_default_float("float32")  # use double precision (needed for L-BFGS)
+dde.config.set_default_float("float64")  # use double precision (needed for L-BFGS)
 seed = 17
 np.random.seed(seed)
 torch.manual_seed(seed)
@@ -58,6 +57,7 @@ time_dict["meshing"].append(time.time())
 length = 0.048
 web_height = 0.044
 load_height = 0.016
+thickness = 0.001
 n_elements_length = 48  # 48
 n_elements_height = 16  # 16
 Cantilever = CooksCantilever2D(
@@ -125,9 +125,9 @@ def strain_energy_neo_hookean_2D_modified(x, y):
     # Determinant of F
     det_f = matrix_determinant_2D(
         f_xx,
+        f_yy,
         f_xy,
         f_yx,
-        f_yy,
     )
     # Strain energy
     W = (
@@ -143,17 +143,17 @@ def cauchy_stress_2D_modified(x, y):
     f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y)
     det_f = matrix_determinant_2D(
         f_xx,
+        f_yy,
         f_xy,
         f_yx,
-        f_yy,
     )
 
     factor_1 = (lame * (det_f**2 - 1) - 2 * shear) / (2 * det_f)
     factor_2 = shear / det_f
 
     # Left Cauchy-Green tensor b = F * F^T
-    b_xx = f_xx * f_xx + f_xy * f_xy
-    b_yy = f_yx * f_yx + f_yy * f_yy
+    b_xx = f_xx**2 + f_xy**2
+    b_yy = f_yx**2 + f_yy**2
     b_xy = f_xx * f_yx + f_xy * f_yy
 
     T_xx = factor_1 + factor_2 * b_xx
@@ -191,6 +191,7 @@ def potential_energy(
         * global_element_weights_t[:, 1:2]
         * (internal_energy_density)
         * jacobian_t
+        * thickness
     )
     ####################################################################################################################
     # get the external work
@@ -202,6 +203,7 @@ def potential_energy(
         global_weights_boundary_t[:, 0:1][cond]
         * (external_force_density)
         * jacobian_boundary_t[cond]
+        * thickness
     )
 
     return [internal_energy, -external_work]
@@ -227,8 +229,8 @@ def output_transform(x, y):
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
 
-    u_out = x_loc * u / youngs_modulus
-    v_out = x_loc * v / youngs_modulus
+    u_out = x_loc * u
+    v_out = x_loc * v
 
     return bkd.concat([u_out, v_out], axis=1)
 
@@ -260,15 +262,15 @@ l2_iteration = []
 relaxation_adam_iterations = (
     0  # just to not get any errors when not using it (undefined variable in naming)
 )
-relaxation = True
+relaxation = False
 earlystopping = False
 earlystopping_choice = "weightsbiases"  # "loss" or "weightsbiases"
 time_dict["setup"].append(time.time())
 
 if relaxation:
     time_dict["relaxation_compiling"].append(time.time())
-    shear_force = max_shear_force / steps * 1e-6
-    relaxation_adam_iterations = 1000
+    shear_force = max_shear_force / steps
+    relaxation_adam_iterations = 2000
     print(f"\nRelaxation step for initial shear force of {shear_force}.\n")
     model.compile(
         "adam", lr=learning_rate_adam, loss_weights=[energy_scale, energy_scale]
@@ -357,11 +359,9 @@ for i in range(steps):
     )
 
     # print Displacement of Point A
-    point_A = np.array([[0.048, 0.060]])
+    point_A = np.array([[length, web_height + load_height]])
     displacement_A = model.predict(point_A)
-    print(
-        f"The predicted y-displacement in point A is {displacement_A[:, 1][0] * 1e3} mm."
-    )
+    print(f"The predicted y-displacement in point A is {displacement_A[:, 1][0]:.4e}.")
 
     # ## Compare with FEM reference
     # if (shear_force % 15 == 0) & (shear_force <= max_shear_force):

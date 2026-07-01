@@ -113,10 +113,10 @@ time_dict["setup"].append(time.time())
 hyperelasticity_utils.lame = 432.099
 hyperelasticity_utils.shear = 185.185
 
-nu, lame, shear, e_modul = compute_elastic_properties()
+nu, lame, shear, youngs_modulus = compute_elastic_properties()
 
 
-def strain_energy_neo_hookean_3d_modified(x, y):
+def strain_energy_neo_hookean_3D_modified(x, y):
     # Deformation gradient (3x3)
     f_xx, f_yy, f_zz, f_xy, f_yx, f_xz, f_zx, f_yz, f_zy = deformation_gradient_3D(x, y)
 
@@ -146,22 +146,23 @@ def cauchy_stress_3D_modified(x, y):
     factor_1 = (lame * (det_f**2 - 1) - 2 * shear) / (2 * det_f)
     factor_2 = shear / det_f
 
-    # Right Cauchy-Green tensor C = F^T * F
-    C_xx = f_xx**2 + f_yx**2 + f_zx**2
-    C_yy = f_xy**2 + f_yy**2 + f_zy**2
-    C_zz = f_xz**2 + f_yz**2 + f_zz**2
-    C_xy = f_xx * f_xy + f_yx * f_yy + f_zx * f_zy
-    C_xz = f_xx * f_xz + f_yx * f_yz + f_zx * f_zz
-    C_yz = f_xy * f_xz + f_yy * f_yz + f_zy * f_zz
+    # Left Cauchy-Green tensor b = F * F^T
+    b_xx = f_xx**2 + f_xy**2 + f_xz**2
+    b_yy = f_yx**2 + f_yy**2 + f_yz**2
+    b_zz = f_zx**2 + f_zy**2 + f_zz**2
 
-    T_xx = factor_1 + factor_2 * C_xx
-    T_yy = factor_1 + factor_2 * C_yy
-    T_zz = factor_1 + factor_2 * C_zz
-    T_xy = factor_2 * C_xy
+    b_xy = f_xx * f_yx + f_xy * f_yy + f_xz * f_yz
+    b_xz = f_xx * f_zx + f_xy * f_zy + f_xz * f_zz
+    b_yz = f_yx * f_zx + f_yy * f_zy + f_yz * f_zz
+
+    T_xx = factor_1 + factor_2 * b_xx
+    T_yy = factor_1 + factor_2 * b_yy
+    T_zz = factor_1 + factor_2 * b_zz
+    T_xy = factor_2 * b_xy
     T_yx = T_xy
-    T_xz = factor_2 * C_xz
+    T_xz = factor_2 * b_xz
     T_zx = T_xz
-    T_yz = factor_2 * C_yz
+    T_yz = factor_2 * b_yz
     T_zy = T_yz
 
     return T_xx, T_yy, T_zz, T_xy, T_yx, T_xz, T_zx, T_yz, T_zy
@@ -185,7 +186,7 @@ def potential_energy(
     boundary_selection_tag,
 ):
 
-    internal_energy_density = strain_energy_neo_hookean_3d_modified(inputs, outputs)[
+    internal_energy_density = strain_energy_neo_hookean_3D_modified(inputs, outputs)[
         beg_pde:beg_boundary
     ]
 
