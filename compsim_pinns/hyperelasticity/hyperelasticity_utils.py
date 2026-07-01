@@ -402,6 +402,39 @@ def deformation_gradient_3D(x, y):
     return f_xx, f_yy, f_zz, f_xy, f_yx, f_xz, f_zx, f_yz, f_zy
 
 
+def deformation_gradient_3D_t(x, y):
+    r"""
+    Calculates the deformation gradient in a 3D continuum.
+
+    The deformation gradient in 3D is defined as
+
+    .. math::
+
+        \mathbf{F}=\frac{\partial \mathbf{u}}{\partial \mathbf{X}} + \mathbf{I}
+        = \begin{pmatrix} \tfrac{\partial u_1}{\partial X_1} + 1 & \tfrac{\partial u_1}{\partial X_2} & \tfrac{\partial u_1}{\partial X_3} \\
+        \tfrac{\partial u_2}{\partial X_1} & \tfrac{\partial u_2}{\partial X_2} + 1 & \tfrac{\partial u_2}{\partial X_3} \\
+        \tfrac{\partial u_3}{\partial X_1} & \tfrac{\partial u_3}{\partial X_2} & \tfrac{\partial u_3}{\partial X_3} + 1 \end{pmatrix}
+
+    Parameters
+    ----------
+    x : torch.Tensor or tf.Tensor
+        the input arguments
+    y : torch.Tensor or tf.Tensor
+        output arguments of the NN
+
+    Returns
+    -------
+    F : torch.Tensor or tf.Tensor
+        Stacked version of the deformation gradient
+    """
+    f_xx, f_yy, f_zz, f_xy, f_yx, f_xz, f_zx, f_yz, f_zy = deformation_gradient_3D(x, y)
+    return (
+        torch.stack((f_xx, f_xy, f_xz, f_yx, f_yy, f_yz, f_zx, f_zy, f_zz))
+        .transpose(0, 1)
+        .reshape((-1, 3, 3))
+    )
+
+
 def strain_energy_neo_hookean_2d(x, y):
     r"""
     Calculates the strain energy density of a Neo-Hookean material in a 2D continuum.
@@ -627,6 +660,52 @@ def cauchy_stress_2D(x, y):
 
     f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y)
     p_xx, p_yy, p_xy, p_yx = first_piola_stress_tensor_2D(x, y)
+
+    f_det = matrix_determinant_2D(f_xx, f_yy, f_xy, f_yx)
+
+    # σ = (1/J) * P * F^T
+    T_xx = (1 / f_det) * (p_xx * f_xx + p_xy * f_xy)
+    T_xy = (1 / f_det) * (p_xx * f_yx + p_xy * f_yy)
+    T_yx = (1 / f_det) * (p_yx * f_xx + p_yy * f_xy)
+    T_yy = (1 / f_det) * (p_yx * f_yx + p_yy * f_yy)
+
+    return T_xx, T_yy, T_xy, T_yx
+
+
+def cauchy_stress_2D_mixed_formulation(x, y):
+    r"""
+    Calculates the Cauchy stress of a Neo-Hookean material in a 2D continuum with mixed formulation.
+
+    The Cauchy stress tensor can be defined in terms of the first Piola-Kirchhoff stress as
+
+    .. math::
+
+        \mathbf{T} = \frac{1}{\mathrm{det}(\mathbf{F})} \mathbf{P} \cdot \mathbf{F}^\top
+
+    Parameters
+    ----------
+    x : torch.Tensor or tf.Tensor
+        the input arguments
+    y : torch.Tensor or tf.Tensor
+        output arguments of the NN
+
+    Returns
+    -------
+    T_xx : torch.Tensor or tf.Tensor
+        entry of the cauchy stress tensor at position (1,1)
+    T_yy : torch.Tensor or tf.Tensor
+        entry of the cauchy stress tensor at position (2,2)
+    T_xy : torch.Tensor or tf.Tensor
+        entry of the cauchy stress tensor at position (1,2)
+    T_yx : torch.Tensor or tf.Tensor
+        entry of the cauchy stress tensor at position (2,1)
+    """
+    f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y[:, 0:2])
+
+    p_xx = y[:, 2:3]
+    p_xy = y[:, 3:4]
+    p_yx = y[:, 4:5]
+    p_yy = y[:, 5:6]
 
     f_det = matrix_determinant_2D(f_xx, f_yy, f_xy, f_yx)
 
