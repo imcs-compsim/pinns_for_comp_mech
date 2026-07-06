@@ -2,6 +2,8 @@
 Module with custom callbacks.
 """
 
+import os
+
 import numpy as np
 from deepxde.backend import torch
 from deepxde.callbacks import Callback
@@ -130,6 +132,68 @@ class SaveModelVTU(Callback):
                 cell_types,
                 pointData=pointData,
             )
+
+
+class PredictionTracker(Callback):
+    """Tracks prediction of user provided points during training."""
+
+    def __init__(
+        self, period=100, points=None, filename="prediction_tracker.csv", precision=8
+    ):
+        """Initialize PredictionTracker."""
+        super().__init__()
+        self.period = period
+        self.points = points
+        self.filename = filename
+        self.precision = precision
+        self.prediction_history = []
+        self._prediction_shape = None
+
+    def on_epoch_end(self):
+        """Track prediction if current iteration is a multiple of period."""
+        iteration = self.model.train_state.iteration
+        if iteration % self.period == 0:
+            prediction = self.model.predict(self.points)
+            self._prediction_shape = np.asarray(prediction).shape
+            self.prediction_history.append(
+                np.concatenate(([iteration], np.asarray(prediction).ravel()))
+            )
+            print(f"Intermediate prediction at iteration {iteration}: {prediction}")
+
+    def on_train_end(self):
+        """Save tracked predictions over iteration count to a CSV file."""
+        if not self.prediction_history:
+            print("No predictions were tracked, so no prediction CSV was saved.\n")
+            return
+
+        directory = os.path.dirname(os.path.abspath(self.filename))
+        os.makedirs(directory, exist_ok=True)
+
+        history = np.vstack(self.prediction_history)
+        n_prediction_values = history.shape[1] - 1
+        if len(self._prediction_shape) == 2:
+            n_points, n_outputs = self._prediction_shape
+            labels = [
+                f"point_{point_idx}_output_{output_idx}"
+                for point_idx in range(n_points)
+                for output_idx in range(n_outputs)
+            ]
+        else:
+            labels = [
+                f"prediction_{prediction_idx}"
+                for prediction_idx in range(n_prediction_values)
+            ]
+        header = "iteration," + ",".join(labels)
+        fmt = ["%d"] + [f"%.{self.precision}e"] * (history.shape[1] - 1)
+        np.savetxt(
+            self.filename,
+            history,
+            delimiter=",",
+            header=header,
+            comments="",
+            fmt=fmt,
+        )
+        print(f"Saved prediction history to {self.filename}\n")
 
 
 class LossPlateauStopping(Callback):
