@@ -1,3 +1,18 @@
+"""
+Nonlinear 2D Cook's Cantilever Under Shear Loading
+==================================================
+
+This example solves a two-dimensional Cook's cantilever problem under shear
+loading with the Energy-based PINN (EPINN).
+
+It is modelled using a modified Neo-Hookean hyperelastic material. The clamped
+boundary conditions are enforced through the output transform, while the shear
+load is applied to the cantilever end through the potential energy.
+
+Results are exported as VTU files for post-processing, while timings and loss
+information are also saved.
+"""
+
 import os
 import time
 from pathlib import Path
@@ -9,23 +24,6 @@ import pyvista as pv
 import torch
 from deepxde import backend as bkd
 
-from compsim_pinns.postprocess.custom_callbacks import (
-    LossPlateauStopping,
-    WeightsBiasPlateauStopping,
-)
-
-dde.config.set_default_float("float64")  # use double precision (needed for L-BFGS)
-seed = 17
-np.random.seed(seed)
-torch.manual_seed(seed)
-if torch.cuda.is_available():
-    torch.cuda.manual_seed_all(seed)
-"""
-@author: svoelkl
-
-Torsion test for a 3D block, done with an incremental approach.
-"""
-
 from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
 from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
 from compsim_pinns.geometry.gmsh_models import CooksCantilever2D
@@ -36,8 +34,24 @@ from compsim_pinns.hyperelasticity.hyperelasticity_utils import (
     deformation_gradient_2D,
     matrix_determinant_2D,
 )
+from compsim_pinns.postprocess.custom_callbacks import (
+    LossPlateauStopping,
+    PredictionTracker,
+    WeightsBiasPlateauStopping,
+)
 from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
+# Set default float type to double precision for L-BFGS optimizer
+dde.config.set_default_float("float64")
+
+# Fix random seeds for reproducibility
+seed = 17
+np.random.seed(seed)
+torch.manual_seed(seed)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(seed)
+
+# Create a dictionary to store timing information
 time_dict = {
     "meshing": [],
     "element_information": [],
@@ -54,38 +68,48 @@ time_dict = {
 time_dict["total"].append(time.time())
 time_dict["meshing"].append(time.time())
 
+# Geometry and mesh generation
 length = 0.048
 web_height = 0.044
 load_height = 0.016
 thickness = 0.001
-n_elements_length = 48  # 48
-n_elements_height = 16  # 16
-Cantilever = CooksCantilever2D(
+n_elements_length = 48
+n_elements_height = 16
+cantilever = CooksCantilever2D(
     length=length,
     web_height=web_height,
     load_height=load_height,
     divisions=[n_elements_length, n_elements_height],
 )
-gmsh_model = Cantilever.generateGmshModel(visualize_mesh=False)
+gmsh_model = cantilever.generateGmshModel(visualize_mesh=False)
 time_dict["meshing"].append(time.time())
 time_dict["element_information"].append(time.time())
 
+# Set up quadrature rules for domain and boundary integration
 domain_dimension = 2
+boundary_dimension = domain_dimension - 1
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=domain_dimension, ngp=2
-)  # gauss_legendre gauss_labotto
+)
 coord_quadrature, weight_quadrature = quad_rule.generate()
-
-boundary_dimension = domain_dimension - 1
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=boundary_dimension, ngp=2
-)  # gauss_legendre gauss_labotto
+)
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
 
 
+# Define BCs
 def cantilever_end(x):
+    """Check whether a point satisfies the `cantilever_end` boundary condition.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+
+    Returns:
+        bool: Result of the `cantilever_end` evaluation.
+    """
     return np.isclose(x[0], length)
 
 
@@ -93,6 +117,7 @@ boundary_selection_map = [
     {"boundary_function": cantilever_end, "tag": "cantilever_end"}
 ]
 
+# Define EPINN geometry
 geom = GmshGeometryElementDeepEnergy(
     gmsh_model,
     dimension=domain_dimension,
@@ -106,13 +131,22 @@ geom = GmshGeometryElementDeepEnergy(
 time_dict["element_information"].append(time.time())
 time_dict["setup"].append(time.time())
 
-hyperelasticity_utils.lame = 80.194e6
-hyperelasticity_utils.shear = 120.291e6
-
+# Set material parameters as global variables in elasticity_utils
+hyperelasticity_utils.lame = 400889.8e6
+hyperelasticity_utils.shear = 80.194e6
 nu, lame, shear, youngs_modulus = compute_elastic_properties()
 
 
 def strain_energy_neo_hookean_2D_modified(x, y):
+    """Compute modified Neo-Hookean strain energy density.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        y: Field values or model outputs associated with `x`.
+
+    Returns:
+        Any: Computed strain energy density.
+    """
     # Deformation gradient (2x2)
     f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y)
 
@@ -120,16 +154,8 @@ def strain_energy_neo_hookean_2D_modified(x, y):
     C_xx = f_xx * f_xx + f_yx * f_yx
     C_yy = f_xy * f_xy + f_yy * f_yy
 
-    I_1 = C_xx + C_yy  # first invariant of C
-
-    # Determinant of F
-    det_f = matrix_determinant_2D(
-        f_xx,
-        f_yy,
-        f_xy,
-        f_yx,
-    )
-    # Strain energy
+    I_1 = C_xx + C_yy
+    det_f = matrix_determinant_2D(f_xx, f_yy, f_xy, f_yx)
     W = (
         0.5 * shear * (I_1 - 2)
         + lame / 4 * (det_f**2 - 1)
@@ -140,13 +166,17 @@ def strain_energy_neo_hookean_2D_modified(x, y):
 
 
 def cauchy_stress_2D_modified(x, y):
+    """Compute modified Neo-Hookean Cauchy stress components.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        y: Field values or model outputs associated with `x`.
+
+    Returns:
+        tuple: Cauchy stress components in 2D.
+    """
     f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y)
-    det_f = matrix_determinant_2D(
-        f_xx,
-        f_yy,
-        f_xy,
-        f_yx,
-    )
+    det_f = matrix_determinant_2D(f_xx, f_yy, f_xy, f_yx)
 
     factor_1 = (lame * (det_f**2 - 1) - 2 * shear) / (2 * det_f)
     factor_2 = shear / det_f
@@ -164,6 +194,7 @@ def cauchy_stress_2D_modified(x, y):
     return T_xx, T_yy, T_xy, T_yx
 
 
+# Define the potential energy function for the EPINN
 def potential_energy(
     X,
     inputs,
@@ -181,7 +212,29 @@ def potential_energy(
     global_weights_boundary_t,
     boundary_selection_tag,
 ):
+    """Compute potential energy for this example setup.
 
+    Args:
+        X: Input coordinates used by this callback.
+        inputs: Value for inputs.
+        outputs: Value for outputs.
+        beg_pde: Value for beg pde.
+        beg_boundary: Value for beg boundary.
+        n_e: Value for n e.
+        n_gp: Value for n gp.
+        n_e_boundary: Value for n e boundary.
+        n_gp_boundary: Value for n gp boundary.
+        jacobian_t: Value for jacobian t.
+        global_element_weights_t: Value for global element weights t.
+        mapped_normal_boundary_t: Value for mapped normal boundary t.
+        jacobian_boundary_t: Value for jacobian boundary t.
+        global_weights_boundary_t: Value for global weights boundary t.
+        boundary_selection_tag: Value for boundary selection tag.
+
+    Returns:
+        Any: Computed value returned by `potential_energy`.
+    """
+    # Internal energy
     internal_energy_density = strain_energy_neo_hookean_2D_modified(inputs, outputs)[
         beg_pde:beg_boundary
     ]
@@ -189,19 +242,17 @@ def potential_energy(
     internal_energy = (
         global_element_weights_t[:, 0:1]
         * global_element_weights_t[:, 1:2]
-        * (internal_energy_density)
+        * internal_energy_density
         * jacobian_t
         * thickness
     )
-    ####################################################################################################################
-    # get the external work
-    # select the points where external force is applied
+    # External work
     cond = boundary_selection_tag["cantilever_end"]
     u_y = outputs[:, 1:2][beg_boundary:][cond]
     external_force_density = shear_force * u_y
     external_work = (
         global_weights_boundary_t[:, 0:1][cond]
-        * (external_force_density)
+        * external_force_density
         * jacobian_boundary_t[cond]
         * thickness
     )
@@ -209,6 +260,7 @@ def potential_energy(
     return [internal_energy, -external_work]
 
 
+# Create the data object for the EPINN
 n_dummy = 1
 data = DeepEnergyPDE(
     geom,
@@ -221,13 +273,21 @@ data = DeepEnergyPDE(
 )
 
 
+# Define the output transform
 def output_transform(x, y):
-    # displacement field (u, v, w)
+    """Compute output transform for this example setup.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+        y: Field values or model outputs associated with `x`.
+
+    Returns:
+        Any: Computed value returned by `output_transform`.
+    """
     u = y[:, 0:1]
     v = y[:, 1:2]
 
     x_loc = x[:, 0:1]
-    y_loc = x[:, 1:2]
 
     u_out = x_loc * u
     v_out = x_loc * v
@@ -235,61 +295,43 @@ def output_transform(x, y):
     return bkd.concat([u_out, v_out], axis=1)
 
 
-# 3 inputs, 3 outputs for 3D
+# Define the neural network architecture
+# 2 inputs, 2 outputs for 2D: u_x, u_y
 layer_size = [2] + [50] * 5 + [2]
 activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
-loss_weights = None
-
 model = dde.Model(data, net)
 
-# Model parameters
+# Set the training parameters
 steps = 1
 max_shear_force = 8e6
 model_path = str(Path(__file__).parent)
-simulation_case = f"cooks_cantilever_2d_nonlinear"
+simulation_case = "cooks_cantilever_2d_nonlinear"
 learning_rate_adam = 1e-3
 learning_rate_total_decay = 1e-3
 adam_iterations = 5000
 exponential_decay = learning_rate_total_decay ** (1 / 5000)
 lbfgs_iterations = 2000
-energy_scale = 1e3
 rel_err_l2_disp = []
 rel_err_l2_stress = []
 l2_iteration = []
-relaxation_adam_iterations = (
-    0  # just to not get any errors when not using it (undefined variable in naming)
-)
+relaxation_adam_iterations = 0  # avoid undefined variable in naming
+relaxation_lbfgs_iterations = 0  # avoid undefined variable in naming
 relaxation = False
 earlystopping = False
 earlystopping_choice = "weightsbiases"  # "loss" or "weightsbiases"
+point_A = np.array([[length, web_height + load_height]])
+output_A_prediction = PredictionTracker(
+    period=1000,
+    points=point_A,
+    filename=os.path.join(model_path, f"prediction_tracker_{learning_rate_adam}.csv"),
+)
+train_callbacks = [output_A_prediction]
 time_dict["setup"].append(time.time())
 
-if relaxation:
-    time_dict["relaxation_compiling"].append(time.time())
-    shear_force = max_shear_force / steps
-    relaxation_adam_iterations = 2000
-    print(f"\nRelaxation step for initial shear force of {shear_force}.\n")
-    model.compile(
-        "adam", lr=learning_rate_adam, loss_weights=[energy_scale, energy_scale]
-    )
-    time_dict["relaxation_compiling"].append(time.time())
-    time_dict["relaxation_training"].append(time.time())
-    losshistory, train_state = model.train(
-        iterations=relaxation_adam_iterations, display_every=100
-    )
-    time_dict["relaxation_training"].append(time.time())
-    time_dict["relaxation_compiling"].append(time.time())
-    relaxation_lbfgs_iterations = 2000
-    dde.optimizers.config.set_LBFGS_options(maxiter=relaxation_lbfgs_iterations)
-    model.compile("L-BFGS", loss_weights=[energy_scale, energy_scale])
-    time_dict["relaxation_compiling"].append(time.time())
-    time_dict["relaxation_training"].append(time.time())
-    losshistory, train_state = model.train(display_every=1000)
-    time_dict["relaxation_training"].append(time.time())
-
+# Define the early stopping callback
 if earlystopping:
     if earlystopping_choice == "loss":
         early = LossPlateauStopping(patience=500, min_delta=1e-5)
@@ -299,34 +341,56 @@ if earlystopping:
         )
     else:
         raise ValueError("The specified stopping choice is not implemented or correct.")
+    train_callbacks.append(early)
 
-# Incremental loop
+# Optional relaxation step before incremental loading
+if relaxation:
+    time_dict["relaxation_compiling"].append(time.time())
+    shear_force = max_shear_force / steps
+    relaxation_adam_iterations = 2000
+    print(f"\nRelaxation step for initial shear force of {shear_force}.\n")
+    model.compile("adam", lr=learning_rate_adam)
+    time_dict["relaxation_compiling"].append(time.time())
+    time_dict["relaxation_training"].append(time.time())
+    losshistory, train_state = model.train(
+        iterations=relaxation_adam_iterations, display_every=100
+    )
+    time_dict["relaxation_training"].append(time.time())
+
+    time_dict["relaxation_compiling"].append(time.time())
+    relaxation_lbfgs_iterations = 2000
+    dde.optimizers.config.set_LBFGS_options(maxiter=relaxation_lbfgs_iterations)
+    model.compile("L-BFGS")
+    time_dict["relaxation_compiling"].append(time.time())
+    time_dict["relaxation_training"].append(time.time())
+    losshistory, train_state = model.train(display_every=1000)
+    time_dict["relaxation_training"].append(time.time())
+
+# Train the network in an incremental manner and predict the results in each load step
 for i in range(steps):
     shear_force = max_shear_force / steps * (i + 1)
     print(f"\nTraining for a shear force of {shear_force}.\n")
     time_dict["simulation_compiling_adam"].append(time.time())
-    model.compile(
-        "adam", lr=learning_rate_adam, loss_weights=[energy_scale, energy_scale]
-    )  # , decay=("exponential", exponential_decay))
+    model.compile("adam", lr=learning_rate_adam)
     time_dict["simulation_compiling_adam"].append(time.time())
     time_dict["simulation_training_adam"].append(time.time())
     losshistory, train_state = model.train(
         iterations=adam_iterations,
         display_every=100,
-        callbacks=[early for _ in [1] if earlystopping],
+        callbacks=train_callbacks,
     )
     time_dict["simulation_training_adam"].append(time.time())
 
     if lbfgs_iterations > 0:
         time_dict["simulation_compiling_lbfgs"].append(time.time())
         dde.optimizers.config.set_LBFGS_options(maxiter=lbfgs_iterations)
-        model.compile("L-BFGS", loss_weights=[energy_scale, energy_scale])
+        model.compile("L-BFGS")
         time_dict["simulation_compiling_lbfgs"].append(time.time())
         time_dict["simulation_training_lbfgs"].append(time.time())
         losshistory, train_state = model.train(display_every=1000)
         time_dict["simulation_training_lbfgs"].append(time.time())
 
-    # Save results
+    # Save the EPINN results
     time_dict["simulation_prediction"].append(time.time())
     points, _, cell_types, elements = geom.get_mesh()
     n_nodes_per_cell = elements.shape[1]
@@ -358,67 +422,15 @@ for i in range(steps):
         )
     )
 
-    # print Displacement of Point A
-    point_A = np.array([[length, web_height + load_height]])
+    # Print displacement of point A
     displacement_A = model.predict(point_A)
     print(f"The predicted y-displacement in point A is {displacement_A[:, 1][0]:.4e}.")
-
-    # ## Compare with FEM reference
-    # if (shear_force % 15 == 0) & (shear_force <= max_shear_force):
-    #     fem_path = str(Path(__file__).parent.parent.parent.parent) + "/fem_references/paper-epinn-data-reference"
-    #     fem_reference = pv.read(fem_path+f"/3d_torsion_prism/fem_reference_3d_block_max_shear_force_{int(shear_force):03}.vtu")
-    #     points_fem = fem_reference.points
-    #     displacement_fem = fem_reference.point_data["displacement"]
-    #     cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
-
-    #     # Compute values on FEM nodes
-    #     displacement_pred_on_fem_mesh = model.predict(points_fem)
-    #     sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, _, sigma_xz_pred_on_fem_mesh, _, sigma_yz_pred_on_fem_mesh, _ = model.predict(points_fem, operator=cauchy_stress_3D)
-    #     cauchy_stress_pred_on_fem_mesh = np.column_stack((sigma_xx_pred_on_fem_mesh, sigma_yy_pred_on_fem_mesh, sigma_zz_pred_on_fem_mesh, sigma_xy_pred_on_fem_mesh, sigma_yz_pred_on_fem_mesh, sigma_xz_pred_on_fem_mesh))
-    #     tensor_cauchy_stress_pred_on_fem_mesh = np.transpose(np.array([[sigma_xx_pred_on_fem_mesh.flatten(), sigma_xy_pred_on_fem_mesh.flatten(), sigma_xz_pred_on_fem_mesh.flatten()],
-    #                                                                    [sigma_xy_pred_on_fem_mesh.flatten(), sigma_yy_pred_on_fem_mesh.flatten(), sigma_yz_pred_on_fem_mesh.flatten()],
-    #                                                                    [sigma_xz_pred_on_fem_mesh.flatten(), sigma_yz_pred_on_fem_mesh.flatten(), sigma_zz_pred_on_fem_mesh.flatten()]]),(2,0,1))
-    #     tensor_cauchy_stress_fem = np.array([[cauchy_stress_fem[:,0], cauchy_stress_fem[:,3], cauchy_stress_fem[:,5],
-    #                                           cauchy_stress_fem[:,3], cauchy_stress_fem[:,1], cauchy_stress_fem[:,4],
-    #                                           cauchy_stress_fem[:,5], cauchy_stress_fem[:,4], cauchy_stress_fem[:,2]]]).T.reshape(-1,3,3)
-
-    #     # Compute L2-error
-    #     volume_integral = fem_reference.copy()
-    #     volume_integral.point_data["squared_error_disp"] = np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem, axis=1) ** 2
-    #     volume_integral.point_data["squared_disp"] = np.linalg.norm(displacement_fem, axis=1) ** 2
-    #     volume_integral.point_data["squared_error_stress"] = np.linalg.norm(tensor_cauchy_stress_pred_on_fem_mesh - tensor_cauchy_stress_fem, axis=(1,2), ord="fro") ** 2
-    #     volume_integral.point_data["squared_stress"] = np.linalg.norm(tensor_cauchy_stress_fem, axis=(1,2), ord="fro") ** 2
-    #     volume_integral = volume_integral.integrate_data()
-    #     l2_iteration.append(train_state.step)
-    #     rel_err_l2_disp.append(np.sqrt(volume_integral.point_data["squared_error_disp"][0] / volume_integral.point_data["squared_disp"][0]))
-    #     print(f"Relative L2 error for displacement:   {rel_err_l2_disp[-1]}")
-    #     rel_err_l2_stress.append(np.sqrt(volume_integral.point_data["squared_error_stress"][0] / volume_integral.point_data["squared_stress"][0]))
-    #     print(f"Relative L2 error for stress:         {rel_err_l2_stress[-1]}")
-
-    #     # Compute mean absolute error
-    #     print(f"Mean absolute error for displacement: {np.linalg.norm(displacement_pred_on_fem_mesh - displacement_fem)/len(displacement_fem)}")
-    #     print(f"Mean absolute error for stress:       {np.mean(np.linalg.norm(tensor_cauchy_stress_pred_on_fem_mesh - tensor_cauchy_stress_fem, axis=(1,2), ord="fro"))}")
-
-    #     # Create output with relative pointwise errors
-    #     fem_reference.point_data["displacement_prediction"] = displacement_pred_on_fem_mesh
-    #     fem_reference.point_data["cauchy_stresses_prediction"] = cauchy_stress_pred_on_fem_mesh
-    #     fem_reference.point_data["absolute_displacement_error"] = abs(displacement_pred_on_fem_mesh - displacement_fem)
-    #     fem_reference.point_data["absolute_cauchy_stress_error"] = abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem)
-    #     fem_reference.point_data["relative_displacement_error"] = np.divide(np.abs(displacement_pred_on_fem_mesh - displacement_fem), np.abs(displacement_fem), out=np.zeros_like(displacement_fem, dtype=float), where=displacement_fem!=0)
-    #     fem_reference.point_data["relative_cauchy_stress_error"] = np.divide(np.abs(cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem), np.abs(cauchy_stress_fem), out=np.zeros_like(cauchy_stress_fem, dtype=float), where=cauchy_stress_fem!=0)
-    #     file_path_fem_compare = os.path.join(model_path, f"{simulation_case}_fem_compare_{int(shear_force):03}")
-    #     fem_reference.save(f"{file_path_fem_compare}.vtu")
-
-    #     # Look at results at gauss points
-    #     fem_gp_reference = pv.read(fem_path+f"/3d_torsion_prism/fem_reference_3d_block_max_shear_force_gp_info_{int(shear_force):03}.vtu")
-    #     points_fem_gp = fem_gp_reference.points
-    #     displacement_fem_gp = fem_gp_reference.point_data["displacement"]
-    #     cauchy_stress_fem_gp = fem_gp_reference.point_data["cauchy_stress_gp"]
 
     file_path = os.path.join(model_path, f"{simulation_case}_{int(shear_force):03}")
     grid.save(f"{file_path}.vtu")
     time_dict["simulation_prediction"].append(time.time())
 
+# Save the trained network parameters
 model.save(f"{model_path}/{simulation_case}")
 dde.saveplot(
     losshistory,
@@ -431,6 +443,7 @@ dde.saveplot(
     test_fname=f"{simulation_case}-{train_state.step}_test.dat",
 )
 
+# Plot the energy over the iterations
 fig1, ax1 = plt.subplots(figsize=(10, 8))
 ax1.plot(
     losshistory.steps,

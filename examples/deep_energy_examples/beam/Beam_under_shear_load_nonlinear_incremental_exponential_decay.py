@@ -1,13 +1,13 @@
 """
 Nonlinear Beam Under Incremental Shear Loading
-==============================================
+==================================================
 
 This example solves a two-dimensional beam under incrementally applied shear
 loading with the Energy-based PINN (EPINN).
 
-It is modelled using a Neo-Hookean hyperelastic material in plane strain.
-The geometry is a clamped rectangular beam with a shear load on the right edge.
-The shear load is applied incrementally in steps. In each step the model is
+It is modelled using a Neo-Hookean hyperelastic material under plane strain assumptions.
+The rectangular beam is clamped on the left side while a shear load is applied to the right side.
+The shear load is applied incrementally in load steps. In each load step the model is
 trained using the Adam optimizer with an exponentially decaying learning rate.
 
 Results are exported as VTU files for post-processing, while errors, timings,
@@ -193,7 +193,7 @@ def potential_energy(
     external_force_density = -shear_load * u_y
     external_work = (
         global_weights_boundary_t[cond]
-        * (external_force_density)
+        * external_force_density
         * jacobian_boundary_t[cond]
     )
 
@@ -226,18 +226,19 @@ def output_transform(x, y):
     """
     u = y[:, 0:1]
     v = y[:, 1:2]
+
     x_loc = x[:, 0:1]
 
     return bkd.concat([u * x_loc / youngs_modulus, v * x_loc / youngs_modulus], axis=1)
 
 
 # Define the neural network architecture
+# 2 inputs, 2 outputs for 2D: u_x, u_y
 layer_size = [2] + [50] * 5 + [2]
 activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
-
 model = dde.Model(data, net)
 
 # Set the training parameters
@@ -357,9 +358,7 @@ for i in range(steps):
     )
     output = model.predict(points)
     displacement_pred = np.column_stack((output[:, 0:1], output[:, 1:2]))
-    sigma_xx, sigma_yy, sigma_xy, sigma_yx = model.predict(
-        points, operator=cauchy_stress_2D
-    )
+    sigma_xx, sigma_yy, sigma_xy, _ = model.predict(points, operator=cauchy_stress_2D)
     cauchy_stress_pred = np.column_stack((sigma_xx, sigma_yy, sigma_xy))
     grid.point_data["pred_displacement"] = np.c_[
         displacement_pred, np.zeros((n_points, 1))
@@ -646,7 +645,7 @@ fig2.savefig(
     f"{model_path}/{simulation_case}-{train_state.step}_edge_trajectory.png", dpi=300
 )
 
-# Save the trajectory of the corner points
+# Save the trajectory of the corner points and the relative L2 errors for displacement and stress
 np.savez(
     f"{model_path}/{simulation_case}_edge_trajectory_meshsize_{2 / mesh_size:03.0f}.npz",
     x=trajectory_edge_points_sorted,
