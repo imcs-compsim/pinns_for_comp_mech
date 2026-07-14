@@ -104,9 +104,7 @@ class SaveModelVTU(Callback):
 
             pointData = {"displacement": combined_disp}
             if self.op:
-                sigma_xx, sigma_yy, sigma_xy, sigma_yx = model.predict(
-                    X, operator=self.op
-                )
+                sigma_xx, sigma_yy, sigma_xy, _ = model.predict(X, operator=self.op)
                 combined_stress = tuple(
                     np.vstack(
                         (

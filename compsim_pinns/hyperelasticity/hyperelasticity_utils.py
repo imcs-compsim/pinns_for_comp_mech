@@ -285,7 +285,7 @@ def matrix_inverse_3D(a11, a12, a13, a21, a22, a23, a31, a32, a33):
     )
 
     # Check if the determinant is zero
-    if det == 0:
+    if torch.any(det == 0).item():
         raise ValueError("The matrix is singular and does not have an inverse.")
 
     inv11 = (a22 * a33 - a23 * a32) / det

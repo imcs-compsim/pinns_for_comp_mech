@@ -229,7 +229,6 @@ def output_transform(x, y):
     Returns:
         Any: Computed value returned by `output_transform`.
     """
-    # displacement field (u, v, w)
     u = y[:, 0:1]
     v = y[:, 1:2]
     w = y[:, 2:3]
@@ -354,11 +353,11 @@ for i in range(steps):
         sigma_yy,
         sigma_zz,
         sigma_xy,
-        sigma_yx,
+        _,
         sigma_xz,
-        sigma_zx,
+        _,
         sigma_yz,
-        sigma_zy,
+        _,
     ) = model.predict(points, operator=cauchy_stress_3D)
     cauchy_stress_pred = np.column_stack(
         (sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz)

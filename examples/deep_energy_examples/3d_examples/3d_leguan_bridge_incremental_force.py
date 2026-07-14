@@ -1,13 +1,15 @@
 """
-Nonlinear 2D Cook's Cantilever Under Shear Loading
+Leguan Bridge Under Incremental Force Loading
 ==================================================
 
-This example solves a two-dimensional Cook's cantilever problem under shear
-loading with the Energy-based PINN (EPINN).
+This example solves a three-dimensional quarter model of the 26 m Leguan
+tank bridge under a moving and incrementally applied force loading with the
+Energy-based PINN (EPINN).
 
-It is modelled using a modified Neo-Hookean hyperelastic material. The clamped
-boundary conditions are enforced through the output transform, while the shear
-load is applied to the cantilever end through the potential energy.
+It is modelled using a Neo-Hookean hyperelastic material. Symmetry and support
+conditions are enforced through the output transform, while the prescribed force
+moves over the slope in load steps. The model is trained with Adam
+followed by L-BFGS.
 
 Results are exported as VTU files for post-processing, while timings and loss
 information are also saved.
@@ -26,18 +28,12 @@ from deepxde import backend as bkd
 
 from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
 from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
-from compsim_pinns.geometry.gmsh_models import CooksCantilever2D
+from compsim_pinns.geometry.gmsh_models import leguan_bridge_quarter
 from compsim_pinns.hyperelasticity import hyperelasticity_utils
 from compsim_pinns.hyperelasticity.hyperelasticity_utils import (
-    bkd_log,
+    cauchy_stress_3D,
     compute_elastic_properties,
-    deformation_gradient_2D,
-    matrix_determinant_2D,
-)
-from compsim_pinns.postprocess.custom_callbacks import (
-    LossPlateauStopping,
-    PredictionTracker,
-    WeightsBiasPlateauStopping,
+    strain_energy_neo_hookean_3d,
 )
 from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
@@ -69,24 +65,15 @@ time_dict["total"].append(time.time())
 time_dict["meshing"].append(time.time())
 
 # Geometry and mesh generation
-length = 0.048
-web_height = 0.044
-load_height = 0.016
-thickness = 0.001
-n_elements_length = 48
-n_elements_height = 16
-cantilever = CooksCantilever2D(
-    length=length,
-    web_height=web_height,
-    load_height=load_height,
-    divisions=[n_elements_length, n_elements_height],
+quarter_bridge_leguan = leguan_bridge_quarter()
+gmsh_model, slope_corner_points, seating_corner_points = (
+    quarter_bridge_leguan.generateGmshModel(visualize_mesh=False)
 )
-gmsh_model = cantilever.generateGmshModel(visualize_mesh=False)
 time_dict["meshing"].append(time.time())
 time_dict["element_information"].append(time.time())
 
 # Set up quadrature rules for domain and boundary integration
-domain_dimension = 2
+domain_dimension = 3
 boundary_dimension = domain_dimension - 1
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=domain_dimension, ngp=2
@@ -99,22 +86,48 @@ coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
 
+# Define top surface normals
+normal_top_slope = np.cross(
+    slope_corner_points[0, :] - slope_corner_points[4, :],
+    slope_corner_points[1, :] - slope_corner_points[5, :],
+)
+normal_top_slope = normal_top_slope / np.linalg.norm(normal_top_slope)
+
+normal_bottom_slope = np.cross(
+    slope_corner_points[1, :] - slope_corner_points[3, :],
+    slope_corner_points[2, :] - slope_corner_points[4, :],
+)
+normal_bottom_slope = normal_bottom_slope / np.linalg.norm(normal_bottom_slope)
+
 
 # Define BCs
-def cantilever_end(x):
-    """Check whether a point satisfies the `cantilever_end` boundary condition.
+def on_top_slope(x):
+    """Check whether a point satisfies the `on_top_slope` boundary condition.
 
     Args:
         x: Input coordinates used to evaluate the function.
 
     Returns:
-        bool: Result of the `cantilever_end` evaluation.
+        bool: Result of the `on_top_slope` evaluation.
     """
-    return np.isclose(x[0], length)
+    return np.isclose(np.dot(normal_top_slope, x - slope_corner_points[0, :]), 0.0)
+
+
+def on_bottom_slope(x):
+    """Check whether a point satisfies the `on_bottom_slope` boundary condition.
+
+    Args:
+        x: Input coordinates used to evaluate the function.
+
+    Returns:
+        bool: Result of the `on_bottom_slope` evaluation.
+    """
+    return np.isclose(np.dot(normal_bottom_slope, x - slope_corner_points[2, :]), 0.0)
 
 
 boundary_selection_map = [
-    {"boundary_function": cantilever_end, "tag": "cantilever_end"}
+    {"boundary_function": on_top_slope, "tag": "on_top_slope"},
+    {"boundary_function": on_bottom_slope, "tag": "on_bottom_slope"},
 ]
 
 # Define EPINN geometry
@@ -132,66 +145,9 @@ time_dict["element_information"].append(time.time())
 time_dict["setup"].append(time.time())
 
 # Set material parameters as global variables in elasticity_utils
-hyperelasticity_utils.lame = 400889.8e6
-hyperelasticity_utils.shear = 80.194e6
+hyperelasticity_utils.youngs_modulus = 100
+hyperelasticity_utils.nu = 0.33
 nu, lame, shear, youngs_modulus = compute_elastic_properties()
-
-
-def strain_energy_neo_hookean_2D_modified(x, y):
-    """Compute modified Neo-Hookean strain energy density.
-
-    Args:
-        x: Input coordinates used to evaluate the function.
-        y: Field values or model outputs associated with `x`.
-
-    Returns:
-        Any: Computed strain energy density.
-    """
-    # Deformation gradient (2x2)
-    f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y)
-
-    # Construct C = F^T F (right Cauchy-Green tensor)
-    C_xx = f_xx * f_xx + f_yx * f_yx
-    C_yy = f_xy * f_xy + f_yy * f_yy
-
-    I_1 = C_xx + C_yy
-    det_f = matrix_determinant_2D(f_xx, f_yy, f_xy, f_yx)
-    W = (
-        0.5 * shear * (I_1 - 2)
-        + lame / 4 * (det_f**2 - 1)
-        - (lame / 2 + shear) * bkd_log(det_f)
-    )
-
-    return W
-
-
-def cauchy_stress_2D_modified(x, y):
-    """Compute modified Neo-Hookean Cauchy stress components.
-
-    Args:
-        x: Input coordinates used to evaluate the function.
-        y: Field values or model outputs associated with `x`.
-
-    Returns:
-        tuple: Cauchy stress components in 2D.
-    """
-    f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y)
-    det_f = matrix_determinant_2D(f_xx, f_yy, f_xy, f_yx)
-
-    factor_1 = (lame * (det_f**2 - 1) - 2 * shear) / (2 * det_f)
-    factor_2 = shear / det_f
-
-    # Left Cauchy-Green tensor b = F * F^T
-    b_xx = f_xx**2 + f_xy**2
-    b_yy = f_yx**2 + f_yy**2
-    b_xy = f_xx * f_yx + f_xy * f_yy
-
-    T_xx = factor_1 + factor_2 * b_xx
-    T_yy = factor_1 + factor_2 * b_yy
-    T_xy = factor_2 * b_xy
-    T_yx = T_xy
-
-    return T_xx, T_yy, T_xy, T_yx
 
 
 # Define the potential energy function for the EPINN
@@ -235,29 +191,57 @@ def potential_energy(
         Any: Computed value returned by `potential_energy`.
     """
     # Internal energy
-    internal_energy_density = strain_energy_neo_hookean_2D_modified(inputs, outputs)[
+    internal_energy_density = strain_energy_neo_hookean_3d(inputs, outputs)[
         beg_pde:beg_boundary
     ]
-
     internal_energy = (
         global_element_weights_t[:, 0:1]
         * global_element_weights_t[:, 1:2]
-        * internal_energy_density
+        * global_element_weights_t[:, 2:3]
+        * (internal_energy_density)
         * jacobian_t
-        * thickness
     )
     # External work
-    cond = boundary_selection_tag["cantilever_end"]
-    u_y = outputs[:, 1:2][beg_boundary:][cond]
-    external_force_density = shear_force * u_y
+    cond_slope = (
+        boundary_selection_tag["on_top_slope"]
+        | boundary_selection_tag["on_bottom_slope"]
+    )
+    u_z = outputs[:, 2:3][beg_boundary:][cond_slope]
+    distributed_load = force_distribution_function(
+        total_load_mass, inputs[beg_boundary:][cond_slope], force_location_x
+    )
+    external_force_density = distributed_load * u_z
     external_work = (
-        global_weights_boundary_t[:, 0:1][cond]
+        global_weights_boundary_t[:, 0:1][cond_slope]
+        * global_weights_boundary_t[:, 1:2][cond_slope]
         * external_force_density
-        * jacobian_boundary_t[cond]
-        * thickness
+        * jacobian_boundary_t[cond_slope]
     )
 
     return [internal_energy, -external_work]
+
+
+def force_distribution_function(load, position, load_location_x):
+    """Compute the force distribution for a tank."""
+    track_width = 0.64
+    track_length = 5
+    hull_width = 3.56
+    distributed_load = load / (
+        track_width * track_length
+    )  # Distributed load per unit area
+    center_track = [load_location_x, hull_width / 2 - track_width / 2]
+    resulting_load = torch.zeros_like(position[:, 2:3])
+    load_condition_x = (load_location_x - track_length / 2 < position[:, 0:1]) & (
+        load_location_x + track_length / 2 > position[:, 0:1]
+    )
+    load_condition_y = (center_track[1] - track_width / 2 < position[:, 1:2]) & (
+        center_track[1] + track_width / 2 > position[:, 1:2]
+    )
+    resulting_load[load_condition_x.squeeze() & load_condition_y.squeeze()] = (
+        distributed_load
+    )
+
+    return resulting_load
 
 
 # Create the data object for the EPINN
@@ -286,99 +270,71 @@ def output_transform(x, y):
     """
     u = y[:, 0:1]
     v = y[:, 1:2]
+    w = y[:, 2:3]
 
     x_loc = x[:, 0:1]
+    y_loc = x[:, 1:2]
+    z_loc = x[:, 2:3]
 
-    u_out = x_loc * u
-    v_out = x_loc * v
+    seating_coord_z = seating_corner_points[0, 2]
 
-    return bkd.concat([u_out, v_out], axis=1)
+    # Top slope plane:
+    # n_x * (x - x0) + n_y * (y - y0) + n_z * (z - z0) = 0
+    top_point = slope_corner_points[0, :]
+    z_top = (
+        top_point[2]
+        - (
+            normal_top_slope[0] * (x_loc - top_point[0])
+            + normal_top_slope[1] * (y_loc - top_point[1])
+        )
+        / normal_top_slope[2]
+    )
+
+    # Hard BCs
+    u_out = x_loc * u / youngs_modulus  # u = 0 on x = 0
+    v_out = y_loc * v / youngs_modulus  # v = 0 on y = 0
+    w_out = (
+        (z_loc - seating_coord_z) * w / youngs_modulus
+    )  # w = 0 on z = seating_coord_z
+
+    return bkd.concat([u_out, v_out, w_out], axis=1)
 
 
 # Define the neural network architecture
-# 2 inputs, 2 outputs for 2D: u_x, u_y
-layer_size = [2] + [50] * 5 + [2]
+# 3 inputs, 3 outputs for 3D: u_x, u_y, u_z
+layer_size = [3] + [50] * 5 + [3]  # also try [3] + [50] * 10 + [3]
 activation = "tanh"
 initializer = "Glorot uniform"
 net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
+loss_weights = None
 model = dde.Model(data, net)
 
 # Set the training parameters
-steps = 1
-max_shear_force = 8e6
+steps = 25
+total_load_mass = -0.1
 model_path = str(Path(__file__).parent)
-simulation_case = "cooks_cantilever_2d_nonlinear"
+simulation_case = f"3d_leguan_bridge_incremental_force"
 learning_rate_adam = 1e-3
 learning_rate_total_decay = 1e-3
 adam_iterations = 5000
 exponential_decay = learning_rate_total_decay ** (1 / 5000)
 lbfgs_iterations = 2000
-rel_err_l2_disp = []
-rel_err_l2_stress = []
-l2_iteration = []
-relaxation_adam_iterations = 0  # avoid undefined variable in naming
-relaxation_lbfgs_iterations = 0  # avoid undefined variable in naming
-relaxation = False
-earlystopping = False
-earlystopping_choice = "weightsbiases"  # "loss" or "weightsbiases"
-point_A = np.array([[length, web_height + load_height]])
-output_A_prediction = PredictionTracker(
-    period=1000,
-    points=point_A,
-    filename=os.path.join(model_path, f"prediction_tracker_{learning_rate_adam}.csv"),
-)
-train_callbacks = [output_A_prediction]
 time_dict["setup"].append(time.time())
-
-# Define the early stopping callback
-if earlystopping:
-    if earlystopping_choice == "loss":
-        early = LossPlateauStopping(patience=500, min_delta=1e-5)
-    elif earlystopping_choice == "weightsbiases":
-        early = WeightsBiasPlateauStopping(
-            patience=500, min_delta=1e-4, norm_choice="fro"
-        )
-    else:
-        raise ValueError("The specified stopping choice is not implemented or correct.")
-    train_callbacks.append(early)
-
-# Optional relaxation step before incremental loading
-if relaxation:
-    time_dict["relaxation_compiling"].append(time.time())
-    shear_force = max_shear_force / steps
-    relaxation_adam_iterations = 2000
-    print(f"\nRelaxation step for initial shear force of {shear_force}.\n")
-    model.compile("adam", lr=learning_rate_adam)
-    time_dict["relaxation_compiling"].append(time.time())
-    time_dict["relaxation_training"].append(time.time())
-    losshistory, train_state = model.train(
-        iterations=relaxation_adam_iterations, display_every=100
-    )
-    time_dict["relaxation_training"].append(time.time())
-
-    time_dict["relaxation_compiling"].append(time.time())
-    relaxation_lbfgs_iterations = 2000
-    dde.optimizers.config.set_LBFGS_options(maxiter=relaxation_lbfgs_iterations)
-    model.compile("L-BFGS")
-    time_dict["relaxation_compiling"].append(time.time())
-    time_dict["relaxation_training"].append(time.time())
-    losshistory, train_state = model.train(display_every=1000)
-    time_dict["relaxation_training"].append(time.time())
 
 # Train the network in an incremental manner and predict the results in each load step
 for i in range(steps):
-    shear_force = max_shear_force / steps * (i + 1)
-    print(f"\nTraining for a shear force of {shear_force}.\n")
+    force_location_x = slope_corner_points[2, 0] / (steps + 1) * (i + 1)
+    print(f"\nTraining for the location of the force at {force_location_x}.\n")
     time_dict["simulation_compiling_adam"].append(time.time())
-    model.compile("adam", lr=learning_rate_adam)
+    model.compile(
+        "adam", lr=learning_rate_adam
+    )  # , decay=("exponential", exponential_decay))
     time_dict["simulation_compiling_adam"].append(time.time())
     time_dict["simulation_training_adam"].append(time.time())
     losshistory, train_state = model.train(
-        iterations=adam_iterations,
-        display_every=100,
-        callbacks=train_callbacks,
-    )
+        iterations=adam_iterations, display_every=100
+    )  # , callbacks=[early for _ in [1] if earlystopping])
     time_dict["simulation_training_adam"].append(time.time())
 
     if lbfgs_iterations > 0:
@@ -395,38 +351,35 @@ for i in range(steps):
     points, _, cell_types, elements = geom.get_mesh()
     n_nodes_per_cell = elements.shape[1]
     n_cells = elements.shape[0]
-    n_points = points.shape[0]
     cells = np.hstack([np.insert(elem, 0, n_nodes_per_cell) for elem in elements])
     cells = np.array(cells, dtype=np.int64)
     cell_types = np.array(cell_types, dtype=np.uint8)
-    grid = pv.UnstructuredGrid(
-        cells, cell_types, np.c_[points, np.zeros((n_points, 1))]
-    )
+    grid = pv.UnstructuredGrid(cells, cell_types, points)
     output = model.predict(points)
-    displacement_pred = np.column_stack((output[:, 0:1], output[:, 1:2]))
-    sigma_xx, sigma_yy, sigma_xy, _ = model.predict(
-        points, operator=cauchy_stress_2D_modified
+    displacement_pred = np.column_stack(
+        (output[:, 0:1], output[:, 1:2], output[:, 2:3])
     )
-    cauchy_stress_pred = np.column_stack((sigma_xx, sigma_yy, sigma_xy))
-    grid.point_data["pred_displacement"] = np.c_[
-        displacement_pred, np.zeros((n_points, 1))
-    ]
-    grid.point_data["pred_cauchy_stress"] = np.column_stack(
-        (
-            cauchy_stress_pred[:, 0],
-            cauchy_stress_pred[:, 1],
-            np.zeros((n_points, 1)),
-            cauchy_stress_pred[:, 2],
-            np.zeros((n_points, 1)),
-            np.zeros((n_points, 1)),
-        )
+    (
+        sigma_xx,
+        sigma_yy,
+        sigma_zz,
+        sigma_xy,
+        _,
+        sigma_xz,
+        _,
+        sigma_yz,
+        _,
+    ) = model.predict(points, operator=cauchy_stress_3D)
+    cauchy_stress_pred = np.column_stack(
+        (sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_xz)
     )
+    grid.point_data["pred_displacement"] = displacement_pred
+    grid.point_data["pred_cauchy_stress"] = cauchy_stress_pred
 
-    # Print displacement of point A
-    displacement_A = model.predict(point_A)
-    print(f"The predicted y-displacement in point A is {displacement_A[:, 1][0]:.4e}.")
-
-    file_path = os.path.join(model_path, f"{simulation_case}_{int(shear_force):03}")
+    file_path = os.path.join(
+        model_path,
+        f"{simulation_case}_{int(abs(total_load_mass))}_{int(abs(force_location_x * 1e3)):03}",
+    )
     grid.save(f"{file_path}.vtu")
     time_dict["simulation_prediction"].append(time.time())
 
@@ -474,35 +427,6 @@ fig1.savefig(
     f"{model_path}/{simulation_case}-{train_state.step}_loss_plot.png", dpi=300
 )
 
-if l2_iteration:
-    fig2, ax2 = plt.subplots(figsize=(10, 8))
-    ax2.plot(
-        l2_iteration,
-        rel_err_l2_disp,
-        color="b",
-        lw=2,
-        label="$L_2$-error for displacement",
-        marker="x",
-    )
-    ax2.plot(
-        l2_iteration,
-        rel_err_l2_stress,
-        color="r",
-        lw=2,
-        label="$L_2$-error for cauchy stress",
-        marker="x",
-    )
-    ax2.set_xlabel("Iterations", size=17)
-    ax2.set_ylabel("$L_2$ norm", size=17)
-    ax2.set_yscale("log")
-    ax2.tick_params(axis="both", labelsize=15)
-    ax2.legend(fontsize=17)
-    ax2.grid()
-    plt.tight_layout()
-    fig2.savefig(
-        f"{model_path}/{simulation_case}-{train_state.step}_l2_norm_over_iterations.png",
-        dpi=300,
-    )
 time_dict["total"].append(time.time())
 
 # Print times to output file
@@ -519,23 +443,6 @@ with open(
         f"Building element information:         {(time_dict['element_information'][1] - time_dict['element_information'][0]):8.3f}",
         file=text_file,
     )
-    if relaxation:
-        print(
-            f"Relaxation compilation (adam):        {(time_dict['relaxation_compiling'][1] - time_dict['relaxation_compiling'][0]):8.3f}",
-            file=text_file,
-        )
-        print(
-            f"Relaxation training (adam):           {(time_dict['relaxation_training'][1] - time_dict['relaxation_training'][0]):8.3f}",
-            file=text_file,
-        )
-        print(
-            f"Relaxation compilation (L-BFGS):      {(time_dict['relaxation_compiling'][3] - time_dict['relaxation_compiling'][2]):8.3f}",
-            file=text_file,
-        )
-        print(
-            f"Relaxation training (L-BFGS):         {(time_dict['relaxation_training'][3] - time_dict['relaxation_training'][2]):8.3f}",
-            file=text_file,
-        )
     if steps > 1:
         for i in range(steps):
             print(f"----------------------------------------------", file=text_file)
