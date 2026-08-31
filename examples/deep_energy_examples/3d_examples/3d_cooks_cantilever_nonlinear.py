@@ -36,6 +36,7 @@ from compsim_pinns.hyperelasticity.hyperelasticity_utils import (
 )
 from compsim_pinns.postprocess.custom_callbacks import (
     LossPlateauStopping,
+    PredictionTracker,
     WeightsBiasPlateauStopping,
 )
 from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
@@ -68,10 +69,10 @@ time_dict["total"].append(time.time())
 time_dict["meshing"].append(time.time())
 
 # Geometry and mesh generation
-length = 0.048
-web_height = 0.044
-load_height = 0.016
-thickness = 0.001
+length = 48
+web_height = 44
+load_height = 16
+thickness = 1
 n_elements_length = 48
 n_elements_height = 16
 n_elements_thickness = 1
@@ -90,11 +91,11 @@ time_dict["element_information"].append(time.time())
 domain_dimension = 3
 boundary_dimension = domain_dimension - 1
 quad_rule = GaussQuadratureRule(
-    rule_name="gauss_legendre", dimension=domain_dimension, ngp=2
+    rule_name="gauss_legendre", dimension=domain_dimension, ngp=3
 )
 coord_quadrature, weight_quadrature = quad_rule.generate()
 quad_rule_boundary_integral = GaussQuadratureRule(
-    rule_name="gauss_legendre", dimension=boundary_dimension, ngp=2
+    rule_name="gauss_legendre", dimension=boundary_dimension, ngp=3
 )
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
@@ -323,19 +324,25 @@ max_shear_force = 20
 model_path = str(Path(__file__).parent)
 simulation_case = f"3d_cooks_cantilever_nonlinear"
 learning_rate_adam = 1e-3
-learning_rate_total_decay = 1e-3
-adam_iterations = 5000
-exponential_decay = learning_rate_total_decay ** (1 / 5000)
-lbfgs_iterations = 2000
+learning_rate_total_decay = 1e-1
+adam_iterations = 20000
+exponential_decay = learning_rate_total_decay ** (1 / 7500)
+lbfgs_iterations = 0
 rel_err_l2_disp = []
 rel_err_l2_stress = []
 l2_iteration = []
 relaxation_adam_iterations = 0  # avoid undefined variable in naming
 relaxation_lbfgs_iterations = 0  # avoid undefined variable in naming
-relaxation = False
+relaxation = True
 earlystopping = False
 earlystopping_choice = "weightsbiases"  # "loss" or "weightsbiases"
-point_A = np.array([[length, web_height + load_height]])
+point_A = np.array([[length, web_height + load_height, 0]])
+output_A_prediction = PredictionTracker(
+    period=500,
+    points=point_A,
+    filename=os.path.join(model_path, f"prediction_tracker_{learning_rate_adam}.csv"),
+)
+train_callbacks = [output_A_prediction]
 time_dict["setup"].append(time.time())
 
 # Define the early stopping callback
@@ -348,28 +355,33 @@ if earlystopping:
         )
     else:
         raise ValueError("The specified stopping choice is not implemented or correct.")
+    train_callbacks.append(early)
 
 # Optional relaxation step before incremental loading
 if relaxation:
     time_dict["relaxation_compiling"].append(time.time())
-    shear_force = max_shear_force / steps
-    relaxation_adam_iterations = 3000
+    shear_force = 0
+    relaxation_adam_iterations = 5000
     print(f"\nRelaxation step for initial shear force of {shear_force}.\n")
     model.compile("adam", lr=learning_rate_adam)
     time_dict["relaxation_compiling"].append(time.time())
     time_dict["relaxation_training"].append(time.time())
     losshistory, train_state = model.train(
-        iterations=relaxation_adam_iterations, display_every=100
+        iterations=relaxation_adam_iterations,
+        display_every=100,
+        callbacks=train_callbacks,
     )
     time_dict["relaxation_training"].append(time.time())
 
     time_dict["relaxation_compiling"].append(time.time())
-    relaxation_lbfgs_iterations = 2000
+    relaxation_lbfgs_iterations = 1000
     dde.optimizers.config.set_LBFGS_options(maxiter=relaxation_lbfgs_iterations)
     model.compile("L-BFGS")
     time_dict["relaxation_compiling"].append(time.time())
     time_dict["relaxation_training"].append(time.time())
-    losshistory, train_state = model.train(display_every=1000)
+    losshistory, train_state = model.train(
+        display_every=1000, callbacks=train_callbacks
+    )
     time_dict["relaxation_training"].append(time.time())
 
 # Train the network in an incremental manner and predict the results in each load step
@@ -377,13 +389,15 @@ for i in range(steps):
     shear_force = max_shear_force / steps * (i + 1)
     print(f"\nTraining for a shear force of {shear_force}.\n")
     time_dict["simulation_compiling_adam"].append(time.time())
-    model.compile("adam", lr=learning_rate_adam)
+    model.compile(
+        "adam", lr=learning_rate_adam, decay=("exponential", exponential_decay)
+    )
     time_dict["simulation_compiling_adam"].append(time.time())
     time_dict["simulation_training_adam"].append(time.time())
     losshistory, train_state = model.train(
         iterations=adam_iterations,
         display_every=100,
-        callbacks=[early for _ in [1] if earlystopping],
+        callbacks=train_callbacks,
     )
     time_dict["simulation_training_adam"].append(time.time())
 
@@ -393,7 +407,9 @@ for i in range(steps):
         model.compile("L-BFGS")
         time_dict["simulation_compiling_lbfgs"].append(time.time())
         time_dict["simulation_training_lbfgs"].append(time.time())
-        losshistory, train_state = model.train(display_every=1000)
+        losshistory, train_state = model.train(
+            display_every=1000, callbacks=train_callbacks
+        )
         time_dict["simulation_training_lbfgs"].append(time.time())
 
     # Save the EPINN results
