@@ -1994,6 +1994,8 @@ class APIGeometry(object):
             [elem_nodes.reshape(-1).tolist()],
         )
 
+        gmsh_model.mesh.renumberNodes()
+
         if visualize_mesh:
             if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
