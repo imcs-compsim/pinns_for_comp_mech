@@ -37,7 +37,6 @@ jobs:
         run: |
           rsync -av --delete compsim_pinns/ ../collab-repo/compsim_pinns/
           rsync -av --delete pyproject.toml ../collab-repo/
-          rsync -av --delete __version__.py ../collab-repo/
           rsync -av --delete env.yaml ../collab-repo/
         # `--delete` ensures removed files are also deleted in the target
 
