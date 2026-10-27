@@ -242,16 +242,16 @@ net.apply_output_transform(output_transform)
 model = dde.Model(data, net)
 
 # Set the training parameters
-steps = 10  # try also 20, 40
+steps = 1  # try also 20, 40
 max_shear_load = 1e-2
 model_path = str(Path(__file__).parent)
 simulation_case = f"Beam_under_shear_load_nonlinear_incremental_exponential_decay"
 learning_rate_adam = 1e-3
 learning_rate_total_decay = 1e-3
-adam_iterations = 50000
+adam_iterations = 5000
 exponential_decay = learning_rate_total_decay ** (1 / 5000)
-lbfgs_iterations = 0
-earlystopping = True
+lbfgs_iterations = 2000
+earlystopping = False
 earlystopping_choice = "weightsbiases"  # "loss" or "weightsbiases"
 time_dict["setup"].append(time.time())
 
@@ -324,7 +324,8 @@ for i in range(steps):
     print(f"\nTraining for a shear load of {shear_load}.\n")
     time_dict["simulation_compiling_adam"].append(time.time())
     model.compile(
-        "adam", lr=learning_rate_adam, decay=("exponential", exponential_decay)
+        "adam",
+        lr=learning_rate_adam,  # decay=("exponential", exponential_decay)
     )
     time_dict["simulation_compiling_adam"].append(time.time())
     time_dict["simulation_training_adam"].append(time.time())

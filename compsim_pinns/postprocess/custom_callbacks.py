@@ -340,6 +340,82 @@ class WeightsBiasPlateauStopping(Callback):
         return float(result)
 
 
+class DisplacementConvergenceStopping(Callback):
+    """Stop training when successive displacement predictions converge."""
+
+    def __init__(
+        self, cut_off_threshold=1e-6, norm_choice="l2", evaluation_points=None
+    ):
+        """Initialize the displacement convergence callback.
+
+        Args:
+            cut_off_threshold: Maximum relative norm of the change between two
+                successive displacement predictions.
+            norm_choice: Norm used for the flattened displacement difference.
+                Supported values are ``"l1"``, ``"l2"``, and ``"linf"``.
+            evaluation_points: Points at which displacement convergence is
+                evaluated. If ``None``, the model's training points are used.
+        """
+        super().__init__()
+        norm_orders = {"l1": 1, "l2": 2, "linf": float("inf")}
+        if norm_choice not in norm_orders:
+            raise ValueError(
+                "norm_choice must be one of 'l1', 'l2', or 'linf', "
+                f"but got {norm_choice!r}."
+            )
+
+        self.norm_choice = norm_choice
+        self.norm_order = norm_orders[norm_choice]
+        self.evaluation_points = evaluation_points
+        self.prediction_last = None
+        self.cut_off_threshold = cut_off_threshold
+        self.stopped_iteration = 0
+        self.norm_diff = None
+
+    def on_train_begin(self):
+        """Set values at the beginning of the training."""
+        self.prediction_last = None
+        self.stopped_iteration = 0
+        self.norm_diff = None
+
+    def on_epoch_end(self):
+        """Stop if the current and previous displacement predictions are close."""
+        parameter = next(self.model.net.parameters())
+        X = (
+            self.model.data.train_x
+            if self.evaluation_points is None
+            else self.evaluation_points
+        )
+        inputs = torch.as_tensor(X, device=parameter.device, dtype=parameter.dtype)
+
+        with torch.no_grad():
+            prediction_current = self.model.net(inputs)
+
+        if self.prediction_last is not None:
+            increment_norm = torch.linalg.vector_norm(
+                (prediction_current - self.prediction_last).reshape(-1),
+                ord=self.norm_order,
+            )
+            current_norm = torch.linalg.vector_norm(
+                prediction_current.reshape(-1), ord=self.norm_order
+            )
+            self.norm_diff = increment_norm / current_norm.clamp_min(
+                torch.finfo(current_norm.dtype).eps
+            )
+            if self.norm_diff.item() < self.cut_off_threshold:
+                self.stopped_iteration = self.model.train_state.iteration
+                self.model.stop_training = True
+
+        self.prediction_last = prediction_current
+
+    def on_train_end(self):
+        """Report when the convergence criterion stopped training."""
+        if self.stopped_iteration > 0:
+            print(
+                f"Early stopping at iteration {self.stopped_iteration} as the relative {self.norm_choice} norm of the displacement increment ({self.norm_diff.item():.3E}) was below {self.cut_off_threshold:.1E}."
+            )
+
+
 class ResetLagrangeParameters(Callback):
     """
     Reset the lagrange parameters at the beginning of a new iteration.

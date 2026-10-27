@@ -37,6 +37,7 @@ from compsim_pinns.hyperelasticity.hyperelasticity_utils import (
     strain_energy_neo_hookean_3d,
 )
 from compsim_pinns.postprocess.custom_callbacks import (
+    DisplacementConvergenceStopping,
     LossPlateauStopping,
     WeightsBiasPlateauStopping,
 )
@@ -266,13 +267,19 @@ relaxation_adam_iterations = 0  # avoid undefined variable in naming
 relaxation_lbfgs_iterations = 0  # avoid undefined variable in naming
 relaxation = False
 earlystopping = True
-earlystopping_choice = "weightsbiases"  # "loss" or "weightsbiases"
+earlystopping_choice = "displacements"  # "loss" or "weightsbiases" or "displacements"
 compare_choice = "fine"  # "fine" or "coarse"
 time_dict["setup"].append(time.time())
 
+# Create the set of test points for the early stopping callback
+element_centers = np.array(
+    gmsh_model.mesh.getBarycenters(elementType=5, tag=-1, fast=False, primary=True)
+).reshape(-1, 3)
+
 # Create error lists to store relative L2 errors
-rel_err_l2_disp = []
-rel_err_l2_stress = []
+rel_l2_error_disp_nodal_integrated = []
+rel_l2_error_stress_nodal_integrated = []
+rel_l2_error_stress_center_integrated = []
 l2_iteration = []
 
 # Define the early stopping callback
@@ -282,6 +289,10 @@ if earlystopping:
     elif earlystopping_choice == "weightsbiases":
         early = WeightsBiasPlateauStopping(
             patience=500, min_delta=1e-4, norm_choice="fro"
+        )
+    elif earlystopping_choice == "displacements":
+        early = DisplacementConvergenceStopping(
+            cut_off_threshold=1e-8, evaluation_points=element_centers
         )
     else:
         raise ValueError("The specified stopping choice is not implemented or correct.")
@@ -317,6 +328,21 @@ for i in range(steps):
     model.compile(
         "adam", lr=learning_rate_adam, decay=("exponential", exponential_decay)
     )
+
+    # if i == 0:
+    #     adam_iterations = 50000
+    #     exponential_decay = learning_rate_total_decay ** (1 / 5000)
+    #     learning_rate_adam = 1e-3
+    #     model.compile(
+    #         "adam", lr=learning_rate_adam, decay=("exponential", exponential_decay)
+    #     )
+    # else:
+    #     adam_iterations = 1000
+    #     learning_rate_adam = 1e-3
+    #     model.compile(
+    #         "adam", lr=learning_rate_adam, decay=("exponential", exponential_decay)
+    #     )
+
     time_dict["simulation_compiling_adam"].append(time.time())
     time_dict["simulation_training_adam"].append(time.time())
     losshistory, train_state = model.train(
@@ -376,8 +402,12 @@ for i in range(steps):
             + f"/3d_torsion_prism/fem_reference_3d_block_torsion_angle_{compare_choice}_{int(theta_deg):03}.vtu"
         )
         points_fem = fem_reference.points
+        cell_centers_fem = fem_reference.cell_centers().points
         displacement_fem = fem_reference.point_data["displacement"]
         cauchy_stress_fem = fem_reference.point_data["nodal_cauchy_stresses_xyz"]
+        cauchy_stress_fem_element_centers = fem_reference.cell_data[
+            "element_cauchy_stresses_xyz"
+        ]
 
         # Compute predictions on FEM nodes
         displacement_pred_on_fem_mesh = model.predict(points_fem)
@@ -440,6 +470,65 @@ for i in range(steps):
             ]
         ).T.reshape(-1, 3, 3)
 
+        (
+            sigma_xx_pred_on_fem_element_centers,
+            sigma_yy_pred_on_fem_element_centers,
+            sigma_zz_pred_on_fem_element_centers,
+            sigma_xy_pred_on_fem_element_centers,
+            _,
+            sigma_xz_pred_on_fem_element_centers,
+            _,
+            sigma_yz_pred_on_fem_element_centers,
+            _,
+        ) = model.predict(cell_centers_fem, operator=cauchy_stress_3D)
+        cauchy_stress_pred_on_fem_element_centers = np.column_stack(
+            (
+                sigma_xx_pred_on_fem_element_centers,
+                sigma_yy_pred_on_fem_element_centers,
+                sigma_zz_pred_on_fem_element_centers,
+                sigma_xy_pred_on_fem_element_centers,
+                sigma_yz_pred_on_fem_element_centers,
+                sigma_xz_pred_on_fem_element_centers,
+            )
+        )
+        tensor_cauchy_stress_pred_on_fem_element_centers = np.transpose(
+            np.array(
+                [
+                    [
+                        sigma_xx_pred_on_fem_element_centers.flatten(),
+                        sigma_xy_pred_on_fem_element_centers.flatten(),
+                        sigma_xz_pred_on_fem_element_centers.flatten(),
+                    ],
+                    [
+                        sigma_xy_pred_on_fem_element_centers.flatten(),
+                        sigma_yy_pred_on_fem_element_centers.flatten(),
+                        sigma_yz_pred_on_fem_element_centers.flatten(),
+                    ],
+                    [
+                        sigma_xz_pred_on_fem_element_centers.flatten(),
+                        sigma_yz_pred_on_fem_element_centers.flatten(),
+                        sigma_zz_pred_on_fem_element_centers.flatten(),
+                    ],
+                ]
+            ),
+            (2, 0, 1),
+        )
+        tensor_cauchy_stress_fem_element_centers = np.array(
+            [
+                [
+                    cauchy_stress_fem_element_centers[:, 0],
+                    cauchy_stress_fem_element_centers[:, 3],
+                    cauchy_stress_fem_element_centers[:, 5],
+                    cauchy_stress_fem_element_centers[:, 3],
+                    cauchy_stress_fem_element_centers[:, 1],
+                    cauchy_stress_fem_element_centers[:, 4],
+                    cauchy_stress_fem_element_centers[:, 5],
+                    cauchy_stress_fem_element_centers[:, 4],
+                    cauchy_stress_fem_element_centers[:, 2],
+                ]
+            ]
+        ).T.reshape(-1, 3, 3)
+
         # Compute relative L2-error
         volume_integral = fem_reference.copy()
         volume_integral.point_data["squared_error_disp"] = (
@@ -460,22 +549,54 @@ for i in range(steps):
         volume_integral.point_data["squared_stress"] = (
             np.linalg.norm(tensor_cauchy_stress_fem, axis=(1, 2), ord="fro") ** 2
         )
+        volume_integral.cell_data["squared_error_stress_center"] = (
+            np.linalg.norm(
+                tensor_cauchy_stress_pred_on_fem_element_centers
+                - tensor_cauchy_stress_fem_element_centers,
+                axis=(1, 2),
+                ord="fro",
+            )
+            ** 2
+        )
+        volume_integral.cell_data["squared_stress_center"] = (
+            np.linalg.norm(
+                tensor_cauchy_stress_fem_element_centers, axis=(1, 2), ord="fro"
+            )
+            ** 2
+        )
         volume_integral = volume_integral.integrate_data()
         l2_iteration.append(train_state.step)
-        rel_err_l2_disp.append(
+        rel_l2_error_disp_nodal_integrated.append(
             np.sqrt(
                 volume_integral.point_data["squared_error_disp"][0]
                 / volume_integral.point_data["squared_disp"][0]
             )
         )
-        print(f"Relative L2 error for displacement:   {rel_err_l2_disp[-1]}")
-        rel_err_l2_stress.append(
+        print(
+            "Relative continuum L2 error "
+            f"(nodal displacement interpolation): {rel_l2_error_disp_nodal_integrated[-1]}"
+        )
+        rel_l2_error_stress_nodal_integrated.append(
             np.sqrt(
                 volume_integral.point_data["squared_error_stress"][0]
                 / volume_integral.point_data["squared_stress"][0]
             )
         )
-        print(f"Relative L2 error for stress:         {rel_err_l2_stress[-1]}")
+        print(
+            "Relative continuum L2 error "
+            f"(nodal stress interpolation):       {rel_l2_error_stress_nodal_integrated[-1]}"
+        )
+        rel_l2_error_stress_center_integrated.append(
+            np.sqrt(
+                volume_integral.cell_data["squared_error_stress_center"][0]
+                / volume_integral.cell_data["squared_stress_center"][0]
+            )
+        )
+        print(
+            "Relative continuum L2 error "
+            "(element-center stress, piecewise constant): "
+            f"{rel_l2_error_stress_center_integrated[-1]}"
+        )
 
         # Compute mean absolute error
         print(
@@ -650,8 +771,14 @@ for i in range(steps):
         l2_norm_stress_gp = np.sum(squared_stress_gp * detJ * gauss_weights[None, :])
         rel_l2_stress_gp = np.sqrt(l2_error_stress_gp / l2_norm_stress_gp)
 
-        print(f"Relative GP L2 error for displacement: {rel_l2_disp_gp}")
-        print(f"Relative GP L2 error for stress:       {rel_l2_stress_gp}")
+        print(
+            "Relative continuum L2 error "
+            f"(Gauss-point displacement quadrature): {rel_l2_disp_gp}"
+        )
+        print(
+            "Relative continuum L2 error "
+            f"(Gauss-point stress quadrature):       {rel_l2_stress_gp}"
+        )
 
         # Relative vector L2 norms
         rel_vec_l2_disp = np.linalg.norm(
@@ -660,8 +787,14 @@ for i in range(steps):
         rel_vec_l2_disp_nodes = np.linalg.norm(
             displacement_pred_on_fem_mesh - displacement_fem
         ) / np.linalg.norm(displacement_fem)
-        print(f"Relative vector L2 error for displacement: GP: {rel_vec_l2_disp}")
-        print(f"                                        nodal: {rel_vec_l2_disp_nodes}")
+        print(
+            "Relative discrete sample norm "
+            f"(unweighted GP displacement):    {rel_vec_l2_disp}"
+        )
+        print(
+            "Relative discrete sample norm "
+            f"(unweighted nodal displacement): {rel_vec_l2_disp_nodes}"
+        )
 
         rel_vec_l2_stress = np.linalg.norm(
             cauchy_stress_pred_on_fem_gp - cauchy_stress_fem_gp
@@ -669,9 +802,13 @@ for i in range(steps):
         rel_vec_l2_stress_nodes = np.linalg.norm(
             cauchy_stress_pred_on_fem_mesh - cauchy_stress_fem
         ) / np.linalg.norm(cauchy_stress_fem)
-        print(f"Relative vector L2 error for stress:       GP: {rel_vec_l2_stress}")
         print(
-            f"                                        nodal: {rel_vec_l2_stress_nodes}"
+            "Relative discrete sample norm "
+            f"(unweighted GP stress Voigt vector):    {rel_vec_l2_stress}"
+        )
+        print(
+            "Relative discrete sample norm "
+            f"(unweighted nodal stress Voigt vector): {rel_vec_l2_stress_nodes}"
         )
 
         # Compare stresses at FEM element centers
@@ -702,7 +839,8 @@ for i in range(steps):
             cauchy_stress_pred_on_fem_centers - stresses_fem_centers
         ) / np.linalg.norm(stresses_fem_centers)
         print(
-            f"                                      centers: {rel_vec_l2_stress_centers}"
+            "Relative discrete sample norm "
+            f"(unweighted center stress Voigt vector): {rel_vec_l2_stress_centers}"
         )
 
         # R2 scores for displacement and stress components on the nodal FEM mesh
@@ -843,18 +981,18 @@ if l2_iteration:
     fig2, ax2 = plt.subplots(figsize=(10, 8))
     ax2.plot(
         l2_iteration,
-        rel_err_l2_disp,
+        rel_l2_error_disp_nodal_integrated,
         color="b",
         lw=2,
-        label="$L_2$-error for displacement",
+        label="$L_2$ error: nodal displacement interpolation",
         marker="x",
     )
     ax2.plot(
         l2_iteration,
-        rel_err_l2_stress,
+        rel_l2_error_stress_nodal_integrated,
         color="r",
         lw=2,
-        label="$L_2$-error for cauchy stress",
+        label="$L_2$ error: nodal Cauchy-stress interpolation",
         marker="x",
     )
     ax2.set_xlabel("Iterations", size=17)
