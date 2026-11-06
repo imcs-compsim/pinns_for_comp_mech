@@ -19,7 +19,6 @@ Key Features:
 
 import os
 
-# os.environ["DDE_BACKEND"] = "pytorch"
 import deepxde as dde
 import numpy as np
 from deepxde import backend as bkd
@@ -47,9 +46,6 @@ seed_h = 10
 seed_w = 10
 origin = [0, -0.5, -0.5]
 
-# The applied pressure
-pressure = -0.1
-
 Block_3D_obj = Block_3D_hex(
     origin=origin,
     length=length,
@@ -63,13 +59,13 @@ gmsh_model = Block_3D_obj.generateGmshModel(visualize_mesh=False)
 domain_dimension = 3
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=domain_dimension, ngp=2
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 boundary_dimension = 2
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=boundary_dimension, ngp=2
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -103,25 +99,12 @@ geom = GmshGeometryElementDeepEnergy(
     boundary_selection_map=boundary_selection_map,
 )
 
-# export_normals_tangentials_to_vtk(geom, save_folder_path=str(Path(__file__).parent.parent.parent.parent), file_name="block_boundary_normals")# # change global variables in elasticity_utils
-# hyperelasticity_utils.youngs_modulus = 1.33
-# hyperelasticity_utils.nu = 0.3
-# nu,lame,shear,youngs_modulus = compute_elastic_properties()
-
-# # change global variables in elasticity_utils
-# elasticity_utils.lame = lame
-# elasticity_utils.shear = shear
-
-# The applied pressure
-
-pressure = 1
 # hyperelasticity_utils.lame = 115.38461538461539
 # hyperelasticity_utils.shear = 76.92307692307692
 hyperelasticity_utils.youngs_modulus = 1.33
 hyperelasticity_utils.nu = 0.33
 
 nu, lame, shear, youngs_modulus = compute_elastic_properties()
-applied_disp_y = -pressure / youngs_modulus * (1 - nu**2) * 1
 
 
 def potential_energy(
@@ -183,24 +166,6 @@ def potential_energy(
     return [internal_energy]
 
 
-def points_at_back(x, on_boundary):
-    """Check whether a point satisfies the `points_at_back` boundary condition.
-
-    Args:
-        x: Input coordinates used to evaluate the function.
-        on_boundary: Boundary indicator provided by the geometry callback.
-
-    Returns:
-        bool: Result of the `points_at_back` evaluation.
-    """
-    points_bottom = np.isclose(x[0], 0)
-
-    return on_boundary and points_bottom
-
-
-bc_u_y = dde.DirichletBC(geom, lambda _: 0, points_at_back, component=1)
-bc_u_z = dde.DirichletBC(geom, lambda _: 0, points_at_back, component=2)
-
 n_dummy = 1
 data = DeepEnergyPDE(
     geom,
@@ -219,7 +184,6 @@ steps = 10
 
 
 def output_transform(x, y):
-    # displacement field (u, v, w)
     """Compute output transform for this example setup.
 
     Args:
@@ -229,6 +193,7 @@ def output_transform(x, y):
     Returns:
         Any: Computed value returned by `output_transform`.
     """
+    # displacement field (u, v, w)
     u = y[:, 0:1]
     v = y[:, 1:2]
     w = y[:, 2:3]
@@ -238,7 +203,6 @@ def output_transform(x, y):
     z_loc = x[:, 2:3]
 
     y0, z0 = 0.0, 0.0
-    # theta = 2*np.pi / 3
     theta_deg = 150
     if model.data.current_epoch is not None:
         if stabilization_model_epoch is not None:
@@ -251,17 +215,13 @@ def output_transform(x, y):
         theta_deg_chunk = (current_step + 1) * theta_deg / steps
     else:
         theta_deg_chunk = 0
-    # print(theta_deg_chunk)
+    print(theta_deg_chunk)
     theta = np.radians(theta_deg_chunk)
     s = x_loc / length
 
     # rotation displacement at x = L
     v_l = y0 + (y_loc - y0) * np.cos(theta) - (z_loc - z0) * np.sin(theta) - y_loc
     w_l = z0 + (y_loc - y0) * np.sin(theta) + (z_loc - z0) * np.cos(theta) - z_loc
-
-    # Simplified version for theta_deg = 180, and the center is y0, z0 = 0.0, 0.0
-    # v_l = -2*y_loc
-    # w_l = -2*z_loc
 
     u_out = s * (1 - s) * u  # no u_x prescribed, just fix at x=0
     v_out = s * v_l + s * (1 - s) * v  # smooth blend
@@ -280,13 +240,6 @@ loss_weights = None
 
 model = dde.Model(data, net)
 
-# dde.optimizers.set_LBFGS_options(
-#                                 maxiter=1000
-# )
-
-# model.compile("adam", lr=0.001)
-# losshistory, train_state = model.train(epochs=stabilization_model_epoch, display_every=100)
-
 file_path = os.path.join(
     os.getcwd(), "deep_energy_3d_block_torsion_nonlinear_incremental_lbfgs"
 )
@@ -300,7 +253,6 @@ model.compile("L-BFGS")
 losshistory, train_state = model.train(
     epochs=epochs, callbacks=[epoch_tracker], display_every=1
 )
-
 
 X, offset, cell_types, elements = geom.get_mesh()
 
@@ -360,7 +312,7 @@ y = X[:, 1].flatten()
 z = X[:, 2].flatten()
 
 file_path = os.path.join(
-    os.getcwd(), "deep_energy_3d_block_torsion_nonlinear_incremental_lbfgs"
+    os.getcwd(), "3d_block_torsion_nonlinear_displacement_incremental_lbfgs"
 )
 
 unstructuredGridToVTK(
@@ -380,11 +332,3 @@ unstructuredGridToVTK(
         "pred_stress_xz": combined_shear_stress_pred[2],
     },
 )
-
-# von_mises
-# sqrt(0.5 * (
-#     (pred_normal_stress_X - pred_normal_stress_Y)^2 +
-#     (pred_normal_stress_Y - pred_normal_stress_Z)^2 +
-#     (pred_normal_stress_Z - pred_normal_stress_X)^2 +
-#     6 * (pred_stress_xy^2 + pred_stress_xz^2 + pred_stress_yz^2)
-# ))

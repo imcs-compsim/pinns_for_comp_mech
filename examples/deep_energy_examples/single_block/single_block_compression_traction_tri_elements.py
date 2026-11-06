@@ -54,13 +54,13 @@ quad_rule = GaussQuadratureRule(
     element_type="simplex",
     dimension=domain_dimension,
     ngp=1,
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 boundary_dimension = 1
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=boundary_dimension, ngp=4
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -163,17 +163,6 @@ def potential_energy(
     # select the points where external force is applied
     cond = boundary_selection_tag["on_top"]
     n_e_boundary = int(cond.sum() / n_gp_boundary)
-    # nx = mapped_normal_boundary_t[:,0:1][cond]
-    # ny = mapped_normal_boundary_t[:,1:2][cond]
-
-    # #sigma_xx_n_x = sigma_xx[beg_boundary:][cond]*nx
-    # #sigma_xy_n_y = sigma_xy[beg_boundary:][cond]*ny
-
-    # sigma_yx_n_x = sigma_xy[beg_boundary:][cond]*nx
-    # sigma_yy_n_y = sigma_yy[beg_boundary:][cond]*ny
-
-    # #t_x = sigma_xx_n_x + sigma_xy_n_y
-    # t_y = sigma_yx_n_x + sigma_yy_n_y
 
     # u_x = outputs[:,0:1][beg_boundary:][cond]
     u_y = outputs[:, 1:2][beg_boundary:][cond]
@@ -184,11 +173,6 @@ def potential_energy(
         * (external_force_density)
         * jacobian_boundary_t[cond]
     )
-
-    # internal_energy_reshaped = bkd.reshape(internal_energy, (n_e, n_gp))
-    # external_work_reshaped = bkd.reshape(external_work, (n_e_boundary, n_gp_boundary))
-
-    # total_energy = bkd.reduce_sum(bkd.sum(internal_energy_reshaped, dim=1)) - bkd.reduce_sum(bkd.sum(external_work_reshaped, dim=1)) #+ bkd.reduce_sum(bkd.sum(internal_energy_reshaped, dim=1))
 
     return [internal_energy, -external_work]
 
@@ -237,18 +221,11 @@ loss_weights = None  # [1,1e3]
 model.compile("adam", lr=0.001, loss_weights=loss_weights)
 losshistory, train_state = model.train(epochs=5000, display_every=100)
 
-# model.compile("L-BFGS", loss_weights=loss_weights)
-# losshistory, train_state = model.train(display_every=200)
-
 X, offset, cell_types, dol_triangles = geom.get_mesh()
 nu, lame, shear, youngs_modulus = problem_parameters()
 
-# start_time_calc = time.time()
+# prediction
 output = model.predict(X)
-# end_time_calc = time.time()
-# final_time = f'Prediction time: {(end_time_calc - start_time_calc):.3f} seconds'
-# print(final_time)
-
 u_x_pred, u_y_pred = output[:, 0], output[:, 1]
 u_pred, v_pred = output[:, 0], output[:, 1]
 sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_strain)
@@ -282,15 +259,11 @@ combined_stress_analytical = tuple(
 )
 
 
-file_path = os.path.join(
-    os.getcwd(), "deep_energy_single_block_compression_traction_tri_elements"
-)
+file_path = os.path.join(os.getcwd(), "single_block_compression_traction_tri_elements")
 
 x = X[:, 0].flatten()
 y = X[:, 1].flatten()
 z = np.zeros(y.shape)
-
-# np.savetxt("Lame_inverse_large", X=np.hstack((X,output[:,0:2])))
 
 unstructuredGridToVTK(
     file_path,

@@ -243,9 +243,6 @@ bc_pressure_y_top = dde.OperatorBC(geom, apply_pressure_y_top, boundary_top)
 # Initial BCs for velocities
 ic_velocity_in_x = dde.OperatorBC(geom, apply_velocity_in_x, boundary_initial)
 ic_velocity_in_y = dde.OperatorBC(geom, apply_velocity_in_y, boundary_initial)
-# for displacements
-# bc_u_x = dde.DirichletBC(geom, lambda _: 0, boundary_initial, component=0)
-# bc_u_y = dde.DirichletBC(geom, lambda _: 0, boundary_initial, component=1)
 
 bcs = [bc_pressure_y_top, ic_velocity_in_x, ic_velocity_in_y]
 

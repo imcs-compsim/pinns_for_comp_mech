@@ -42,8 +42,8 @@ block_2d = Block_2D(
 )
 
 quad_rule = GaussQuadratureRule(
-    rule_name="gauss_labotto", dimension=2, ngp=3
-)  # gauss_legendre gauss_labotto
+    rule_name="gauss_lobatto", dimension=2, ngp=3
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 n_test_func = 10
@@ -301,7 +301,6 @@ def output_transform(x, y):
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
 
-    # return tf.concat([u*(x_loc+l_beam/2),v*(y_loc+h_beam/2), pressure + sigma_xx*(l_beam/2-x_loc), sigma_yy*(h_beam/2-y_loc),sigma_xy*(l_beam/2-x_loc)*(x_loc+l_beam/2)*(h_beam/2-y_loc)*(y_loc+h_beam/2)], axis=1)
     return bkd.concat(
         [
             u * (x_loc),
@@ -471,8 +470,6 @@ file_path = os.path.join(os.getcwd(), "patch_test_weak")
 x = X[:, 0].flatten()
 y = X[:, 1].flatten()
 z = np.zeros(y.shape)
-
-# np.savetxt("Lame_inverse_large", X=np.hstack((X,output[:,0:2])))
 
 unstructuredGridToVTK(
     file_path,

@@ -62,9 +62,6 @@ def boundary_condition(x):
     x : x passed to this function by the dde.pde is the NN input. Therefore,
         we must first extract the time coordinate.
     """
-    # x_t = x[:,1:2]
-    # k = diffusionCoeff(x=0)[0]
-    # return -tf.exp(-k*(np.pi)**2*x_t)
     return 0.0
 
 
@@ -171,6 +168,4 @@ model.compile("adam", lr=1e-3, loss_weights=lw)
 losshistory, train_state = model.train(epochs=10000)
 
 # # Plot/print the results
-# dde.saveplot(losshistory, train_state, issave=True, isplot=True)
-
 compareModelPredictionAndAnalyticalSolution(model, analytical_solution)

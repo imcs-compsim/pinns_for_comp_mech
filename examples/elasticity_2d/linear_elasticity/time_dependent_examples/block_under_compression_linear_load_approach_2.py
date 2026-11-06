@@ -78,7 +78,6 @@ t_max = 1
 pressure = 0.1
 nu, lame, shear, youngs_modulus = problem_parameters()
 
-# spaceDomain = dde.geometry.Rectangle([x_min, y_min], [x_max, y_max])
 timeDomain = dde.geometry.TimeDomain(t_min, t_max)
 spaceTimeDomain = dde.geometry.GeometryXTime(geom, timeDomain)
 
@@ -177,9 +176,6 @@ ic_velocity_in_x = dde.icbc.OperatorBC(
 ic_velocity_in_y = dde.icbc.OperatorBC(
     spaceTimeDomain, apply_velocity_in_y, boundary_initial
 )
-# for displacements
-# ic_u_x = dde.icbc.IC(spaceTimeDomain, lambda _: 0, lambda _, on_initial: on_initial, component=0)
-# ic_u_y = dde.icbc.IC(spaceTimeDomain, lambda _: 0, lambda _, on_initial: on_initial, component=1)
 
 # Neumann BC
 bc_pressure_y_top = dde.OperatorBC(spaceTimeDomain, apply_pressure_y_top, boundary_top)

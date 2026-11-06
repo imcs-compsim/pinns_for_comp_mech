@@ -88,12 +88,12 @@ boundary_selection_map = [
 
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=2, ngp=2
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=1, ngp=6
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -206,7 +206,6 @@ def potential_energy(
         + outputs[:, 1:2][beg_boundary:][cond]
         + radius
     )
-    # gap_n = tf.math.divide_no_nan(gap_y, tf.math.abs(mapped_normal_boundary_t[:,1:2][cond]))
     eta = 2e4
     contact_force_density = 1 / 2 * eta * bkd.relu(-gap_y) * bkd.relu(-gap_y)
     contact_work = (
@@ -215,28 +214,7 @@ def potential_energy(
         * jacobian_boundary_t[cond]
     )
 
-    ####################################################################################################################
-    # Reshape energy-work terms and sum over the gauss points
-    # internal_energy_reshaped = bkd.sum(bkd.reshape(internal_energy, (n_e, n_gp)), dim=1)
-    # external_work_reshaped = bkd.sum(bkd.reshape(external_work, (n_e_boundary_external, n_gp_boundary)), dim=1)
-    # contact_work_reshaped = bkd.sum(bkd.reshape(contact_work, (n_e_boundary_contact, n_gp_boundary)), dim=1)
-    # sum over the elements and get the overall loss
-    # total_energy = bkd.reduce_sum(internal_energy_reshaped) - bkd.reduce_sum(external_work_reshaped) + bkd.reduce_sum(contact_work_reshaped)
-
     return [internal_energy, -external_work, contact_work]
-
-
-def points_at_top(x):
-    """Compute points at top for this example setup.
-
-    Args:
-        x: Input coordinates used to evaluate the function.
-
-    Returns:
-        Any: Computed value returned by `points_at_top`.
-    """
-    cond_points_top = np.isclose(x, 0)
-    return cond_points_top
 
 
 n_dummy = 1
@@ -274,7 +252,6 @@ net.apply_output_transform(output_transform)
 epoch_tracker = EpochTracker()
 
 model = dde.Model(data, net)
-# if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
 model.compile("adam", lr=0.001)
 losshistory, train_state = model.train(
     epochs=10, callbacks=[epoch_tracker], display_every=1
@@ -285,37 +262,6 @@ exit()
 model.compile("L-BFGS")
 model.train_step.optimizer_kwargs["options"]["maxiter"] = 1000
 losshistory, train_state = model.train(display_every=200)
-
-# # post
-
-# X, offset, cell_types, dol_triangles = geom.get_mesh()
-# nu,lame,shear,youngs_modulus = problem_parameters()
-
-# # start_time_calc = time.time()
-# output = model.predict(X)
-# # end_time_calc = time.time()
-# # final_time = f'Prediction time: {(end_time_calc - start_time_calc):.3f} seconds'
-# # print(final_time)
-
-# u_x_pred, u_y_pred = output[:,0], output[:,1]
-# u_pred, v_pred = output[:,0], output[:,1]
-# sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_strain)
-
-
-# combined_disp = tuple(np.vstack((u_x_pred, u_y_pred, np.zeros(u_x_pred.shape[0]))))
-# combined_stress = tuple(np.vstack((sigma_xx.flatten(), sigma_yy.flatten(), sigma_xy.flatten())))
-
-# file_path = os.path.join(os.getcwd(), "deep_energy_hertzian")
-
-# x = X[:,0].flatten()
-# y = X[:,1].flatten()
-# z = np.zeros(y.shape)
-
-# #np.savetxt("Lame_inverse_large", X=np.hstack((X,output[:,0:2])))
-
-# unstructuredGridToVTK(file_path, x, y, z, dol_triangles.flatten(), offset,
-#                       cell_types, pointData = { "displacement" : combined_disp,"stress" : combined_stress})
-
 
 ###################################################################################
 ############################## VISUALIZATION PARTS ################################
@@ -348,13 +294,8 @@ y = X[:, 1].flatten()
 z = np.zeros(y.shape)
 triangles = tri.Triangulation(x, y)
 
-# # predictions
-# start_time_calc = time.time()
+# predictions
 output = model.predict(X)
-# end_time_calc = time.time()
-# final_time = f'Prediction time: {(end_time_calc - start_time_calc):.3f} seconds'
-# print(final_time)
-
 u_pred, v_pred = output[:, 0], output[:, 1]
 sigma_xx_pred, sigma_yy_pred, sigma_xy_pred = model.predict(
     X, operator=stress_plane_strain
@@ -459,7 +400,7 @@ combined_error_polar_stress = tuple(
     np.vstack((error_polar_stress_x, error_polar_stress_y, error_polar_stress_xy))
 )
 
-file_path = os.path.join(os.getcwd(), "deep_energy_hertzian_normal_contact")
+file_path = os.path.join(os.getcwd(), "Hertzian_normal_contact_test")
 
 dol_triangles = triangles.triangles
 offset = np.arange(

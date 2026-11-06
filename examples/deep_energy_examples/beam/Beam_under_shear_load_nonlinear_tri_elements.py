@@ -58,13 +58,13 @@ quad_rule = GaussQuadratureRule(
     element_type="simplex",
     dimension=domain_dimension,
     ngp=4,
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 boundary_dimension = 1
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=boundary_dimension, ngp=4
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -178,13 +178,6 @@ def potential_energy(
         * jacobian_boundary_t[cond]
     )
 
-    ####################################################################################################################
-    # Reshape energy-work terms and sum over the gauss points
-    # internal_energy_reshaped = bkd.sum(bkd.reshape(internal_energy, (n_e, n_gp)), dim=1)
-    # external_work_reshaped = bkd.sum(bkd.reshape(external_work, (n_e_boundary_external, n_gp_boundary)), dim=1)
-    # sum over the elements and get the overall loss
-    # total_energy = bkd.reduce_sum(internal_energy_reshaped) #- bkd.reduce_sum(external_work_reshaped)
-
     return [internal_energy, -external_work]
 
 
@@ -226,12 +219,10 @@ net = dde.maps.FNN(layer_size, activation, initializer)
 net.apply_output_transform(output_transform)
 
 model = dde.Model(data, net)
-# if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
 model.compile("adam", lr=0.001)
 losshistory, train_state = model.train(epochs=10000, display_every=1000)
 
 model.compile("L-BFGS")
-# model.train_step.optimizer_kwargs["options"]['maxiter']=2000
 model.train()
 
 ###################################################################################
@@ -274,7 +265,7 @@ combined_stress_polar = tuple(
     )
 )
 
-file_path = os.path.join(os.getcwd(), "Beam_under_shear_load_nonlinear")
+file_path = os.path.join(os.getcwd(), "Beam_under_shear_load_nonlinear_tri_elements")
 
 x = X[:, 0].flatten()
 y = X[:, 1].flatten()

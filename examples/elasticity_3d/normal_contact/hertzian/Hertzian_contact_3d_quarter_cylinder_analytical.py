@@ -100,24 +100,6 @@ def boundary_contact(x, on_boundary):
     )
 
 
-def bottom_point(x, on_boundary):
-    """Check whether a point satisfies the `bottom_point` boundary condition.
-
-    Args:
-        x: Input coordinates used to evaluate the function.
-        on_boundary: Boundary indicator provided by the geometry callback.
-
-    Returns:
-        bool: Result of the `bottom_point` evaluation.
-    """
-    points_at_x_0 = np.isclose(x[0], 0)
-    points_on_the_radius = np.isclose(
-        np.linalg.norm(x[:2] - center[:2], axis=-1), radius
-    )
-
-    return on_boundary and points_on_the_radius and points_at_x_0
-
-
 # # Neumann BCs on non-contact zones of sphere
 bc1 = dde.OperatorBC(geom, apply_zero_neumann_x_mixed_formulation, boundary_not_contact)
 bc2 = dde.OperatorBC(geom, apply_zero_neumann_y_mixed_formulation, boundary_not_contact)
@@ -160,8 +142,6 @@ s_z = np.vstack((s_z, s_z, s_z))
 observe_sigma_xx = dde.PointSetBC(ex_data_xyz, s_x, component=3)
 observe_sigma_yy = dde.PointSetBC(ex_data_xyz, s_y, component=4)
 observe_sigma_zz = dde.PointSetBC(ex_data_xyz, s_z, component=5)
-
-# bc7 = dde.DirichletBC(geom, lambda _: 0, bottom_point, component=1)
 
 n_dummy = 1
 data = dde.data.PDE(
@@ -261,8 +241,6 @@ w_zero_traction_x, w_zero_traction_y, w_zero_traction_z = 1e0, 1e0, 1e0
 w_zero_tangential_traction_component1 = 1e0
 w_zero_tangential_traction_component2 = 1e0
 w_zero_fischer_burmeister = 5e2
-# single dirichlet
-# w_dirichlet = 1e0
 
 loss_weights = [
     w_momentum_xx,
@@ -294,11 +272,9 @@ restore_model = False
 if not restore_model:
     model.compile("adam", lr=0.001, loss_weights=loss_weights)
     losshistory, train_state = model.train(iterations=2000, display_every=100)
-    # losshistory, train_state = model.train(iterations=2000, display_every=200, model_save_path=model_path) # use if you want to save the model
 
     model.compile("L-BFGS", loss_weights=loss_weights)
     losshistory, train_state = model.train(display_every=1000)
-    # losshistory, train_state = model.train(display_every=1000, model_save_path=model_path) # same as above
 else:
     n_iterations = 15921
     model_restore_path = model_path + "-" + str(n_iterations) + ".ckpt"

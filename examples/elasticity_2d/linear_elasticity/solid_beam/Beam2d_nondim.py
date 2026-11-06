@@ -119,7 +119,7 @@ def neumann_y(x, y, X):
 
     return sigma_yx_n_x + shear_y_norm / (2 * Inertia) * (y_loc - h / 2) * (
         y_loc + h / 2
-    ) * (-1)  # *normals[:,0:1]
+    ) * (-1)
 
 
 nu, lame, shear, youngs_modulus = problem_parameters()

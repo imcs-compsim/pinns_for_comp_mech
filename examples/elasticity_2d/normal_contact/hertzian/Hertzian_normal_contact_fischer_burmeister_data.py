@@ -95,10 +95,6 @@ def calculate_gap_in_normal_direction(x, y, X):
 
     # calculate the boundary normals
     normals, cond = calculate_boundary_normals(X, geom)
-
-    # Here is the idea to calculate gap_n:
-    # gap_n/|n| = gap_y/|ny| --> since n is unit vector |n|=1
-    # gap_n = tf.math.divide_no_nan(gap_y[cond],tf.math.abs(normals[:,1:2]))
     num = gap_y[cond]
     den = torch.abs(normals[:, 1:2])
     gap_n = torch.zeros_like(num)
@@ -245,20 +241,6 @@ if add_external_data:
         (stress_fem[on_boundary_][:n_boundary], stress_fem[~on_boundary_][:n_domain])
     )
 
-    # visualize points
-    # sns.set_theme()
-    # fig, ax = plt.subplots(figsize=(10,8))
-
-    # ax.scatter(node_coords_xy[on_boundary_][:n_boundary,0],node_coords_xy[on_boundary_][:n_boundary,1], label="boundary pts.")
-    # ax.scatter(node_coords_xy[~on_boundary_][:n_domain,0],node_coords_xy[~on_boundary_][:n_domain,1], label="collocation pts.")
-    # ax.set_xlabel(r"$x$", fontsize=24)
-    # ax.set_ylabel(r"$y$", fontsize=24)
-    # ax.tick_params(axis='both', which='major', labelsize=18)
-
-    # ax.legend(fontsize=20)
-    # plt.savefig("Hertzian_data_dist.png",dpi=200)
-    # plt.show()
-
     # define boundary conditions for experimental data
     observe_u = dde.PointSetBC(ex_data_xy, ex_data_disp[:, 0:1], component=0)
     observe_v = dde.PointSetBC(ex_data_xy, ex_data_disp[:, 1:2], component=1)
@@ -326,7 +308,6 @@ def output_transform(x, y):
     x_loc = x[:, 0:1]
     y_loc = x[:, 1:2]
 
-    # return tf.concat([u*(-x_loc), ext_dips + v*(-y_loc), sigma_xx, sigma_yy, sigma_xy*(x_loc)*(y_loc)], axis=1)
     return torch.cat(
         [
             u * (-x_loc) / youngs_modulus,

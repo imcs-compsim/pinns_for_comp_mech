@@ -52,12 +52,12 @@ gmsh_model = block_2d.generateGmshModel(visualize_mesh=False)
 
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=2, ngp=2
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=1, ngp=4
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -178,13 +178,6 @@ def potential_energy(
         * jacobian_boundary_t[cond]
     )
 
-    ####################################################################################################################
-    # Reshape energy-work terms and sum over the gauss points
-    # internal_energy_reshaped = bkd.sum(bkd.reshape(internal_energy, (n_e, n_gp)), dim=1)
-    # external_work_reshaped = bkd.sum(bkd.reshape(external_work, (n_e_boundary_external, n_gp_boundary)), dim=1)
-    # sum over the elements and get the overall loss
-    # total_energy = bkd.reduce_sum(internal_energy_reshaped) #- bkd.reduce_sum(external_work_reshaped)
-
     return [internal_energy, -external_work]
 
 
@@ -235,8 +228,6 @@ model_saver = SaveModelVTU(
 )
 
 model = dde.Model(data, net)
-# if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
-
 model.compile("adam", lr=0.001)
 losshistory, train_state = model.train(
     epochs=stabilization_model_epoch, display_every=100
@@ -293,7 +284,7 @@ combined_stress_polar = tuple(
     )
 )
 
-file_path = os.path.join(os.getcwd(), "Beam_under_shear_load_nonlinear")
+file_path = os.path.join(os.getcwd(), "Beam_under_shear_load_nonlinear_lbfgs")
 
 x = X[:, 0].flatten()
 y = X[:, 1].flatten()

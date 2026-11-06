@@ -113,9 +113,6 @@ method_list = [
 ]
 method_name = "KKT_inequality_sigmoid"
 
-# Karush-Kuhn-Tucker conditions for frictionless contact
-# gn>=0 (positive_normal_gap), On<=0 (negative_normal_traction), Tt=0 (zero_tangential_traction) and gn.On=0 (zero_complimentary)
-
 bc_zero_tangential_traction = dde.OperatorBC(
     geom, zero_tangential_traction, boundary_contact
 )
@@ -334,8 +331,6 @@ x = X[:, 0].flatten()
 y = X[:, 1].flatten()
 z = np.zeros(y.shape)
 
-# np.savetxt("Lame_inverse_large", X=np.hstack((X,output[:,0:2])))
-
 unstructuredGridToVTK(
     file_path,
     x,
@@ -368,15 +363,3 @@ rel_err_l2_stress = np.linalg.norm(
     s_combined_pred - s_combined_analytical
 ) / np.linalg.norm(s_combined_analytical)
 print("Relative L2 error for stress: ", rel_err_l2_stress)
-
-# adopted sign
-# Relative L2 error for disp:  0.003821093510421621
-# Relative L2 error for stress:  0.001537474850331165
-
-# sigmoid
-# Relative L2 error for disp:  0.0009028400465172404
-# Relative L2 error for stress:  0.0009412639930073679
-
-# fb
-# Relative L2 error for disp:  0.0002480401972722835
-# Relative L2 error for stress:  0.00030554812293575304

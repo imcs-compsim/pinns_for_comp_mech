@@ -50,7 +50,7 @@ block_2d = Block_2D(
 
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=2, ngp=5
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 gmsh_model = block_2d.generateGmshModel(visualize_mesh=False)
@@ -134,10 +134,6 @@ def potential_energy(
         * jacobian_t
     )
 
-    # internal_energy_reshaped = bkd.reshape(internal_energy, (n_e, n_gp))
-
-    # total_energy = bkd.reduce_sum(bkd.sum(internal_energy_reshaped, dim=1))
-
     return [internal_energy]
 
 
@@ -172,7 +168,6 @@ def points_at_bottom(x, on_boundary):
 
 
 bc_u_y = dde.DirichletBC(geom, lambda _: applied_disp_y, points_at_top, component=1)
-# bc_u_y = dde.DirichletBC(geom, lambda _: 0, points_at_bottom, component=1)
 
 n_dummy = 1
 data = DeepEnergyPDE(
@@ -203,7 +198,6 @@ def output_transform(x, y):
     y_loc = x[:, 1:2]
 
     return bkd.concat([u * (x_loc), v * (y_loc)], axis=1)
-    # return bkd.concat([u*(x_loc),v*(1-y_loc)+applied_disp_y], axis=1)
 
 
 # two inputs x and y, output is ux and uy
@@ -225,12 +219,8 @@ losshistory, train_state = model.train(display_every=200)
 X, offset, cell_types, dol_triangles = geom.get_mesh()
 nu, lame, shear, youngs_modulus = problem_parameters()
 
-# start_time_calc = time.time()
+# prediction
 output = model.predict(X)
-# end_time_calc = time.time()
-# final_time = f'Prediction time: {(end_time_calc - start_time_calc):.3f} seconds'
-# print(final_time)
-
 u_x_pred, u_y_pred = output[:, 0], output[:, 1]
 u_pred, v_pred = output[:, 0], output[:, 1]
 sigma_xx, sigma_yy, sigma_xy = model.predict(X, operator=stress_plane_strain)
@@ -264,13 +254,11 @@ combined_stress_analytical = tuple(
 )
 
 
-file_path = os.path.join(os.getcwd(), "deep_energy_single_block_compression")
+file_path = os.path.join(os.getcwd(), "single_block_compression")
 
 x = X[:, 0].flatten()
 y = X[:, 1].flatten()
 z = np.zeros(y.shape)
-
-# np.savetxt("Lame_inverse_large", X=np.hstack((X,output[:,0:2])))
 
 unstructuredGridToVTK(
     file_path,

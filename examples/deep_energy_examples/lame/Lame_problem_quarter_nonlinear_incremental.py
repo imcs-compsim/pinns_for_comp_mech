@@ -58,12 +58,12 @@ gmsh_model = quarter_circle_with_hole.generateGmshModel()
 
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=2, ngp=2
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=1, ngp=4
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
@@ -186,10 +186,6 @@ def potential_energy(
     current_epoch = model.data.current_epoch
     chunk = current_epoch // ((epochs + 1) / steps)
     pressure = (chunk + 1) * pressure_inlet / steps
-    # if current_epoch < (epochs/2):
-    #     pressure = 2/epochs*current_epoch*pressure_inlet
-    # else:
-    #     pressure = pressure_inlet
 
     external_force_density = -pressure * nx * phi_x + -pressure * ny * phi_y
     external_work = (
@@ -197,13 +193,6 @@ def potential_energy(
         * (external_force_density)
         * jacobian_boundary_t[cond]
     )
-
-    ####################################################################################################################
-    # Reshape energy-work terms and sum over the gauss points
-    # internal_energy_reshaped = bkd.sum(bkd.reshape(internal_energy, (n_e, n_gp)), dim=1)
-    # external_work_reshaped = bkd.sum(bkd.reshape(external_work, (n_e_boundary_external, n_gp_boundary)), dim=1)
-    # sum over the elements and get the overall loss
-    # total_energy = bkd.reduce_sum(internal_energy_reshaped) #- bkd.reduce_sum(external_work_reshaped)
 
     return [internal_energy, -external_work]
 
@@ -249,14 +238,12 @@ net.apply_output_transform(output_transform)
 epoch_tracker = EpochTracker(period=10)
 
 model = dde.Model(data, net)
-# if we want to save the model, we use "model_save_path=model_path" during training, if we want to load trained model, we use "model_restore_path=return_restore_path(model_path, num_epochs)"
 model.compile("adam", lr=0.001)
 losshistory, train_state = model.train(
     epochs=epochs, callbacks=[epoch_tracker], display_every=100
 )
 
 model.compile("L-BFGS")
-# model.train_step.optimizer_kwargs["options"]['maxiter']=2000
 model.train(callbacks=[epoch_tracker], display_every=100)
 
 ###################################################################################
@@ -287,7 +274,6 @@ def compareModelPredictionAndAnalyticalSolution(model):
     sigma_theta_analytical = (
         radius_inner**2 * pressure_inlet / dr2 * (r**2 + radius_outer**2) / r**2
     )
-    # u_rad = radius_inner**2*pressure_inlet*r/(youngs_modulus*(radius_outer**2-radius_inner**2))*(1-nu+(radius_outer/r)**2*(1+nu))
 
     inv_dr2 = 1 / radius_inner**2 - 1 / radius_outer**2
     a = -pressure_inlet / inv_dr2
@@ -388,7 +374,7 @@ combined_stress_polar = tuple(
     )
 )
 
-file_path = os.path.join(os.getcwd(), "Lame_quarter_gmsh_nonlinear")
+file_path = os.path.join(os.getcwd(), "Lame_problem_quarter_nonlinear_incremental")
 
 x = X[:, 0].flatten()
 y = X[:, 1].flatten()

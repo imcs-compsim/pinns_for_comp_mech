@@ -448,7 +448,7 @@ error_y = abs(np.array(v_pred.tolist()) - u_y_analy.flatten())
 combined_error = tuple(np.vstack((error_x, error_y, np.zeros(error_x.shape[0]))))
 
 
-file_path = os.path.join(os.getcwd(), "Beam2D_nondim_newformulation")
+file_path = os.path.join(os.getcwd(), "Beam2D_nondim_mixed")
 
 x = X[:, 0].flatten()
 y = X[:, 1].flatten()

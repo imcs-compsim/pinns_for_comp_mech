@@ -158,9 +158,6 @@ bc_pressure_y_top = dde.OperatorBC(geom, apply_pressure_y_top, boundary_top)
 # Initial BCs for velocities
 ic_velocity_in_x = dde.OperatorBC(geom, apply_velocity_in_x, boundary_initial)
 ic_velocity_in_y = dde.OperatorBC(geom, apply_velocity_in_y, boundary_initial)
-# Initial BCs for displacements
-# bc_u_x = dde.DirichletBC(geom, lambda _: 0, boundary_initial, component=0)
-# bc_u_y = dde.DirichletBC(geom, lambda _: 0, boundary_initial, component=1)
 
 bcs = [bc_pressure_y_top, ic_velocity_in_x, ic_velocity_in_y]
 
@@ -240,35 +237,6 @@ losshistory, train_state = model.train(display_every=200)
 #########################################################################################################################################
 #### POST-PROCESSING #####
 #########################################################################################################################################
-# 3D visualization
-# def solutionFieldOnMeshToVtk3D(geom,
-#                                model,
-#                                file_name = "Test_time"):
-
-
-#     X, offset, cell_types, elements = geom.get_mesh()
-
-#     output = model.predict(X)
-
-#     # .tolist() is applied to remove datatype
-#     # .tolist() is applied to remove datatype
-#     u_pred, v_pred = output[:,0].tolist(), output[:,1].tolist() # displacements
-#     w_pred = np.zeros_like(output[:,0]).tolist()
-#     sigma_xx_pred, sigma_yy_pred, sigma_xy_pred = output[:,2].tolist(), output[:,3].tolist(), output[:,4].tolist() # stresses
-
-
-#     combined_disp_pred = tuple(np.vstack((u_pred, v_pred, w_pred)))
-#     combined_stress_pred= tuple(np.vstack((sigma_xx_pred, sigma_yy_pred, sigma_xy_pred)))
-
-#     x = X[:,0].flatten()
-#     y = X[:,1].flatten()
-#     z = X[:,2].flatten()
-
-#     unstructuredGridToVTK(file_name, x, y, z, elements.flatten(), offset,
-#                         cell_types, pointData = { "pred_displacement" : combined_disp_pred,
-#                                                     "pred_normal_stress" : combined_stress_pred}
-#                                                     )
-# solutionFieldOnMeshToVtk3D(geom, model)
 gmsh.clear()
 
 gmsh_options = {"General.Terminal": 1, "Mesh.Algorithm": 6}

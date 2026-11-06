@@ -45,9 +45,6 @@ seed_h = 15
 seed_w = 15
 origin = [0, 0, 0]
 
-# The applied pressure
-pressure = -0.1
-
 Block_3D_obj = Block_3D_hex(
     origin=origin,
     length=length,
@@ -62,34 +59,15 @@ geom = GmshGeometry3D(gmsh_model)
 
 quad_rule = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=3, ngp=1
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature, weight_quadrature = quad_rule.generate()
 
 quad_rule_boundary_integral = GaussQuadratureRule(
     rule_name="gauss_legendre", dimension=2, ngp=3
-)  # gauss_legendre gauss_labotto
+)  # gauss_legendre gauss_lobatto
 coord_quadrature_boundary, weight_quadrature_boundary = (
     quad_rule_boundary_integral.generate()
 )
-
-
-def boundary_inner(x):
-    """
-    Determine if points lie on the inner boundary at the top surface.
-
-    Args:
-        x (array-like): Coordinates of points, where x[1] represents the y-coordinate (height).
-
-    Returns:
-        array-like: True for points where the y-coordinate equals the height value,
-            False otherwise. Uses np.isclose for floating-point comparison tolerance.
-    """
-    return np.isclose(x[1], height)
-
-
-boundary_selection_map = [
-    {"boundary_function": boundary_inner, "tag": "boundary_inner"}
-]
 
 geom = GmshGeometryElementDeepEnergy(
     gmsh_model,
@@ -100,15 +78,6 @@ geom = GmshGeometryElementDeepEnergy(
     weight_quadrature_boundary=None,
     boundary_selection_map=None,
 )
-
-# # change global variables in elasticity_utils
-# hyperelasticity_utils.youngs_modulus = 1.33
-# hyperelasticity_utils.nu = 0.3
-# nu,lame,shear,youngs_modulus = compute_elastic_properties()
-
-# # change global variables in elasticity_utils
-# elasticity_utils.lame = lame
-# elasticity_utils.shear = shear
 
 # The applied pressure
 pressure = 0.1
@@ -185,33 +154,6 @@ def potential_energy(
         * jacobian_t
     )
 
-    # get the external energy
-    # select the points where external force is applied
-    # cond = boundary_selection_tag["on_top"]
-    # n_e_boundary = int(cond.sum()/n_gp_boundary)
-    # nx = mapped_normal_boundary_t[:,0:1][cond]
-    # ny = mapped_normal_boundary_t[:,1:2][cond]
-
-    # #sigma_xx_n_x = sigma_xx[beg_boundary:][cond]*nx
-    # #sigma_xy_n_y = sigma_xy[beg_boundary:][cond]*ny
-
-    # sigma_yx_n_x = sigma_xy[beg_boundary:][cond]*nx
-    # sigma_yy_n_y = sigma_yy[beg_boundary:][cond]*ny
-
-    # #t_x = sigma_xx_n_x + sigma_xy_n_y
-    # t_y = sigma_yx_n_x + sigma_yy_n_y
-
-    # u_x = outputs[:,0:1][beg_boundary:][cond]
-    # u_y = outputs[:,1:2][beg_boundary:][cond]
-
-    # external_force_density = -pressure*u_y
-    # external_work = global_weights_boundary_t[cond]*(external_force_density)*jacobian_boundary_t[cond]
-
-    # internal_energy_reshaped = bkd.reshape(internal_energy, (n_e, n_gp))
-    # external_work_reshaped = bkd.reshape(external_work, (n_e_boundary, n_gp_boundary))
-
-    # total_energy = bkd.reduce_sum(bkd.sum(internal_energy_reshaped, dim=1)) - bkd.reduce_sum(bkd.sum(external_work_reshaped, dim=1)) #+ bkd.reduce_sum(bkd.sum(internal_energy_reshaped, dim=1))
-
     return [internal_energy]
 
 
@@ -228,21 +170,6 @@ def points_at_top(x, on_boundary):
     points_top = np.isclose(x[1], height)
 
     return on_boundary and points_top
-
-
-def points_at_bottom(x, on_boundary):
-    """Check whether a point satisfies the `points_at_bottom` boundary condition.
-
-    Args:
-        x: Input coordinates used to evaluate the function.
-        on_boundary: Boundary indicator provided by the geometry callback.
-
-    Returns:
-        bool: Result of the `points_at_bottom` evaluation.
-    """
-    points_bottom = np.isclose(x[1], 0)
-
-    return on_boundary and points_bottom
 
 
 bc_u_y = dde.DirichletBC(geom, lambda _: applied_disp_y, points_at_top, component=1)
