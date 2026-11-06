@@ -1,3 +1,5 @@
+"""Run the 4C-coupled predictor for nonlinear Hertzian normal contact."""
+
 import os
 from contextlib import contextmanager
 from types import SimpleNamespace
@@ -44,6 +46,14 @@ reduced_node_mask = None
 
 @contextmanager
 def nvtx_range(name):
+    """Profile a code region with NVTX when CUDA is available.
+
+    Args:
+        name: Label assigned to the profiling range.
+
+    Yields:
+        None while the profiled code region executes.
+    """
     if torch.cuda.is_available():
         torch.cuda.nvtx.range_push(name)
         try:
@@ -56,6 +66,11 @@ def nvtx_range(name):
 
 # executed once, optional
 def setup(context):
+    """Initialize the reduced contact mesh and predictor geometry.
+
+    Args:
+        context: 4C predictor context containing mesh and time-step metadata.
+    """
     global geom, num_load_steps, points, reduced_node_mask
 
     # store the number of load steps to be performed
@@ -169,6 +184,11 @@ def setup(context):
 
 # executed in every step, mandatory
 def compute(state):
+    """Train the contact predictor and update the full 4C state.
+
+    Args:
+        state: Mutable 4C state for the current load step.
+    """
     global geom, num_load_steps, points, reduced_node_mask
 
     with nvtx_range("PROFILE_4C_ML_STEP"):

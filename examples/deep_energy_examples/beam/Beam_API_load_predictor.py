@@ -1,5 +1,10 @@
+"""Run the 4C-coupled deep-energy predictor for a sheared beam."""
+
+from contextlib import contextmanager
+
 import deepxde as dde
 import numpy as np
+import torch
 from deepxde import backend as bkd
 
 from compsim_pinns.deep_energy.deep_pde import DeepEnergyPDE
@@ -10,9 +15,6 @@ from compsim_pinns.hyperelasticity.hyperelasticity_utils import (
     strain_energy_neo_hookean_2d,
 )
 from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
-
-from contextlib import contextmanager
-import torch
 
 ###########
 # GLOBALS #
@@ -27,8 +29,17 @@ points = None
 # FUNCTIONS #
 #############
 
+
 @contextmanager
 def nvtx_range(name):
+    """Profile a code region with NVTX when CUDA is available.
+
+    Args:
+        name: Label assigned to the profiling range.
+
+    Yields:
+        None while the profiled code region executes.
+    """
     if torch.cuda.is_available():
         torch.cuda.nvtx.range_push(name)
         try:
@@ -38,8 +49,14 @@ def nvtx_range(name):
     else:
         yield
 
+
 # executed once, optional
 def setup(context):
+    """Initialize mesh, quadrature, material, and boundary data.
+
+    Args:
+        context: 4C predictor context containing mesh and time-step metadata.
+    """
     global geom, num_load_steps, points
     # Load mesh from 4C output
     # with open(context, "rb") as f:
@@ -122,11 +139,17 @@ def setup(context):
 
 # executed in every step, mandatory
 def compute(state):
+    """Train the predictor and write its displacement into the 4C state.
+
+    Args:
+        state: Mutable 4C state for the current load step.
+    """
     global geom, num_load_steps, points
 
     with nvtx_range("PROFILE_4C_ML_STEP"):
         with nvtx_range(f"ML predictor step {state.step}"):
             with nvtx_range("build DeepXDE model"):
+
                 def potential_energy(
                     X,
                     inputs,
@@ -166,7 +189,9 @@ def compute(state):
                     Returns:
                         Any: Computed value returned by `potential_energy`.
                     """
-                    internal_energy_density = strain_energy_neo_hookean_2d(inputs, outputs)
+                    internal_energy_density = strain_energy_neo_hookean_2d(
+                        inputs, outputs
+                    )
 
                     internal_energy = (
                         global_element_weights_t[:, 0:1]
@@ -204,7 +229,9 @@ def compute(state):
                 )
 
                 # get corner node coordinates
-                _, arr, _ = geom.gmsh_model.mesh.getNodes(dim=2, tag=-1, includeBoundary=True)
+                _, arr, _ = geom.gmsh_model.mesh.getNodes(
+                    dim=2, tag=-1, includeBoundary=True
+                )
                 node_xy = arr.reshape(-1, 3)[:, :2]
                 mn, mx = node_xy.min(0), node_xy.max(0)
                 top_right_corner_node_coords = node_xy[
@@ -261,7 +288,7 @@ def compute(state):
                     dde.optimizers.config.set_LBFGS_options(maxiter=lbfgs_iterations)
                     model.compile("L-BFGS")
                     losshistory, train_state = model.train(display_every=1000)
-        
+
             with nvtx_range("predict displacement"):
                 output = model.predict(points[:, :2])
                 output_to_4C = output.flatten()

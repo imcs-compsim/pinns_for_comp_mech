@@ -1,3 +1,5 @@
+"""Run the 4C-coupled deep-energy predictor for Cook's cantilever."""
+
 from contextlib import contextmanager
 
 import deepxde as dde
@@ -32,6 +34,14 @@ points = None
 
 @contextmanager
 def nvtx_range(name):
+    """Profile a code region with NVTX when CUDA is available.
+
+    Args:
+        name: Label assigned to the profiling range.
+
+    Yields:
+        None while the profiled code region executes.
+    """
     if torch.cuda.is_available():
         torch.cuda.nvtx.range_push(name)
         try:
@@ -44,6 +54,11 @@ def nvtx_range(name):
 
 # executed once, optional
 def setup(context):
+    """Initialize mesh, quadrature, material, and boundary data.
+
+    Args:
+        context: 4C predictor context containing mesh and time-step metadata.
+    """
     global geom, num_load_steps, points
     # Load mesh from 4C output
     # with open(context, "rb") as f:
@@ -112,6 +127,11 @@ def setup(context):
 
 # executed in every step, mandatory
 def compute(state):
+    """Train the predictor and write its displacement into the 4C state.
+
+    Args:
+        state: Mutable 4C state for the current load step.
+    """
     global geom, num_load_steps, points
 
     with nvtx_range("PROFILE_4C_ML_STEP"):
@@ -119,6 +139,15 @@ def compute(state):
             with nvtx_range("build DeepXDE model"):
 
                 def strain_energy_neo_hookean_2D_modified(x, y):
+                    """Compute the modified 2D Neo-Hookean strain energy.
+
+                    Args:
+                        x: Spatial coordinates evaluated by DeepXDE.
+                        y: Predicted displacement field.
+
+                    Returns:
+                        Strain-energy density at the supplied coordinates.
+                    """
                     # Deformation gradient (2x2)
                     f_xx, f_yy, f_xy, f_yx = deformation_gradient_2D(x, y)
 

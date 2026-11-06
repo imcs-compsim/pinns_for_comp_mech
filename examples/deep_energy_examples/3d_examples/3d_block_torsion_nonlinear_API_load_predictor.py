@@ -1,3 +1,5 @@
+"""Run the 4C-coupled deep-energy predictor for nonlinear block torsion."""
+
 from contextlib import contextmanager
 
 import deepxde as dde
@@ -10,7 +12,8 @@ from compsim_pinns.geometry.custom_geometry import GmshGeometryElementDeepEnergy
 from compsim_pinns.geometry.gmsh_models import APIGeometry
 from compsim_pinns.hyperelasticity import hyperelasticity_utils
 from compsim_pinns.hyperelasticity.hyperelasticity_utils import (
-    compute_elastic_properties, strain_energy_neo_hookean_3d
+    compute_elastic_properties,
+    strain_energy_neo_hookean_3d,
 )
 from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
@@ -30,6 +33,14 @@ points = None
 
 @contextmanager
 def nvtx_range(name):
+    """Profile a code region with NVTX when CUDA is available.
+
+    Args:
+        name: Label assigned to the profiling range.
+
+    Yields:
+        None while the profiled code region executes.
+    """
     if torch.cuda.is_available():
         torch.cuda.nvtx.range_push(name)
         try:
@@ -42,6 +53,11 @@ def nvtx_range(name):
 
 # executed once, optional
 def setup(context):
+    """Initialize mesh, quadrature, and geometry data for the predictor.
+
+    Args:
+        context: 4C predictor context containing mesh and time-step metadata.
+    """
     global geom, num_load_steps, points
     # Load mesh from 4C output
     # with open(context, "rb") as f:
@@ -91,6 +107,11 @@ def setup(context):
 
 # executed in every step, mandatory
 def compute(state):
+    """Train the predictor and write its displacement into the 4C state.
+
+    Args:
+        state: Mutable 4C state for the current load step.
+    """
     global geom, num_load_steps, points
 
     with nvtx_range("PROFILE_4C_ML_STEP"):
