@@ -1,3 +1,5 @@
+"""Custom Gmsh geometry wrappers for DeepXDE sampling and element data."""
+
 import os
 import time
 import warnings
@@ -7,11 +9,70 @@ import numpy as np
 from deepxde import config
 from deepxde.geometry.geometry import Geometry
 
-from compsim_pinns.geometry.gmsh_models import APIGeometry
+
+def _is_in_tolerance(provided, target, tolerance=1e-5):
+    """Check whether provided points match any target point within tolerance."""
+
+    contained_rows = np.all(
+        np.isclose(provided[:, None, :], target, rtol=tolerance, atol=tolerance),
+        axis=2,
+    )
+    return np.any(contained_rows, axis=1)
+
+
+def _compute_tangentials(normal_boundaries):
+    """Compute two unit tangential vectors for each 3D boundary normal."""
+
+    normals = np.asarray(normal_boundaries, dtype=float).reshape(-1, 3)
+    if normals.shape[0] == 0:
+        return np.empty((0, 3)), np.empty((0, 3))
+
+    normal_norms = np.linalg.norm(normals, axis=1, keepdims=True)
+    normals = np.divide(
+        normals,
+        normal_norms,
+        out=np.zeros_like(normals),
+        where=normal_norms > 0,
+    )
+
+    t_1 = np.zeros_like(normals)
+    xy_norms = np.linalg.norm(normals[:, :2], axis=1)
+    z_axis_mask = xy_norms <= 1e-12
+    general_mask = ~z_axis_mask
+
+    t_1[z_axis_mask] = np.array([0.0, 1.0, 0.0])
+    t_1[general_mask, 0] = normals[general_mask, 1] / xy_norms[general_mask]
+    t_1[general_mask, 1] = -normals[general_mask, 0] / xy_norms[general_mask]
+
+    t_2 = np.cross(normals, t_1)
+    t_2_norms = np.linalg.norm(t_2, axis=1, keepdims=True)
+    t_2 = np.divide(
+        t_2,
+        t_2_norms,
+        out=np.zeros_like(t_2),
+        where=t_2_norms > 0,
+    )
+
+    if not np.allclose(np.sum(normals * t_1, axis=1), 0.0):
+        raise ValueError(
+            "Normal vectors and first tangential vectors are not orthogonal."
+        )
+    if not np.allclose(np.sum(normals * t_2, axis=1), 0.0):
+        raise ValueError(
+            "Normal vectors and second tangential vectors are not orthogonal."
+        )
+    if not np.allclose(np.sum(t_1 * t_2, axis=1), 0.0):
+        raise ValueError("First and second tangential vectors are not orthogonal.")
+
+    return t_1, t_2
 
 
 class GmshGeometry3D(Geometry):
+    """Represent a 3D Gmsh geometry for DeepXDE boundary and mesh queries."""
+
     def __init__(self, gmsh_model, external_dim_size=None, target_surface_ids=None):
+        """Initialize a 3D Gmsh geometry wrapper."""
+
         self.gmsh_model = gmsh_model
         self.external_dim_size = external_dim_size
         self.target_surface_ids = target_surface_ids
@@ -36,7 +97,7 @@ class GmshGeometry3D(Geometry):
         if self.external_dim_size:
             node_coords_xyz_inside = self.add_external_dim(node_coords_xyz_inside)
 
-        return self.is_in_tolerance(x, node_coords_xyz_inside)
+        return _is_in_tolerance(x, node_coords_xyz_inside)
 
     def on_boundary(self, x):
         """Check if x is on the geometry boundary."""
@@ -56,18 +117,7 @@ class GmshGeometry3D(Geometry):
         if self.external_dim_size:
             node_coords_xyz_boundary = self.add_external_dim(node_coords_xyz_boundary)
 
-        return self.is_in_tolerance(x, node_coords_xyz_boundary)
-
-    def is_in_tolerance(self, provided, target):
-
-        tolerance = 1e-5
-
-        contained_rows = np.all(
-            np.isclose(provided[:, None, :], target, rtol=tolerance, atol=tolerance),
-            axis=2,
-        )
-        contained_indices_boolean = np.any(contained_rows, axis=1)
-        return contained_indices_boolean
+        return _is_in_tolerance(x, node_coords_xyz_boundary)
 
     def boundary_normal(self, x):
         """Slice the unit normal at x for Neumann or Robin boundary conditions."""
@@ -84,7 +134,7 @@ class GmshGeometry3D(Geometry):
         return n[mask]
 
     def boundary_tangential_1(self, x):
-        """Slice the unit tangentil vector 1 at x for Neumann or Robin boundary conditions."""
+        """Slice the first unit tangential vector at x for Neumann or Robin boundary conditions."""
 
         _, t_1, _, uniq = self.boundary_normal_global
 
@@ -98,7 +148,7 @@ class GmshGeometry3D(Geometry):
         return t_1[mask]
 
     def boundary_tangential_2(self, x):
-        """Slice the unit tangentil vector 2 at x for Neumann or Robin boundary conditions."""
+        """Slice the second unit tangential vector at x for Neumann or Robin boundary conditions."""
 
         _, _, t_2, uniq = self.boundary_normal_global
 
@@ -112,16 +162,12 @@ class GmshGeometry3D(Geometry):
         return t_2[mask]
 
     def fun_boundary_normal_global(self):
-        """Compute the unit normal on the geometry boundary"""
+        """Compute geometry boundary normals and tangential vectors."""
 
-        # fig = plt.figure(figsize=(8, 8), dpi=80)
-
-        node_tag_boundary, node_coords_xyz_boundary, normal_boundary, surface_id = (
-            [],
-            [],
-            [],
-            [],
-        )
+        node_tag_boundary = []
+        node_coords_xyz_boundary = []
+        normal_boundary = []
+        surface_id = []
         border = {}
         start = 0
 
@@ -151,11 +197,6 @@ class GmshGeometry3D(Geometry):
                 node_coords_xyz_boundary.extend(node_coords.tolist())
                 normal_boundary.extend(normals.tolist())
 
-                # # distinguish start/end positio for each surface
-                # end = start+node_coords.shape[0]
-                # border[surface_name] = [start,end]
-                # start = end
-
         # convert them into numpy array
         node_tag_boundary = np.array(node_tag_boundary)
         node_coords_xyz_boundary = np.array(node_coords_xyz_boundary)
@@ -174,8 +215,10 @@ class GmshGeometry3D(Geometry):
 
         if self.target_surface_ids:
             for repeated_node_id in repeated_node_tag:
+                # create mask to get the repeated nodes in the global boundary node list
+                repeated_node_mask = node_tag_boundary == repeated_node_id
                 # get the neighboring surfaces which includes this point
-                neighbor_surface_ids = surface_id[node_tag_boundary == repeated_node_id]
+                neighbor_surface_ids = surface_id[repeated_node_mask]
                 # choose the target face that is one of the neighboring surfaces
                 target_surface_position = None
                 for target_surface in self.target_surface_ids:
@@ -186,18 +229,16 @@ class GmshGeometry3D(Geometry):
                         break
                 if target_surface_position is None:
                     continue
-                determined_boundary_normal = normal_boundary[
-                    node_tag_boundary == repeated_node_id
-                ][target_surface_position]
+                determined_boundary_normal = normal_boundary[repeated_node_mask][
+                    target_surface_position
+                ]
                 determined_tangential_boundary_1 = tangential_boundary_1[
-                    node_tag_boundary == repeated_node_id
+                    repeated_node_mask
                 ][target_surface_position]
                 determined_tangential_boundary_2 = tangential_boundary_2[
-                    node_tag_boundary == repeated_node_id
+                    repeated_node_mask
                 ][target_surface_position]
-                ids_of_repeated_node = np.where(node_tag_boundary == repeated_node_id)[
-                    0
-                ]
+                ids_of_repeated_node = np.where(repeated_node_mask)[0]
                 for id in ids_of_repeated_node:
                     normal_boundary[id] = determined_boundary_normal
                     tangential_boundary_1[id] = determined_tangential_boundary_1
@@ -212,38 +253,9 @@ class GmshGeometry3D(Geometry):
         return normal_boundary, tangential_boundary_1, tangential_boundary_2, uniq
 
     def compute_tangentials(self, normal_boundaries):
-        # calculate the tangential vector components here.
-        # Tangential of normal vector in 3D is a plane. Thus, we need two tangential vectors, let's call them t_1 and t_2.
-        t_1_list = []
-        t_2_list = []
+        """Compute two unit tangential vectors for each 3D boundary normal."""
 
-        # Loop over each normal vector in the input array
-        for n in normal_boundaries:
-            n_x, n_y, n_z = n
-
-            # case 1 Handle [0, 0, 1]
-            if np.isclose(n_z, 1):
-                t_1 = np.array([0, 1, 0])
-                t_2 = np.array([-1, 0, 0])
-            # case 2 Handle [0, 0, -1]
-            elif np.isclose(n_z, -1):
-                t_1 = np.array([0, 1, 0])
-                t_2 = np.array([1, 0, 0])
-            else:
-                t_1 = np.array([n_y, -n_x, 0]) / np.sqrt(n_x**2 + n_y**2)
-                t_2 = np.cross(n, t_1)
-
-            # check if all normal_boundary (let's call it as n), t1 and t2 are perpendicular to each, meaning
-            # n . t_1 = 0, n . t_2 = 0, and t_1 . t-2 = 0
-            assert np.isclose(np.dot(n, t_1), 0)
-            assert np.isclose(np.dot(n, t_2), 0)
-            assert np.isclose(np.dot(t_1, t_2), 0)
-
-            # Append results to the list
-            t_1_list.append(t_1)
-            t_2_list.append(t_2)
-
-        return np.array(t_1_list), np.array(t_2_list)
+        return _compute_tangentials(normal_boundaries)
 
     def random_points(self, n, random="pseudo"):
         """Get collocation points from geometry"""
@@ -295,7 +307,7 @@ class GmshGeometry3D(Geometry):
     ):
         """Get sorted coordinates and node tags"""
 
-        node_tag -= 1  # gmsh node numbering start with 1 but we need 0
+        node_tag -= 1  # Gmsh node numbering start with 1 but we need 0
 
         node_coords_xyz = node_coords.reshape(-1, 3)
         node_coords_xyz = node_coords_xyz[node_tag.argsort()][:, 0:3]
@@ -350,6 +362,8 @@ class GmshGeometry3D(Geometry):
 
 
 class GmshGeometry2D(Geometry):
+    """Represent a 2D Gmsh geometry for DeepXDE boundary and mesh queries."""
+
     def __init__(
         self,
         gmsh_model,
@@ -358,6 +372,8 @@ class GmshGeometry2D(Geometry):
         revert_curve_list=None,
         revert_normal_dir_list=None,
     ):
+        """Initialize a 2D Gmsh geometry wrapper."""
+
         self.gmsh_model = gmsh_model
         self.revert_curve_list = revert_curve_list
         self.revert_normal_dir_list = revert_normal_dir_list
@@ -440,17 +456,15 @@ class GmshGeometry2D(Geometry):
         return n[mask]
 
     def fun_boundary_normal_global(self):
-        """Compute the unit normal on the geometry boundary"""
+        """Compute unit normals on the geometry boundary."""
 
         fig = plt.figure(figsize=(8, 8), dpi=80)
 
-        (
-            node_tag_boundary,
-            node_coords_x_boundary,
-            node_coords_y_boundary,
-            n_x_boundary,
-            n_y_boundary,
-        ) = [], [], [], [], []
+        node_tag_boundary = []
+        node_coords_x_boundary = []
+        node_coords_y_boundary = []
+        n_x_boundary = []
+        n_y_boundary = []
         border = {}
         start = 0
 
@@ -554,7 +568,10 @@ class GmshGeometry2D(Geometry):
         count = 0
         for node in repeated_node_tag:
             location = coords_xy[node_tag_boundary == node]
-            assert np.all(location[0] == location[1])
+            if not np.allclose(location, location[0]):
+                raise ValueError(
+                    f"Repeated node {node} has inconsistent coordinates: {location}"
+                )
             normals = n[node_tag_boundary == node]
             print(
                 f"At location {location[0]} for node {node}, two normals exist such as {normals[0]} and {normals[1]}"
@@ -660,7 +677,7 @@ class GmshGeometry2D(Geometry):
     ):
         """Get sorted coordinates and node tags"""
 
-        node_tag -= 1  # gmsh node numbering start with 1 but we need 0
+        node_tag -= 1  # Gmsh node numbering start with 1 but we need 0
 
         node_coords_xyz = node_coords.reshape(-1, 3)
         node_coords_xy = node_coords_xyz[node_tag.argsort()][:, 0:2]
@@ -678,6 +695,7 @@ class GmshGeometry2D(Geometry):
         return node_coords_xy, node_coords_xy_boundary, node_coords_xy_inside
 
     def add_external_dim(self, node_coords_xy):
+        """Append repeated external dimension coordinates to 2D node coordinates."""
 
         node_coords_xy_rp = np.tile(node_coords_xy, (self.external_dim_size, 1))
         external_dim_rp = np.repeat(self.external_dim, node_coords_xy.shape[0], axis=0)
@@ -687,6 +705,8 @@ class GmshGeometry2D(Geometry):
 
 
 class GmshGeometry1D(Geometry):
+    """Represent a 1D Gmsh geometry with quadrature-based element data."""
+
     def __init__(
         self,
         gmsh_model,
@@ -701,6 +721,8 @@ class GmshGeometry1D(Geometry):
         external_dim_size=None,
         borders=None,
     ):
+        """Initialize a 1D Gmsh geometry wrapper."""
+
         self.gmsh_model = gmsh_model
         self.coord_left = coord_left
         self.coord_right = coord_right
@@ -713,7 +735,6 @@ class GmshGeometry1D(Geometry):
         self.n_gp = self.weight_quadrature.shape[0]
         # obtain element information
         self.get_element_info()
-        # self.boundary_normal_global = self.fun_boundary_normal_global()
         self.external_dim_size = external_dim_size
         self.borders = borders
         if external_dim_size:
@@ -849,7 +870,7 @@ class GmshGeometry1D(Geometry):
     ):
         """Get sorted coordinates and node tags"""
 
-        node_tag -= 1  # gmsh node numbering start with 1 but we need 0
+        node_tag -= 1  # Gmsh node numbering start with 1 but we need 0
 
         node_coords_xyz = node_coords.reshape(-1, 3)
         node_coords_x = node_coords_xyz[node_tag.argsort()][:, 0:1]
@@ -867,9 +888,8 @@ class GmshGeometry1D(Geometry):
         return node_coords_x, node_coords_x_boundary, node_coords_x_inside
 
     def get_element_info(self):
-        # self.mapped_coordinates = []
-        # self.jacobian = []
-        # self.element_weights = []
+        """Build mapped coordinates, Jacobians, weights, and element functions."""
+
         self.mapped_coordinates = np.array([])
         self.jacobian = np.array([])
         self.global_element_weights = np.array([])
@@ -919,10 +939,6 @@ class GmshGeometry1D(Geometry):
                     ),
                 )
             )
-            # list version
-            # self.mapped_coordinates.append(self.get_mapped_coordinates(coordinate_node1, coordinate_node2))
-            # self.jacobian.append(self.get_jacobian(coordinate_node1, coordinate_node2))
-            # self.element_weights.append(self.weight_quadrature)
 
         self.mapped_coordinates = self.mapped_coordinates.reshape(-1, 1).astype(
             config.real(np)
@@ -936,6 +952,8 @@ class GmshGeometry1D(Geometry):
         ).astype(config.real(np))
 
     def get_mapped_coordinates(self, coordinate_node1, coordinate_node2):
+        """Map 1D reference quadrature coordinates to physical coordinates."""
+
         # linear mapping
         # x_m = N . x --> N linear shape functions N1=1/2(1-psi) N2=1/2(1+psi)
         N1 = 1 / 2 * (1 - self.coord_quadrature)
@@ -945,6 +963,8 @@ class GmshGeometry1D(Geometry):
         return mapped_coordinate
 
     def get_jacobian(self, coordinate_node1, coordinate_node2):
+        """Compute the 1D element Jacobian."""
+
         DN1 = -1 / 2
         DN2 = 1 / 2
         jacob = DN1 * coordinate_node1 + DN2 * coordinate_node2
@@ -952,6 +972,7 @@ class GmshGeometry1D(Geometry):
         return jacob
 
     def get_element_function(self, element_mapped_coordinate, element_jacobian):
+        """Evaluate the weighted element function at quadrature points."""
 
         f_quad_element = self.ele_func(element_mapped_coordinate)
 
@@ -966,6 +987,8 @@ class GmshGeometry1D(Geometry):
 
 
 class GmshGeometryElement(Geometry):
+    """Represent a Gmsh geometry with element-level quadrature data."""
+
     def __init__(
         self,
         gmsh_model,
@@ -981,6 +1004,7 @@ class GmshGeometryElement(Geometry):
         revert_normal_dir_list=None,
         only_get_mesh=False,
     ):
+        """Initialize an element-based Gmsh geometry wrapper."""
 
         self.gmsh_model = gmsh_model
         self.coord_quadrature = coord_quadrature
@@ -1030,7 +1054,7 @@ class GmshGeometryElement(Geometry):
         if self.external_dim_size:
             node_coords_x_inside = self.add_external_dim(node_coords_x_inside)
 
-        return self.is_in_tolerance(x, node_coords_x_inside)
+        return _is_in_tolerance(x, node_coords_x_inside)
 
     def on_boundary(self, x):
         """Check if x is on the geometry boundary."""
@@ -1052,18 +1076,7 @@ class GmshGeometryElement(Geometry):
         if self.external_dim_size:
             node_coords_xyz_boundary = self.add_external_dim(node_coords_xyz_boundary)
 
-        return self.is_in_tolerance(x, node_coords_xyz_boundary)
-
-    def is_in_tolerance(self, provided, target):
-
-        tolerance = 1e-5
-
-        contained_rows = np.all(
-            np.isclose(provided[:, None, :], target, rtol=tolerance, atol=tolerance),
-            axis=2,
-        )
-        contained_indices_boolean = np.any(contained_rows, axis=1)
-        return contained_indices_boolean
+        return _is_in_tolerance(x, node_coords_xyz_boundary)
 
     def boundary_normal(self, x):
         """Slice the unit normal at x for Neumann or Robin boundary conditions."""
@@ -1080,17 +1093,15 @@ class GmshGeometryElement(Geometry):
         return n[mask]
 
     def fun_boundary_normal_global(self):
-        """Compute the unit normal on the geometry boundary"""
+        """Compute unit normals on the geometry boundary."""
 
         fig = plt.figure(figsize=(8, 8), dpi=80)
 
-        (
-            node_tag_boundary,
-            node_coords_x_boundary,
-            node_coords_y_boundary,
-            n_x_boundary,
-            n_y_boundary,
-        ) = [], [], [], [], []
+        node_tag_boundary = []
+        node_coords_x_boundary = []
+        node_coords_y_boundary = []
+        n_x_boundary = []
+        n_y_boundary = []
         border = {}
         start = 0
 
@@ -1194,7 +1205,10 @@ class GmshGeometryElement(Geometry):
         count = 0
         for node in repeated_node_tag:
             location = coords_xy[node_tag_boundary == node]
-            assert np.all(location[0] == location[1])
+            if not np.allclose(location, location[0]):
+                raise ValueError(
+                    f"Repeated node {node} has inconsistent coordinates: {location}"
+                )
             normals = n[node_tag_boundary == node]
             print(
                 f"At location {location[0]} for node {node}, two normals exist such as {normals[0]} and {normals[1]}"
@@ -1334,14 +1348,9 @@ class GmshGeometryElement(Geometry):
             node_coords_x_inside = node_coords_x[node_tag_inside]
 
         return node_coords_x, node_coords_x_boundary, node_coords_x_inside
-        # return node_coords_x.astype(config.real(np)) if node_coords_x is not None else node_coords_x, \
-        #         node_coords_x_boundary.astype(config.real(np)) if node_coords_x_boundary is not None else node_coords_x_boundary, \
-        #         node_coords_x_inside.astype(config.real(np)) if node_coords_x_inside is not None else node_coords_x_inside
 
     def get_element_info(self):
-        # self.mapped_coordinates = []
-        # self.jacobian = []
-        # self.element_weights = []
+        """Build element-level quadrature data for mapped coordinates and weights."""
 
         self.n_elements = self.gmsh_model.mesh.getElements(self.dim, -1)[1][0].shape[0]
 
@@ -1416,6 +1425,8 @@ class GmshGeometryElement(Geometry):
         )
 
     def get_mapped_coordinates(self, coordinate_list):
+        """Map reference quadrature coordinates to physical element coordinates."""
+
         # linear mapping
         # x_m = N . x --> N linear shape functions N1=1/2(1-psi) N2=1/2(1+psi)
         if self.dim == 1:
@@ -1460,6 +1471,8 @@ class GmshGeometryElement(Geometry):
             return np.hstack((mapped_coordinate_x, mapped_coordinate_y))
 
     def get_jacobian(self, coordinate_list):
+        """Compute element Jacobians at quadrature points."""
+
         if self.dim == 1:
             DN1 = -1 / 2 * np.ones((self.n_gp, 1))
             DN2 = 1 / 2 * np.ones((self.n_gp, 1))
@@ -1506,12 +1519,12 @@ class GmshGeometryElement(Geometry):
 
             jacob = J11 * J22 - J12 * J21
 
-            # print(jacob)
-
         return jacob
 
 
 class GmshGeometryElementDeepEnergy(Geometry):
+    """Represent a Gmsh geometry with Deep Energy element and boundary data."""
+
     def __init__(
         self,
         gmsh_model,
@@ -1529,7 +1542,9 @@ class GmshGeometryElementDeepEnergy(Geometry):
         weight_quadrature_boundary=None,
         boundary_selection_map=None,
         lagrange_method=False,
+        use_geometry_normals=False,
     ):
+        """Initialize a Deep Energy Gmsh geometry wrapper."""
 
         self.gmsh_model = gmsh_model
         self.dim = dimension
@@ -1554,16 +1569,9 @@ class GmshGeometryElementDeepEnergy(Geometry):
         self.boundary_selection_map = boundary_selection_map
         self.boundary_selection_tag = None
         self.lagrange_parameter = None
+        self.use_geometry_normals = use_geometry_normals
         self.boundary_normal_global = None
 
-        if not self.only_get_mesh:
-            try:
-                if self.dim == 2:
-                    self.boundary_normal_global = self.fun_boundary_normal_global()
-                elif self.dim == 3:
-                    self.boundary_normal_global = self.fun_boundary_normal_global_3d()
-            except Exception:
-                self.boundary_normal_global = None
         # obtain element information
         if self.coord_quadrature is not None:
             self.n_gp = self.weight_quadrature.shape[0]
@@ -1593,6 +1601,24 @@ class GmshGeometryElementDeepEnergy(Geometry):
 
         super(GmshGeometryElementDeepEnergy, self).__init__(self.dim, self.bbox, 1)
 
+    def ensure_boundary_normal_global(self):
+        """Compute pointwise CAD normals only when boundary_normal() needs them."""
+
+        if self.boundary_normal_global is not None:
+            return
+        if self.only_get_mesh:
+            raise ValueError(
+                "Boundary normals are not available when only_get_mesh=True."
+            )
+        if self.dim == 2:
+            self.boundary_normal_global = self.fun_boundary_normal_global()
+        elif self.dim == 3:
+            self.boundary_normal_global = self.fun_boundary_normal_global_3d()
+        else:
+            raise NotImplementedError(
+                f"Boundary normals are not implemented for dimension {self.dim}."
+            )
+
     def inside(self, x):
         """Check if x is inside the geometry (including the boundary)."""
 
@@ -1612,7 +1638,7 @@ class GmshGeometryElementDeepEnergy(Geometry):
         if self.external_dim_size:
             node_coords_x_inside = self.add_external_dim(node_coords_x_inside)
 
-        return self.is_in_tolerance(x, node_coords_x_inside)
+        return _is_in_tolerance(x, node_coords_x_inside)
 
     def on_boundary(self, x):
         """Check if x is on the geometry boundary."""
@@ -1634,27 +1660,18 @@ class GmshGeometryElementDeepEnergy(Geometry):
         if self.external_dim_size:
             node_coords_xyz_boundary = self.add_external_dim(node_coords_xyz_boundary)
 
-        return self.is_in_tolerance(x, node_coords_xyz_boundary)
+        return _is_in_tolerance(x, node_coords_xyz_boundary)
 
-    def is_in_tolerance(self, provided, target):
-
-        tolerance = 1e-5
-
-        contained_rows = np.all(
-            np.isclose(provided[:, None, :], target, rtol=tolerance, atol=tolerance),
-            axis=2,
-        )
-        contained_indices_boolean = np.any(contained_rows, axis=1)
-        return contained_indices_boolean
-
-    def _get_boundary_entity_local_node_ids(self, element_type):
+    @staticmethod
+    def _get_boundary_entity_local_node_ids(element_type):
+        """Return local node indices for the faces of a linear element."""
         if element_type == 2:  # triangle with 3 nodes
             return ((0, 1), (1, 2), (2, 0))
-        elif element_type == 3:  # quad with 4 nodes
+        if element_type == 3:  # quadrilateral with 4 nodes
             return ((0, 1), (1, 2), (2, 3), (3, 0))
-        elif element_type == 4:  # tetrahedron with 4 nodes
+        if element_type == 4:  # tetrahedron with 4 nodes
             return ((0, 2, 1), (0, 1, 3), (1, 2, 3), (2, 0, 3))
-        elif element_type == 5:  # hexahedron with 8 nodes
+        if element_type == 5:  # hexahedron with 8 nodes
             return (
                 (0, 3, 2, 1),
                 (4, 5, 6, 7),
@@ -1663,26 +1680,25 @@ class GmshGeometryElementDeepEnergy(Geometry):
                 (2, 3, 7, 6),
                 (3, 0, 4, 7),
             )
-        raise NotImplemented(
-            f"Element type: {element_type}, not implemented! Use only triangle, quad, tet, or hex elements"
+        raise NotImplementedError(
+            f"Element type {element_type} is not implemented. "
+            "Use linear triangle, quadrilateral, tetrahedral, or hexahedral elements."
         )
 
     def _build_boundary_entity_lookup(self):
+        """Identify exterior faces by counting their adjacent volume elements."""
         boundary_entity_count = {}
-
         for element_tag in self.gmsh_model.mesh.getElements(self.dim, -1)[1][0]:
             element_type, element_node_ids, _, _ = self.gmsh_model.mesh.getElement(
                 element_tag
             )
-            local_boundary_entities = self._get_boundary_entity_local_node_ids(
-                element_type
-            )
-            for local_entity in local_boundary_entities:
-                entity_node_ids = tuple(
-                    int(element_node_ids[local_node_id])
-                    for local_node_id in local_entity
+            for local_entity in self._get_boundary_entity_local_node_ids(element_type):
+                entity_key = tuple(
+                    sorted(
+                        int(element_node_ids[local_node_id])
+                        for local_node_id in local_entity
+                    )
                 )
-                entity_key = tuple(sorted(entity_node_ids))
                 boundary_entity_count[entity_key] = (
                     boundary_entity_count.get(entity_key, 0) + 1
                 )
@@ -1693,59 +1709,10 @@ class GmshGeometryElementDeepEnergy(Geometry):
             if count == 1
         }
 
-    def _compute_boundary_entity_normal(
-        self, boundary_coordinate_list, coordinate_list
-    ):
-        boundary_coords = np.asarray(boundary_coordinate_list, dtype=float)
-        cell_coords = np.asarray(coordinate_list, dtype=float)
-        cell_center = np.mean(cell_coords, axis=0)
-        entity_center = np.mean(boundary_coords, axis=0)
-
-        if self.dim == 2:
-            tangent = boundary_coords[1] - boundary_coords[0]
-            normal = np.array([tangent[1], -tangent[0]], dtype=float)
-        elif self.dim == 3:
-            if boundary_coords.shape[0] == 3:
-                normal = np.cross(
-                    boundary_coords[1] - boundary_coords[0],
-                    boundary_coords[2] - boundary_coords[0],
-                )
-            elif boundary_coords.shape[0] == 4:
-                normal = np.cross(
-                    boundary_coords[1] - boundary_coords[0],
-                    boundary_coords[2] - boundary_coords[0],
-                ) + np.cross(
-                    boundary_coords[2] - boundary_coords[0],
-                    boundary_coords[3] - boundary_coords[0],
-                )
-            else:
-                raise ValueError(
-                    "Boundary face must have 3 or 4 nodes for 3D normal computation."
-                )
-        else:
-            raise ValueError(
-                "Boundary-entity normal computation supports only 2D or 3D."
-            )
-
-        if np.dot(normal, entity_center - cell_center) < 0:
-            normal *= -1
-
-        normal_norm = np.linalg.norm(normal)
-        if np.isclose(normal_norm, 0.0):
-            raise ValueError(
-                "Degenerate boundary entity encountered during normal computation."
-            )
-
-        return normal / normal_norm
-
     def boundary_normal(self, x):
         """Slice the unit normal at x for Neumann or Robin boundary conditions."""
 
-        if self.boundary_normal_global is None:
-            raise ValueError(
-                "Boundary node normals are unavailable for this mesh. Boundary integration "
-                "uses boundary-entity normals directly."
-            )
+        self.ensure_boundary_normal_global()
 
         if self.dim == 2:
             n, uniq = self.boundary_normal_global
@@ -1762,17 +1729,15 @@ class GmshGeometryElementDeepEnergy(Geometry):
         return n[mask]
 
     def fun_boundary_normal_global(self):
-        """Compute the unit normal on the geometry boundary"""
+        """Compute unit normals on the geometry boundary."""
 
         fig = plt.figure(figsize=(8, 8), dpi=80)
 
-        (
-            node_tag_boundary,
-            node_coords_x_boundary,
-            node_coords_y_boundary,
-            n_x_boundary,
-            n_y_boundary,
-        ) = [], [], [], [], []
+        node_tag_boundary = []
+        node_coords_x_boundary = []
+        node_coords_y_boundary = []
+        n_x_boundary = []
+        n_y_boundary = []
         border = {}
         start = 0
 
@@ -1876,7 +1841,10 @@ class GmshGeometryElementDeepEnergy(Geometry):
         count = 0
         for node in repeated_node_tag:
             location = coords_xy[node_tag_boundary == node]
-            assert np.all(location[0] == location[1])
+            if not np.allclose(location, location[0]):
+                raise ValueError(
+                    f"Repeated node {node} has inconsistent coordinates: {location}"
+                )
             normals = n[node_tag_boundary == node]
             print(
                 f"At location {location[0]} for node {node}, two normals exist such as {normals[0]} and {normals[1]}"
@@ -1914,16 +1882,12 @@ class GmshGeometryElementDeepEnergy(Geometry):
         return n, uniq
 
     def fun_boundary_normal_global_3d(self):
-        """Compute the unit normal on the geometry boundary"""
+        """Compute geometry boundary normals and tangential vectors."""
 
-        # fig = plt.figure(figsize=(8, 8), dpi=80)
-
-        node_tag_boundary, node_coords_xyz_boundary, normal_boundary, surface_id = (
-            [],
-            [],
-            [],
-            [],
-        )
+        node_tag_boundary = []
+        node_coords_xyz_boundary = []
+        normal_boundary = []
+        surface_id = []
         border = {}
         start = 0
 
@@ -1953,11 +1917,6 @@ class GmshGeometryElementDeepEnergy(Geometry):
                 node_coords_xyz_boundary.extend(node_coords.tolist())
                 normal_boundary.extend(normals.tolist())
 
-                # # distinguish start/end positio for each surface
-                # end = start+node_coords.shape[0]
-                # border[surface_name] = [start,end]
-                # start = end
-
         # convert them into numpy array
         node_tag_boundary = np.array(node_tag_boundary)
         node_coords_xyz_boundary = np.array(node_coords_xyz_boundary)
@@ -1976,8 +1935,10 @@ class GmshGeometryElementDeepEnergy(Geometry):
 
         if self.target_surface_ids:
             for repeated_node_id in repeated_node_tag:
+                # create mask to get the repeated nodes in the global boundary node list
+                repeated_node_mask = node_tag_boundary == repeated_node_id
                 # get the neighboring surfaces which includes this point
-                neighbor_surface_ids = surface_id[node_tag_boundary == repeated_node_id]
+                neighbor_surface_ids = surface_id[repeated_node_mask]
                 # choose the target face that is one of the neighboring surfaces
                 target_surface_position = None
                 for target_surface in self.target_surface_ids:
@@ -1988,18 +1949,16 @@ class GmshGeometryElementDeepEnergy(Geometry):
                         break
                 if target_surface_position is None:
                     continue
-                determined_boundary_normal = normal_boundary[
-                    node_tag_boundary == repeated_node_id
-                ][target_surface_position]
+                determined_boundary_normal = normal_boundary[repeated_node_mask][
+                    target_surface_position
+                ]
                 determined_tangential_boundary_1 = tangential_boundary_1[
-                    node_tag_boundary == repeated_node_id
+                    repeated_node_mask
                 ][target_surface_position]
                 determined_tangential_boundary_2 = tangential_boundary_2[
-                    node_tag_boundary == repeated_node_id
+                    repeated_node_mask
                 ][target_surface_position]
-                ids_of_repeated_node = np.where(node_tag_boundary == repeated_node_id)[
-                    0
-                ]
+                ids_of_repeated_node = np.where(repeated_node_mask)[0]
                 for id in ids_of_repeated_node:
                     normal_boundary[id] = determined_boundary_normal
                     tangential_boundary_1[id] = determined_tangential_boundary_1
@@ -2014,38 +1973,9 @@ class GmshGeometryElementDeepEnergy(Geometry):
         return normal_boundary, tangential_boundary_1, tangential_boundary_2, uniq
 
     def compute_tangentials(self, normal_boundaries):
-        # calculate the tangential vector components here.
-        # Tangential of normal vector in 3D is a plane. Thus, we need two tangential vectors, let's call them t_1 and t_2.
-        t_1_list = []
-        t_2_list = []
+        """Compute two unit tangential vectors for each 3D boundary normal."""
 
-        # Loop over each normal vector in the input array
-        for n in normal_boundaries:
-            n_x, n_y, n_z = n
-
-            # case 1 Handle [0, 0, 1]
-            if np.allclose(n, [0, 0, 1]):
-                t_1 = np.array([0, 1, 0])
-                t_2 = np.array([-1, 0, 0])
-            # case 2 Handle [0, 0, -1]
-            elif np.allclose(n, [0, 0, -1]):
-                t_1 = np.array([0, 1, 0])
-                t_2 = np.array([1, 0, 0])
-            else:
-                t_1 = np.array([n_y, -n_x, 0]) / np.sqrt(n_x**2 + n_y**2)
-                t_2 = np.cross(n, t_1)  # t_2 = t_2 / np.linalg.norm(t_2)?
-
-            # check if all normal_boundary (let's call it as n), t1 and t2 are perpendicular to each, meaning
-            # n . t_1 = 0, n . t_2 = 0, and t_1 . t-2 = 0
-            assert np.isclose(np.dot(n, t_1), 0)
-            assert np.isclose(np.dot(n, t_2), 0)
-            assert np.isclose(np.dot(t_1, t_2), 0)
-
-            # Append results to the list
-            t_1_list.append(t_1)
-            t_2_list.append(t_2)
-
-        return np.array(t_1_list), np.array(t_2_list)
+        return _compute_tangentials(normal_boundaries)
 
     def random_points(self, n, random="pseudo"):
         """Get collocation points from geometry"""
@@ -2155,14 +2085,134 @@ class GmshGeometryElementDeepEnergy(Geometry):
             node_coords_x_inside = node_coords_x[node_tag_inside]
 
         return node_coords_x, node_coords_x_boundary, node_coords_x_inside
-        # return node_coords_x.astype(config.real(np)) if node_coords_x is not None else node_coords_x, \
-        #         node_coords_x_boundary.astype(config.real(np)) if node_coords_x_boundary is not None else node_coords_x_boundary, \
-        #         node_coords_x_inside.astype(config.real(np)) if node_coords_x_inside is not None else node_coords_x_inside
+
+    def get_gmsh_normals_at_boundary_gauss_points(self, boundary_mapped_coordinate):
+        """Get Gmsh normals at mapped boundary quadrature points."""
+
+        boundary_mapped_coordinate = np.asarray(boundary_mapped_coordinate)
+        n_points = boundary_mapped_coordinate.shape[0]
+        coord_xyz = np.zeros((boundary_mapped_coordinate.shape[0], 3))
+        coord_xyz[:, : self.dim] = boundary_mapped_coordinate[:, : self.dim]
+        coord = coord_xyz.reshape(-1).tolist()
+        boundary_entity_dim = self.dim - 1
+        best_distance = np.full(
+            n_points, np.inf
+        )  # distance from the closest point on the boundary entity to the mapped boundary quadrature point
+        best_normals = np.zeros(
+            (n_points, self.dim)
+        )  # normal vector corresponding to the closest point on the boundary entity for each mapped boundary quadrature point
+        found_normals = np.zeros(
+            n_points, dtype=bool
+        )  # boolean array to track whether a normal vector has been found for each mapped boundary quadrature point
+
+        for entity_dim, entity_tag in self.gmsh_model.getEntities():
+            if entity_dim != boundary_entity_dim:
+                continue
+
+            try:
+                closest_point, parametric_coord = self.gmsh_model.getClosestPoint(
+                    entity_dim, entity_tag, coord
+                )
+            except AttributeError:
+                closest_point = boundary_mapped_coordinate
+                parametric_coord = self.gmsh_model.getParametrization(
+                    entity_dim, entity_tag, coord
+                )
+            except Exception:
+                closest_point = None
+                parametric_coord = None
+
+            if parametric_coord is None:
+                continue
+
+            try:
+                if entity_dim == 1:
+                    tangent = np.array(
+                        self.gmsh_model.getDerivative(1, entity_tag, parametric_coord)
+                    ).reshape(-1, 3)[:, :2]
+                    normals = np.column_stack((tangent[:, 1], -tangent[:, 0]))
+                else:
+                    normals = np.array(
+                        self.gmsh_model.getNormal(entity_tag, parametric_coord)
+                    ).reshape(-1, 3)[:, : self.dim]
+            except Exception:
+                normals = None
+
+            if normals is None:
+                continue
+
+            closest_point = np.asarray(closest_point)
+            if closest_point.shape == boundary_mapped_coordinate.shape:
+                closest_point = closest_point.reshape(-1, self.dim)
+            else:
+                closest_point = closest_point.reshape(-1, 3)[:, : self.dim]
+            distance = np.linalg.norm(
+                closest_point - boundary_mapped_coordinate, axis=1
+            )
+            # make sure to update the normal only if the closest point on the boundary entity is closer than any previously found closest point (mostly found on other entities) for each mapped boundary quadrature point
+            update_mask = distance < best_distance
+
+            best_distance[update_mask] = distance[update_mask]
+            best_normals[update_mask] = normals[update_mask]
+            found_normals[update_mask] = True
+
+        if not np.any(found_normals):
+            return None
+
+        normal_norm = np.linalg.norm(best_normals, axis=1, keepdims=True)
+        best_normals = np.divide(
+            best_normals,
+            normal_norm,
+            out=np.zeros_like(best_normals),
+            where=normal_norm > 0,
+        )
+
+        return best_normals, found_normals
+
+    def orient_boundary_normals_outward(
+        self, normals, boundary_mapped_coordinate, element_centers
+    ):
+        """Flip boundary normals so they point away from element centers."""
+
+        direction = boundary_mapped_coordinate - element_centers
+        # compute the dot product between normals and direction vectors, and flip normals where the dot product is negative
+        flip = np.sum(normals * direction, axis=1, keepdims=True) < 0
+
+        return np.where(flip, -normals, normals)
+
+    def get_flat_boundary_face_normals(self, edge_coordinate_list, coordinate_list):
+        """Compute repeated outward normals for a flat boundary edge or face."""
+
+        # Collect face and element centers
+        face_coordinates = np.vstack(edge_coordinate_list)
+        element_center = np.mean(np.vstack(coordinate_list), axis=0)
+        face_center = np.mean(face_coordinates, axis=0)
+
+        # Build a normal from the boundary edge or face orientation
+        if self.dim == 2:
+            tangent = face_coordinates[1] - face_coordinates[0]
+            normal = np.array([tangent[1], -tangent[0]])
+        else:
+            normal = np.cross(
+                face_coordinates[1] - face_coordinates[0],
+                face_coordinates[2] - face_coordinates[0],
+            )
+
+        # Skip degenerate edges or faces
+        normal_norm = np.linalg.norm(normal)
+        if np.isclose(normal_norm, 0):
+            return np.zeros((self.n_gp_boundary, self.dim))
+
+        # Normalize and orient away from the element center
+        normal = normal / normal_norm
+        if np.dot(normal, face_center - element_center) < 0:
+            normal = -normal
+
+        # Use the same flat normal at every boundary Gauss point
+        return np.repeat(normal.reshape(1, -1), self.n_gp_boundary, axis=0)
 
     def get_element_info(self):
-        # self.mapped_coordinates = []
-        # self.jacobian = []
-        # self.element_weights = []
+        """Build element and optional boundary quadrature data."""
 
         self.n_elements = self.gmsh_model.mesh.getElements(self.dim, -1)[1][0].shape[0]
 
@@ -2189,6 +2239,7 @@ class GmshGeometryElementDeepEnergy(Geometry):
                     self.weight_quadrature_boundary.shape[1],
                 )
             )
+            boundary_element_centers = np.empty((boundary_storage_size, self.dim))
 
             if self.boundary_selection_map:
                 tag_list = [
@@ -2201,6 +2252,8 @@ class GmshGeometryElementDeepEnergy(Geometry):
                     )
                     for tag in tag_list
                 }
+        else:
+            boundary_element_centers = None
 
         element_id = 0
         boundary_element_id = 0
@@ -2209,7 +2262,6 @@ class GmshGeometryElementDeepEnergy(Geometry):
             element_type, element_node_ids, _, _ = self.gmsh_model.mesh.getElement(
                 element_tag
             )
-
             if element_node_ids.shape[0] > 2**self.dim:
                 raise ValueError("Use linear elements.")
 
@@ -2243,86 +2295,66 @@ class GmshGeometryElementDeepEnergy(Geometry):
                 local_boundary_entities = self._get_boundary_entity_local_node_ids(
                     element_type
                 )
-
                 for local_boundary_entity in local_boundary_entities:
                     edge_coordinate_list = [
                         coordinate_list[local_node_id]
                         for local_node_id in local_boundary_entity
                     ]
-                    boundary_node_ids = tuple(
-                        int(element_node_ids[local_node_id])
-                        for local_node_id in local_boundary_entity
+                    entity_key = tuple(
+                        sorted(
+                            int(element_node_ids[local_node_id])
+                            for local_node_id in local_boundary_entity
+                        )
                     )
-                    entity_key = tuple(sorted(boundary_node_ids))
-
                     if entity_key in boundary_entity_lookup:
                         boundary_mapped_coordinate = self.get_mapped_coordinates(
                             self.boundary_dim,
                             self.coord_quadrature_boundary,
                             edge_coordinate_list,
                         )
-                        self.mapped_coordinates_boundary[
-                            boundary_element_id * self.n_gp_boundary : (
-                                boundary_element_id + 1
-                            )
-                            * self.n_gp_boundary,
-                            :,
-                        ] = boundary_mapped_coordinate
-
-                        boundary_normal = self._compute_boundary_entity_normal(
-                            edge_coordinate_list, coordinate_list
+                        boundary_slice = slice(
+                            boundary_element_id * self.n_gp_boundary,
+                            (boundary_element_id + 1) * self.n_gp_boundary,
                         )
-                        boundary_normal_mapped = np.repeat(
-                            boundary_normal.reshape(1, -1), self.n_gp_boundary, axis=0
+                        self.mapped_coordinates_boundary[boundary_slice, :] = (
+                            boundary_mapped_coordinate
                         )
-                        self.mapped_normal_boundary[
-                            boundary_element_id * self.n_gp_boundary : (
-                                boundary_element_id + 1
-                            )
-                            * self.n_gp_boundary,
-                            :,
-                        ] = boundary_normal_mapped
-                        # # get the boundary normal of point 0 (point 1 should give also the same)
-                        # if self.dim == 2:
-                        #     boundary_normal_node_1 = self.boundary_normal(edge_coordinate_list[0].reshape(-1,self.dim))
-                        #     boundary_normal_node_2 = self.boundary_normal(edge_coordinate_list[1].reshape(-1,self.dim))
-                        #     boundary_normal = (boundary_normal_node_1 + boundary_normal_node_2)/2
-                        # elif self.dim == 3:
-                        #     if element_type == 5:
-                        #         boundary_normal_node_1 = self.boundary_normal(edge_coordinate_list[0].reshape(-1,self.dim))
-                        #         boundary_normal_node_2 = self.boundary_normal(edge_coordinate_list[1].reshape(-1,self.dim))
-                        #         boundary_normal_node_3 = self.boundary_normal(edge_coordinate_list[2].reshape(-1,self.dim))
-                        #         boundary_normal_node_4 = self.boundary_normal(edge_coordinate_list[3].reshape(-1,self.dim))
-                        #         boundary_normal = (boundary_normal_node_1 + boundary_normal_node_2 + boundary_normal_node_3 + boundary_normal_node_4)/4
-                        #     elif element_type == 4:
-                        #         boundary_normal_node_1 = self.boundary_normal(edge_coordinate_list[0].reshape(-1,self.dim))
-                        #         boundary_normal_node_2 = self.boundary_normal(edge_coordinate_list[1].reshape(-1,self.dim))
-                        #         boundary_normal_node_3 = self.boundary_normal(edge_coordinate_list[2].reshape(-1,self.dim))
-                        #         boundary_normal = (boundary_normal_node_1 + boundary_normal_node_2 + boundary_normal_node_3)/3
 
-                        # boundary_normal = np.repeat(boundary_normal, self.n_gp_boundary, axis=0)
-                        # self.mapped_normal_boundary[boundary_element_id*self.n_gp_boundary:(boundary_element_id+1)*self.n_gp_boundary,:] = boundary_normal
+                        if self.dim in [2, 3]:
+                            boundary_normal_mapped = (
+                                self.get_flat_boundary_face_normals(
+                                    edge_coordinate_list, coordinate_list
+                                )
+                            )
+                            boundary_element_centers[boundary_slice, :] = np.mean(
+                                np.vstack(coordinate_list), axis=0
+                            )
+                        else:
+                            boundary_normal_coordinate_list = [
+                                self.boundary_normal(
+                                    edge_coords.reshape(-1, self.dim)
+                                ).ravel()
+                                for edge_coords in edge_coordinate_list
+                            ]
+                            boundary_normal_mapped = self.get_mapped_coordinates(
+                                self.boundary_dim,
+                                self.coord_quadrature_boundary,
+                                boundary_normal_coordinate_list,
+                            )
+                        self.mapped_normal_boundary[boundary_slice, :] = (
+                            boundary_normal_mapped
+                        )
 
                         boundary_jacobian = self.get_jacobian(
                             self.boundary_dim,
                             self.coord_quadrature_boundary,
                             edge_coordinate_list,
                         )
-                        self.jacobian_boundary[
-                            boundary_element_id * self.n_gp_boundary : (
-                                boundary_element_id + 1
-                            )
-                            * self.n_gp_boundary,
-                            :,
-                        ] = boundary_jacobian
+                        self.jacobian_boundary[boundary_slice, :] = boundary_jacobian
 
-                        self.global_weights_boundary[
-                            boundary_element_id * self.n_gp_boundary : (
-                                boundary_element_id + 1
-                            )
-                            * self.n_gp_boundary,
-                            :,
-                        ] = self.weight_quadrature_boundary.copy()
+                        self.global_weights_boundary[boundary_slice, :] = (
+                            self.weight_quadrature_boundary.copy()
+                        )
 
                         if self.boundary_selection_map:
                             for selection_map in self.boundary_selection_map:
@@ -2332,18 +2364,47 @@ class GmshGeometryElementDeepEnergy(Geometry):
                                     boundary_function(coord)
                                     for coord in edge_coordinate_list
                                 )
-                                # check_cond = boundary_function(edge_coordinate_list[0]) and boundary_function(edge_coordinate_list[1]) and boundary_function(edge_coordinate_list[2]) and boundary_function(edge_coordinate_list[3])
                                 check_cond = np.repeat(
                                     check_cond, self.n_gp_boundary, axis=0
                                 )
-                                self.boundary_selection_tag[tag][
-                                    boundary_element_id * self.n_gp_boundary : (
-                                        boundary_element_id + 1
-                                    )
-                                    * self.n_gp_boundary
-                                ] = check_cond
+                                self.boundary_selection_tag[tag][boundary_slice] = (
+                                    check_cond
+                                )
 
                         boundary_element_id += 1
+
+        if (
+            self.use_geometry_normals
+            and self.coord_quadrature_boundary is not None
+            and self.dim in [2, 3]
+            and boundary_element_id > 0
+        ):
+            used_boundary_slice = slice(0, boundary_element_id * self.n_gp_boundary)
+            gmsh_normal_result = self.get_gmsh_normals_at_boundary_gauss_points(
+                self.mapped_coordinates_boundary[used_boundary_slice, :]
+            )
+
+            if gmsh_normal_result is not None:
+                gmsh_normals, gmsh_normal_mask = gmsh_normal_result
+                if np.any(gmsh_normal_mask):
+                    gmsh_normals[gmsh_normal_mask] = (
+                        self.orient_boundary_normals_outward(
+                            gmsh_normals[gmsh_normal_mask],
+                            self.mapped_coordinates_boundary[used_boundary_slice, :][
+                                gmsh_normal_mask
+                            ],
+                            boundary_element_centers[used_boundary_slice, :][
+                                gmsh_normal_mask
+                            ],
+                        )
+                    )
+                    boundary_normals = self.mapped_normal_boundary[
+                        used_boundary_slice, :
+                    ]
+                    boundary_normals[gmsh_normal_mask] = gmsh_normals[gmsh_normal_mask]
+                    self.mapped_normal_boundary[used_boundary_slice, :] = (
+                        boundary_normals
+                    )
 
         self.mapped_coordinates = self.mapped_coordinates.astype(config.real(np))
         self.jacobian = self.jacobian.astype(config.real(np))
@@ -2374,6 +2435,8 @@ class GmshGeometryElementDeepEnergy(Geometry):
                 self.lagrange_parameter = np.zeros_like(self.jacobian_boundary)
 
     def get_mapped_coordinates(self, dimension, quadrature_coordinate, coordinate_list):
+        """Map reference quadrature coordinates to physical coordinates."""
+
         # linear mapping
         # x_m = N . x --> N linear shape functions N1=1/2(1-psi) N2=1/2(1+psi)
         if dimension == 1:
@@ -2381,10 +2444,6 @@ class GmshGeometryElementDeepEnergy(Geometry):
             N2 = 1 / 2 * (1 + quadrature_coordinate)
             mapped_coordinate = N1 * coordinate_list[0] + N2 * coordinate_list[1]
 
-            # Following is also identical
-            # coords = np.vstack([coord for coord in coordinate_list])
-            # N_stack = np.hstack((N1,N2))
-            # mapped_coordinate = np.matmul(N_stack, coords)
             return mapped_coordinate
         # 2D biliniear mapping (quad4 and tri3)
         elif dimension == 2:
@@ -2399,25 +2458,12 @@ class GmshGeometryElementDeepEnergy(Geometry):
                 N4 = 1 / 4 * (1 - xi) * (1 + eta)
 
                 N_stack = np.hstack((N1, N2, N3, N4))
-                # x_stack = np.vstack((
-                #                     coordinate_list[0].reshape(1, -1),
-                #                     coordinate_list[1].reshape(1, -1),
-                #                     coordinate_list[2].reshape(1, -1),
-                #                     coordinate_list[3].reshape(1, -1)
-                #                 ))
             elif len(coordinate_list) == 3:  # triangular element logic
                 N1 = 1.0 - xi - eta
                 N2 = xi
                 N3 = eta
 
                 N_stack = np.hstack((N1, N2, N3))  # shape (n_gp, 3)
-
-                # # Each coord[i] should be shape (3,) or (1,3)
-                # x_stack = np.vstack([
-                #     coordinate_list[0].reshape(1, -1),
-                #     coordinate_list[1].reshape(1, -1),
-                #     coordinate_list[2].reshape(1, -1)
-                # ])  # shape (3, 2) or (3, 3)
 
             mapped_coordinate = np.matmul(N_stack, coords)  # shape (n_gp, dim)
 
@@ -2441,9 +2487,6 @@ class GmshGeometryElementDeepEnergy(Geometry):
                 N8 = 0.125 * (1 - xi) * (1 + eta) * (1 + zeta)
 
                 N_stack = np.hstack((N1, N2, N3, N4, N5, N6, N7, N8))
-                # x_stack = np.vstack([coord[0:1] for coord in coordinate_list])
-                # y_stack = np.vstack([coord[1:2] for coord in coordinate_list])
-                # z_stack = np.vstack([coord[2:3] for coord in coordinate_list])
             elif len(coordinate_list) == 4:  # tet element logic
                 N1 = 1.0 - xi - eta - zeta
                 N2 = xi
@@ -2451,16 +2494,13 @@ class GmshGeometryElementDeepEnergy(Geometry):
                 N4 = zeta
                 N_stack = np.hstack((N1, N2, N3, N4))
 
-            # mapped_x = np.matmul(N_stack, x_stack) # mapped_x = N_stack @ x_stack
-            # mapped_y = np.matmul(N_stack, y_stack) # mapped_y = N_stack @ y_stack
-            # mapped_z = np.matmul(N_stack, z_stack) # mapped_z = N_stack @ z_stack
-
-            # return np.hstack((mapped_x, mapped_y, mapped_z))
             mapped_coordinate = np.matmul(N_stack, coords)  # shape (n_gp, dim)
 
             return mapped_coordinate
 
     def get_jacobian(self, dimension, quadrature_coordinate, coordinate_list):
+        """Compute Jacobians for mapped 1D, 2D, or 3D elements."""
+
         if dimension == 1:
             # Extract x and y coordinates
             x1, y1 = coordinate_list[0]  # First node (x1, y1)
@@ -2621,34 +2661,3 @@ class GmshGeometryElementDeepEnergy(Geometry):
                 jacob[:] = abs(detJ)
 
         return jacob
-
-
-class Geometry4CAPI(Geometry):
-    def __new__(cls, self, mesh, context, state, visualize=False):
-        self.dimension = context["problem_dim"]
-        self.visualize = visualize
-        gmsh_model = APIGeometry(self.dimension, mesh).generateGmshModel(
-            visualize_mesh=self.visualize
-        )
-
-        if self.dimension == 1:
-            raise Exception("1D geometry import not yet supported!")
-            # coord_left  = mesh["coordinates"].min()
-            # coord_right = mesh["coordinates"].max()
-            # return GmshGeometry1D(
-            #     gmsh_model=gmsh_model,
-            #     coord_left=coord_left,
-            #     coord_right=coord_right,
-            # )
-        elif self.dimension == 2:
-            return GmshGeometry2D(
-                gmsh_model=gmsh_model,
-            )
-        elif self.dimension == 3:
-            return GmshGeometry3D(
-                gmsh_model=gmsh_model,
-            )
-        else:
-            raise ValueError(
-                f"Unsupported dimension of {self.dimension} (expected 1, 2, or 3)."
-            )
