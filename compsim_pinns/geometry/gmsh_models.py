@@ -3219,7 +3219,17 @@ class Geom_step_to_gmsh(object):
 
 
 class APIGeometry(object):
+    """Construct a Gmsh discrete model from externally supplied mesh data."""
+
     def __init__(self, dimension, mesh):
+        """
+        Initialize an API-backed geometry.
+
+        Args:
+            dimension: Topological dimension of the mesh.
+            mesh: Mesh object providing coordinates, node IDs, element IDs,
+                and connectivity.
+        """
         self.dimension = dimension
         self.mesh_info = mesh
 
@@ -3261,6 +3271,19 @@ class APIGeometry(object):
         nen = elem_nodes.shape[1]
 
         def etype_from(d, n):
+            """
+            Determine the Gmsh element family and order.
+
+            Args:
+                d: Topological dimension of the element.
+                n: Number of nodes per element.
+
+            Returns:
+                A tuple containing the Gmsh element-family name and polynomial order.
+
+            Raises:
+                ValueError: If the dimension and node count are unsupported.
+            """
             if d == 1 and n in (2, 3):
                 return ("line", 1 if n == 2 else 2)
             elif d == 2 and n == 3:
