@@ -3216,3 +3216,101 @@ class Geom_step_to_gmsh(object):
             gmsh.fltk.run()
 
         return gmsh_model
+
+
+class APIGeometry(object):
+    def __init__(self, dimension, mesh):
+        self.dimension = dimension
+        self.mesh_info = mesh
+
+    def generateGmshModel(self, visualize_mesh=False):
+        """
+        Generates a mesh from the provided information via the API.
+
+        Parameters
+        ----------
+        visualize_mesh : boolean
+            a boolean value to show the mesh using Gmsh or not
+        Returns
+        -------
+        gmsh_model: Object
+            gmsh model
+        """
+        gmsh.initialize(sys.argv)
+        gmsh_model = gmsh.model
+        coords = np.asarray(self.mesh_info.coordinates)
+        node_ids = np.asarray(self.mesh_info.node_ids, dtype=np.int64)
+        elem_ids = np.asarray(self.mesh_info.element_ids, dtype=np.int64)
+        conn = np.asarray(self.mesh_info.connectivity, dtype=np.int64)
+
+        # Make Gmsh-compliant tags (1-based)
+        node_tags = node_ids + 1  # node numbering offset from 4C
+        elem_tags = elem_ids + 1  # element numbering offset from 4C
+        elem_nodes = conn + 1  # node numbering offset from 4C
+
+        # Promote from 1D or 2D coords to 3D for gmsh API
+        if coords.shape[1] == 1:
+            coords3 = np.column_stack(
+                [coords, np.zeros(len(coords)), np.zeros(len(coords))]
+            )
+        elif coords.shape[1] == 2:
+            coords3 = np.column_stack([coords, np.zeros(len(coords))])
+        else:
+            coords3 = coords
+
+        nen = elem_nodes.shape[1]
+
+        def etype_from(d, n):
+            if d == 1 and n in (2, 3):
+                return ("line", 1 if n == 2 else 2)
+            elif d == 2 and n == 3:
+                return ("triangle", 1)
+            elif d == 2 and n == 6:
+                return ("triangle", 2)
+            elif d == 2 and n == 4:
+                return ("quadrangle", 1)
+            elif d == 2 and n in (8, 9):
+                return ("quadrangle", 2)
+            elif d == 3 and n == 4:
+                return ("tetrahedron", 1)
+            elif d == 3 and n == 10:
+                return ("tetrahedron", 2)
+            elif d == 3 and n == 8:
+                return ("hexahedron", 1)
+            elif d == 3 and n in (20, 27):
+                return ("hexahedron", 2)
+            else:
+                raise ValueError(
+                    f"Unsupported element type (dim, nodes per element) = ({d},{n})"
+                )
+
+        et_name, et_order = etype_from(self.dimension, nen)
+        etype = gmsh_model.mesh.getElementType(et_name, et_order)
+
+        try:
+            tag = gmsh_model.addDiscreteEntity(self.dimension)
+        except TypeError:
+            gmsh_model.addDiscreteEntity(self.dimension, -1)
+            tag = gmsh_model.getEntities(self.dimension)[-1][1]
+
+        gmsh_model.mesh.addNodes(
+            self.dimension,
+            tag,
+            node_tags.tolist(),
+            coords3.reshape(-1).astype(float).tolist(),
+        )
+        gmsh_model.mesh.addElements(
+            self.dimension,
+            tag,
+            [etype],
+            [elem_tags.tolist()],
+            [elem_nodes.reshape(-1).tolist()],
+        )
+
+        gmsh_model.mesh.renumberNodes()
+
+        if visualize_mesh:
+            if "-nopopup" not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model

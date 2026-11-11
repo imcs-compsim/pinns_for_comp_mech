@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version-file: 'pyproject.toml'
 
       - name: Find changed files in the PR
         id: changed

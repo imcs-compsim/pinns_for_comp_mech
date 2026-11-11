@@ -4,7 +4,7 @@ So far, mostly used in a the context of the Deep Energy Method / energy-based PI
 """
 
 import deepxde as dde
-import tensorflow as tf
+# import tensorflow as tf
 import torch
 from deepxde.backend import get_preferred_backend
 
@@ -104,6 +104,7 @@ def bkd_log(x):
 
     backend_name = get_preferred_backend()
     if (backend_name == "tensorflow.compat.v1") or (backend_name == "tensorflow"):
+        import tensorflow as tf
         # return tf.math.log(x)
         return tf.math.log(tf.math.maximum(x, 1e-8))
     elif backend_name == "pytorch":
