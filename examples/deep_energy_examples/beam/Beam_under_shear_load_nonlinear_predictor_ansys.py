@@ -251,7 +251,7 @@ displacement_to_4C_save_path = (
     f"{model_path}/Beam_under_shear_load_nonlinear_displacement_to_4C"
 )
 mesh_4C_input_path = (
-    str(Path(__file__).parent.parent.parent.parent)
+    str(Path(__file__).parents[3])
     + f"/paper-epinn/2d_bending_beam/hyperelastic_bending_beam.exo"
 )
 simulation_case = f"Beam_under_shear_load_nonlinear_predictor_ansys"
@@ -337,7 +337,7 @@ for i in range(steps):
 
     # Compare the results with the FEM reference
     if any(abs(shear_load * 1000 - i) <= 1e-12 for i in range(1, 11)):
-        fem_path = str(Path(__file__).parent.parent)
+        fem_path = str(Path(__file__).parents[1])
         fem_reference = pv.read(
             fem_path
             + f"/fem_reference/fem_reference_2d_bending_beam_{int(round(shear_load * 1e3)):02}.vtu"

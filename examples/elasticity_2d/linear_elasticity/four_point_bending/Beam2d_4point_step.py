@@ -335,12 +335,9 @@ def strain_xx(x, y, X):
 
 
 # Experimental Data from Johannes
-xChannel2 = np.load(
-    Path(__file__).parent.parent.parent.absolute() / "train_data/xChannel2.npy"
-)
+xChannel2 = np.load(Path(__file__).parents[2].absolute() / "train_data/xChannel2.npy")
 measured_strains_2 = np.load(
-    Path(__file__).parent.parent.parent.absolute()
-    / "train_data/strainsInitialChannel2.npy"
+    Path(__file__).parents[2].absolute() / "train_data/strainsInitialChannel2.npy"
 )
 
 # Filter out nans

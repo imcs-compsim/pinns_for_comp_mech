@@ -392,7 +392,7 @@ for i in range(steps):
     # Compare the results with the FEM reference
     if ((ext_traction * 10) % 2 == 0) & (ext_traction <= max_ext_traction):
         fem_path = (
-            str(Path(__file__).parent.parent.parent.parent)
+            str(Path(__file__).parents[3])
             + "/fem_references/paper-epinn-data-reference"
         )
         fem_reference = pv.read(

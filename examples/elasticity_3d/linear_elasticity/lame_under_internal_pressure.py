@@ -59,7 +59,7 @@ from compsim_pinns.postprocess.elasticity_postprocessing import (
     solutionFieldOnMeshToVtk3D,
 )
 
-path_to_step_file = str(Path(__file__).parent.parent) + f"/step_files/lame_3d.stp"
+path_to_step_file = str(Path(__file__).parents[1]) + f"/step_files/lame_3d.stp"
 
 curve_info = {
     "4": 14,
@@ -278,8 +278,7 @@ model = dde.Model(data, net)
 
 restore_model = False
 model_path = (
-    str(Path(__file__).parent.parent.parent)
-    + f"/pretrained_models/elasticity_3d/lame/lame_3d"
+    str(Path(__file__).parents[2]) + f"/pretrained_models/elasticity_3d/lame/lame_3d"
 )
 
 if not restore_model:
@@ -298,7 +297,7 @@ else:
 solutionFieldOnMeshToVtk3D(
     geom,
     model,
-    save_folder_path=str(Path(__file__).parent.parent.parent),
+    save_folder_path=str(Path(__file__).parents[2]),
     file_name="lame_3d_new",
     polar_transformation="spherical",
 )

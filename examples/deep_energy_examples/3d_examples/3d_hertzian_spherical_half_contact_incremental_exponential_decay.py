@@ -384,7 +384,7 @@ for i in range(steps):
 
     # Compare the results with the FEM reference
     if ((ext_traction * 10) % 2 == 0) & (ext_traction <= max_ext_traction):
-        fem_path = str(Path(__file__).parent.parent)
+        fem_path = str(Path(__file__).parents[1])
         fem_reference = pv.read(
             fem_path
             + f"/fem_reference/3d_sphere_contact_fem_reference_{int((ext_traction * 10)):02}.vtu"

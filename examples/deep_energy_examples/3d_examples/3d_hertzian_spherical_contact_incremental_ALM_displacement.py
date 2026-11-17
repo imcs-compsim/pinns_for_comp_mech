@@ -444,7 +444,7 @@ for i in range(steps):
         min(displacement_bc % 0.008, 0.008 - displacement_bc % 0.008) < 1e-12
     ):
         fem_path = (
-            str(Path(__file__).parent.parent.parent.parent)
+            str(Path(__file__).parents[3])
             + "/fem_references/paper-epinn-data-reference"
         )
         fem_reference = pv.read(

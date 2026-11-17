@@ -445,7 +445,7 @@ for i in range(steps):
     # Compare the results with the FEM reference
     if any(abs(shear_load * 1000 - i) <= 1e-12 for i in range(1, 11)):
         fem_path = (
-            str(Path(__file__).parent.parent.parent.parent.parent)
+            str(Path(__file__).parents[4])
             + "/fem_references/paper-epinn-data-reference/2d_bending_beam"
         )
         fem_reference = pv.read(

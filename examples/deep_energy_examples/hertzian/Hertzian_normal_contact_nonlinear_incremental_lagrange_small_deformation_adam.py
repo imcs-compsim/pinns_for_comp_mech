@@ -349,7 +349,7 @@ def polar_transformation_2d_tensor(T_xx, T_yy, T_xy, T_yx, X):
 
 
 fem_path = (
-    str(Path(__file__).parent.parent.parent)
+    str(Path(__file__).parents[2])
     + "/elasticity_2d/Hertzian_fem/Hertzian_fem_fine_mesh.csv"
 )
 df = pd.read_csv(fem_path)

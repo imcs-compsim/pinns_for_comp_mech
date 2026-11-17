@@ -301,8 +301,7 @@ bc3 = dde.OperatorBC(geom, zero_neumann_x_mixed_formulation, boundary_outer)
 bc4 = dde.OperatorBC(geom, zero_neumann_y_mixed_formulation, boundary_outer)
 
 inv_data = (
-    str(Path(__file__).parent.parent.parent)
-    + "/elasticity_2d/data/lame/Inverse_mixed_variable"
+    str(Path(__file__).parents[2]) + "/elasticity_2d/data/lame/Inverse_mixed_variable"
 )
 data = np.loadtxt(inv_data)
 np.random.seed(42)

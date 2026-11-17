@@ -263,8 +263,7 @@ displacement_to_4C_save_path = (
     f"{model_path}/3d_block_torsion_nonlinear_displacement_to_4C"
 )
 mesh_4C_input_path = (
-    str(Path(__file__).parent.parent.parent.parent)
-    + f"/paper-epinn/3d_torsion_prism/block_torsion.exo"
+    str(Path(__file__).parents[3]) + f"/paper-epinn/3d_torsion_prism/block_torsion.exo"
 )
 simulation_case = (
     f"3d_block_torsion_nonlinear_displacement_incremental_exponential_decay"
@@ -373,7 +372,7 @@ for i in range(steps):
 
     # Compare the results with the FEM reference
     if (theta_deg % 15 == 0) & (theta_deg <= torsion_angle):
-        fem_path = str(Path(__file__).parent.parent)
+        fem_path = str(Path(__file__).parents[1])
         fem_reference = pv.read(
             fem_path
             + f"/fem_reference/fem_reference_3d_block_torsion_angle_{compare_choice}_{int(theta_deg):03}.vtu"

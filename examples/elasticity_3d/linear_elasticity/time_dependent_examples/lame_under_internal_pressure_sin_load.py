@@ -71,9 +71,7 @@ from compsim_pinns.postprocess.save_normals_tangentials_to_vtk import (
     export_normals_tangentials_to_vtk,
 )
 
-path_to_step_file = (
-    str(Path(__file__).parent.parent.parent) + f"/step_files/lame_3d.stp"
-)
+path_to_step_file = str(Path(__file__).parents[2]) + f"/step_files/lame_3d.stp"
 
 curve_info = {
     "4": 14,
@@ -95,7 +93,7 @@ geom = GmshGeometry3D(gmsh_model, target_surface_ids=target_surface_ids)
 # This allows for visualization of boundary normals in Paraview
 export_normals_tangentials_to_vtk(
     geom,
-    save_folder_path=str(Path(__file__).parent.parent.parent.parent),
+    save_folder_path=str(Path(__file__).parents[3]),
     file_name="lame_boundary_normals",
 )
 
@@ -407,7 +405,7 @@ losshistory, train_state = model.train(display_every=100)
 solutionFieldOnMeshToVtkSpaceTime(
     geom,
     model,
-    save_folder_path=str(Path(__file__).parent.parent.parent.parent),
+    save_folder_path=str(Path(__file__).parents[3]),
     file_name="lame_3d_time",
     polar_transformation="spherical",
 )
