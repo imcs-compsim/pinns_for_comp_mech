@@ -236,7 +236,7 @@ model = dde.Model(data, net)
 restore_model = False
 # store the model
 model_path = (
-    str(Path(__file__).parent.parent.parent.parent)
+    str(Path(__file__).parents[3])
     + f"/pretrained_models/elasticity_2d/patch/{method_name}/{method_name}"
 )
 

@@ -278,7 +278,7 @@ model = dde.Model(data, net)
 
 restore_model = False
 model_path = (
-    str(Path(__file__).parent.parent.parent)
+    str(Path(__file__).parents[2])
     + f"/pretrained_models/deep_energy_examples/3d_herzian_spherical_contact/3d_herzian_spherical_contact_nonlinear"
 )
 

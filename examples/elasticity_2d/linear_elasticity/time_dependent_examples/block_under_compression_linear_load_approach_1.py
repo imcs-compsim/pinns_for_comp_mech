@@ -59,7 +59,7 @@ geom = GmshGeometry3D(gmsh_model, target_surface_ids=[4])
 # This allows for visualization of boundary normals in Paraview
 export_normals_tangentials_to_vtk(
     geom,
-    save_folder_path=str(Path(__file__).parent.parent.parent.parent),
+    save_folder_path=str(Path(__file__).parents[3]),
     file_name="block_boundary_normals",
 )
 
@@ -270,6 +270,6 @@ solutionFieldOnMeshToVtkSpaceTime(
     model,
     time_interval=time_interval,
     time_steps=time_steps,
-    save_folder_path=str(Path(__file__).parent.parent.parent.parent),
+    save_folder_path=str(Path(__file__).parents[3]),
     file_name="2D_block_time_linear_load",
 )

@@ -242,7 +242,7 @@ net.apply_output_transform(output_transform)
 model = dde.Model(data, net)
 restore_model = False
 model_path = (
-    str(Path(__file__).parent.parent.parent)
+    str(Path(__file__).parents[2])
     + f"/pretrained_models/deep_energy_examples/3d_contact_ring_instability/3d_contact_ring_instability_half_nonlinear"
 )
 

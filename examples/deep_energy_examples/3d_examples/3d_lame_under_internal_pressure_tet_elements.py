@@ -60,7 +60,7 @@ from compsim_pinns.geometry.gmsh_models import Geom_step_to_gmsh
 from compsim_pinns.vpinns.quad_rule import GaussQuadratureRule
 
 path_to_step_file = (
-    str(Path(__file__).parent.parent.parent) + f"/elasticity_3d/step_files/lame_3d.stp"
+    str(Path(__file__).parents[2]) + f"/elasticity_3d/step_files/lame_3d.stp"
 )
 
 curve_info = {

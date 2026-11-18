@@ -288,7 +288,7 @@ add_external_data = True
 if add_external_data:
     # load external data
     fem_path = (
-        str(Path(__file__).parent.parent.parent)
+        str(Path(__file__).parents[2])
         + "/elasticity_2d/Hertzian_fem/Hertzian_fem_fine_mesh.csv"
     )
     df = pd.read_csv(fem_path)
@@ -412,7 +412,7 @@ losshistory, train_state = model.train(display_every=200)
 ###################################################################################
 
 fem_path = (
-    str(Path(__file__).parent.parent.parent)
+    str(Path(__file__).parents[2])
     + "/elasticity_2d/Hertzian_fem/Hertzian_fem_fine_mesh.csv"
 )
 df = pd.read_csv(fem_path)

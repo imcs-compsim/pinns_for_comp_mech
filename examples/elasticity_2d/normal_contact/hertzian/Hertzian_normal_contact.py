@@ -337,10 +337,7 @@ losshistory, train_state = model.train(display_every=1000)
 ############################## VISUALIZATION PARTS ################################
 ###################################################################################
 
-fem_path = (
-    str(Path(__file__).parent.parent.parent)
-    + "/Hertzian_fem/Hertzian_fem_fine_mesh.csv"
-)
+fem_path = str(Path(__file__).parents[2]) + "/Hertzian_fem/Hertzian_fem_fine_mesh.csv"
 df = pd.read_csv(fem_path)
 fem_results = df[
     [

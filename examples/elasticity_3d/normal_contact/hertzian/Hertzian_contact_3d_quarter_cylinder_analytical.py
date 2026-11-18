@@ -34,8 +34,7 @@ from compsim_pinns.postprocess.elasticity_postprocessing import (
 )
 
 path_to_step_file = (
-    str(Path(__file__).parent.parent.parent)
-    + f"/step_files/hertzian_quarter_cylinder.stp"
+    str(Path(__file__).parents[2]) + f"/step_files/hertzian_quarter_cylinder.stp"
 )
 
 curve_info = {"7": 15, "9": 15, "14": 8, "18": 8, "8": 40, "6": 25, "2": 15, "16": 15}
@@ -264,7 +263,7 @@ loss_weights = [
 ]
 
 model_path = (
-    str(Path(__file__).parent.parent.parent.parent)
+    str(Path(__file__).parents[3])
     + f"/pretrained_models/elasticity_3d/hertzian_enhanced/hertzian_3d_enhanced_analytical"
 )
 restore_model = False
@@ -313,7 +312,7 @@ geom = GmshGeometry3D(gmsh_model)
 solutionFieldOnMeshToVtk3D(
     geom,
     model,
-    save_folder_path=str(Path(__file__).parent.parent.parent.parent),
+    save_folder_path=str(Path(__file__).parents[3]),
     file_name="3D_hertzian_contact_quarter_cylinder_analytical",
     polar_transformation="cylindrical",
 )

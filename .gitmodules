@@ -1,0 +1,3 @@
+[submodule "fem_references/paper-epinn-data-reference"]
+	path = fem_references/paper-epinn-data-reference
+	url = https://github.com/imcs-compsim/paper-epinn-data-reference

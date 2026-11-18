@@ -232,7 +232,7 @@ model = dde.Model(data, net)
 
 restore_model = True
 model_path = (
-    str(Path(__file__).parent.parent.parent)
+    str(Path(__file__).parents[2])
     + f"/pretrained_models/deep_energy_examples/beam/beam_nonlinear"
 )
 
@@ -259,7 +259,7 @@ else:
 ###################################################################################
 
 file_path = (
-    str(Path(__file__).parent.parent)
+    str(Path(__file__).parents[1])
     + f"/reference_results/beam/bending_beam_test-structure.pvd"
 )
 save_file_path = os.path.join(os.getcwd(), "Beam_under_shear_load_nonlinear")
