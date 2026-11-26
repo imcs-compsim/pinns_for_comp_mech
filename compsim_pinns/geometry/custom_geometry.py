@@ -2661,3 +2661,151 @@ class GmshGeometryElementDeepEnergy(Geometry):
                 jacob[:] = abs(detJ)
 
         return jacob
+
+
+class MultibodyDeepEnergy(Geometry):
+    """Combine multiple Deep Energy geometries into one training geometry."""
+
+    def __init__(self, geometry_tuple, mesh_tuple=None):
+        """Initialize a multibody geometry from compatible component geometries.
+
+        Args:
+            geometry_tuple: Geometries whose quadrature and boundary data are combined.
+            mesh_tuple: Optional meshes corresponding to ``geometry_tuple``.
+        """
+        if not geometry_tuple:
+            raise ValueError("At least one component geometry is required.")
+
+        self.geometry_tuple = geometry_tuple
+        self.mesh_tuple = mesh_tuple
+
+        def concat(attr):
+            "Concatenate attributes of the selected sub-geometries"
+            return np.concatenate(
+                [getattr(geom, attr) for geom in self.geometry_tuple], axis=0
+            )
+
+        # check consistency
+        self.dim = self.geometry_tuple[0].dim
+        self.boundary_dim = self.geometry_tuple[0].boundary_dim
+        self.n_gp = self.geometry_tuple[0].n_gp
+        self.n_gp_boundary = self.geometry_tuple[0].n_gp_boundary
+        compatibility_attributes = ("dim", "boundary_dim", "n_gp", "n_gp_boundary")
+        for geometry_index, geom in enumerate(self.geometry_tuple[1:], start=1):
+            incompatible_attributes = [
+                attribute
+                for attribute in compatibility_attributes
+                if getattr(geom, attribute) != getattr(self, attribute)
+            ]
+            if incompatible_attributes:
+                attributes = ", ".join(incompatible_attributes)
+                raise ValueError(
+                    f"Component geometry {geometry_index} is incompatible with the "
+                    f"first geometry for: {attributes}."
+                )
+        # copy together the other attributes
+        self.boundary_elements = sum(
+            geom.boundary_elements for geom in self.geometry_tuple
+        )
+        self.boundary_normal_global = (
+            np.concatenate(
+                [geom.boundary_normal_global[0] for geom in self.geometry_tuple], axis=0
+            ),
+            np.concatenate(
+                [geom.boundary_normal_global[1] for geom in self.geometry_tuple], axis=0
+            ),
+        )
+        self.boundary_selection_map = list(
+            {
+                entry["tag"]: entry
+                for geometry in self.geometry_tuple
+                for entry in geometry.boundary_selection_map
+            }.values()
+        )
+        self.boundary_selection_tag = {}
+        for separate_geometry in self.geometry_tuple:
+            for key, value in separate_geometry.boundary_selection_tag.items():
+                self.boundary_selection_tag.setdefault(key, []).append(value)
+        self.boundary_selection_tag = {
+            key: np.concatenate(values)
+            for key, values in self.boundary_selection_tag.items()
+        }
+        self.coord_quadrature = self.geometry_tuple[0].coord_quadrature
+        self.coord_quadrature_boundary = self.geometry_tuple[
+            0
+        ].coord_quadrature_boundary
+        self.global_element_weights = concat("global_element_weights")
+        self.global_weights_boundary = concat("global_weights_boundary")
+        self.idstr = type(self).__name__
+        self.jacobian = concat("jacobian")
+        self.jacobian_boundary = concat("jacobian_boundary")
+        self.lagrange_method = all(geom.lagrange_method for geom in self.geometry_tuple)
+        self.mapped_coordinates = concat("mapped_coordinates")
+        self.mapped_coordinates_boundary = concat("mapped_coordinates_boundary")
+        self.mapped_normal_boundary = concat("mapped_normal_boundary")
+        self.n_elements = sum(geom.n_elements for geom in self.geometry_tuple)
+
+    def inside(self, x):
+        """Check if x is inside the geometry (including the boundary)."""
+        return np.logical_or.reduce([geom.inside(x) for geom in self.geometry_tuple])
+
+    def on_boundary(self, x):
+        """Check if x is on the geometry boundary."""
+        return np.logical_or.reduce(
+            [geom.on_boundary(x) for geom in self.geometry_tuple]
+        )
+
+    def random_points(self, n, random="pseudo"):
+        """Get collocation points from all geometries."""
+        return np.concatenate(
+            [geom.random_points(n, random=random) for geom in self.geometry_tuple],
+            axis=0,
+        ).astype(config.real(np))
+
+    def random_boundary_points(self, n, random="pseudo"):
+        """Get boundary points from all geometries."""
+        return np.concatenate(
+            [
+                geom.random_boundary_points(n, random=random)
+                for geom in self.geometry_tuple
+            ],
+            axis=0,
+        ).astype(config.real(np))
+
+    def get_mesh(self):
+        """Get the combined mesh for post-processing."""
+        mesh_tuple = self.mesh_tuple
+        if mesh_tuple is None:
+            mesh_tuple = [geom.get_mesh() for geom in self.geometry_tuple]
+
+        points_list = []
+        cell_types_list = []
+        elements_list = []
+        node_offset = 0
+
+        for points, _, cell_types, elements in mesh_tuple:
+            points_list.append(points)
+            cell_types_list.append(cell_types)
+            elements_list.append(elements + node_offset)
+            node_offset += points.shape[0]
+
+        points = np.concatenate(points_list, axis=0)
+        cell_types = np.concatenate(cell_types_list, axis=0)
+        elements = np.concatenate(elements_list, axis=0)
+        offset = np.cumsum([element.shape[0] for element in elements])
+
+        return points, offset, cell_types, elements
+
+    def get_tying_node_idx(self):
+        """Return pairs of boundary-point indices shared by two component bodies."""
+        _, inverse, counts = np.unique(
+            self.mapped_coordinates_boundary,
+            axis=0,
+            return_inverse=True,
+            return_counts=True,
+        )
+        nonunique_indices = np.array(
+            [np.where(inverse == i)[0] for i in np.where(counts == 2)[0]]
+        )
+
+        return nonunique_indices
