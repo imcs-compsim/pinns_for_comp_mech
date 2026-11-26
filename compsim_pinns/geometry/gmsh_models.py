@@ -1,6 +1,7 @@
 """Module with geometry class definitions."""
 
 import sys
+from collections.abc import Mapping
 
 import gmsh
 import numpy as np
@@ -172,6 +173,90 @@ class Block_2D(object):
         factory.addRectangle(x0, y0, 0, l, h)
 
         gmsh_model.occ.synchronize()
+
+        # generate mesh
+        gmsh_model.mesh.generate(2)
+
+        if visualize_mesh:
+            if "-nopopup" not in sys.argv:
+                gmsh.fltk.run()
+
+        return gmsh_model
+
+
+class Block_2D_structured(object):
+    """Generate a rectangular two-dimensional structured quadrilateral mesh."""
+
+    def __init__(
+        self, coord_left_corner, coord_right_corner, mesh_size=0.26, gmsh_options=None
+    ):
+        """Initialize the block bounds, relative mesh size, and Gmsh options."""
+        self.coord_left_corner = coord_left_corner
+        self.coord_right_corner = coord_right_corner
+        self.mesh_size = mesh_size
+        self.gmsh_options = gmsh_options
+
+    def generateGmshModel(self, visualize_mesh=False):
+        """
+        Generates structured 2D mesh.
+
+        Parameters
+        ----------
+        visualize_mesh : boolean
+            a boolean value to show the mesh using Gmsh or not
+        Returns
+        -------
+        gmsh_model: Object
+            gmsh model
+        """
+
+        # Parameters
+        x0 = self.coord_left_corner[0]
+        y0 = self.coord_left_corner[1]
+        x1 = self.coord_right_corner[0]
+        y1 = self.coord_right_corner[1]
+        if x1 <= x0 or y1 <= y0:
+            raise ValueError(
+                "The right corner must be greater than the left corner in both "
+                "coordinate directions."
+            )
+        l = x1 - x0
+        h = y1 - y0
+        # Mesh size.
+        lcar = self.mesh_size * min(h, l)
+
+        # create gmsh model instance
+        gmsh_model = gmsh.model
+
+        # initialize gmsh
+        gmsh.initialize(sys.argv)
+
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMin", lcar)
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMax", lcar)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if type(value).__name__ == "str":
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+
+        gmsh_model.add("Rectangle")
+
+        rectangle = gmsh_model.occ.addRectangle(x0, y0, 0, l, h)
+
+        gmsh_model.occ.synchronize()
+
+        boundary_curves = gmsh_model.getBoundary([(2, rectangle)], oriented=False)
+
+        for _, curve_tag in boundary_curves:
+            xmin, ymin, _, xmax, ymax, _ = gmsh_model.getBoundingBox(1, curve_tag)
+            curve_length = max(abs(xmax - xmin), abs(ymax - ymin))
+            n_points = max(2, int(np.ceil(curve_length / lcar)) + 1)
+            gmsh_model.mesh.setTransfiniteCurve(curve_tag, n_points)
+
+        gmsh_model.mesh.setTransfiniteSurface(rectangle)
+        gmsh_model.mesh.setRecombine(2, rectangle)
 
         # generate mesh
         gmsh_model.mesh.generate(2)
@@ -1481,6 +1566,125 @@ class Block_3D_hex(object):
 
         if visualize_mesh:
             gmsh.fltk.run()
+
+        return gmsh_model
+
+
+class LShape_3D(object):
+    """Generate a three-dimensional L-shaped domain by subtracting a box."""
+
+    def __init__(
+        self,
+        coord_left_corner,
+        coord_right_corner,
+        coord_cut_left_corner,
+        coord_cut_right_corner,
+        mesh_size=0.125,
+        gmsh_options=None,
+    ):
+        """Initialize the outer box, cutout box, and meshing configuration."""
+        self.coord_left_corner = coord_left_corner
+        self.coord_right_corner = coord_right_corner
+        self.coord_cut_left_corner = coord_cut_left_corner
+        self.coord_cut_right_corner = coord_cut_right_corner
+        self.mesh_size = mesh_size
+        self.gmsh_options = gmsh_options
+
+    def generateGmshModel(self, visualize_mesh=False):
+        """
+        Generates an L-shaped 2D domain by creating a structured quad
+        mesh on the outer rectangle and removing cutout elements.
+
+        Parameters
+        ----------
+        visualize_mesh : boolean
+            a boolean value to show the mesh using Gmsh or not
+        Returns
+        -------
+        gmsh_model: Object
+            gmsh model
+        """
+
+        # Parameters
+        x0 = self.coord_left_corner[0]
+        y0 = self.coord_left_corner[1]
+        z0 = self.coord_left_corner[2]
+        x1 = self.coord_right_corner[0]
+        y1 = self.coord_right_corner[1]
+        z1 = self.coord_right_corner[2]
+        if x1 <= x0 or y1 <= y0 or z1 <= z0:
+            raise ValueError(
+                "The outer right corner must be greater than the outer left corner "
+                "in every coordinate direction."
+            )
+
+        cut_x0 = self.coord_cut_left_corner[0]
+        cut_y0 = self.coord_cut_left_corner[1]
+        cut_z0 = self.coord_cut_left_corner[2]
+        cut_x1 = self.coord_cut_right_corner[0]
+        cut_y1 = self.coord_cut_right_corner[1]
+        cut_z1 = self.coord_cut_right_corner[2]
+        if cut_x1 <= cut_x0 or cut_y1 <= cut_y0 or cut_z1 <= cut_z0:
+            raise ValueError(
+                "The cutout right corner must be greater than the cutout left "
+                "corner in every coordinate direction."
+            )
+        if (
+            cut_x0 < x0
+            or cut_y0 < y0
+            or cut_z0 < z0
+            or cut_x1 > x1
+            or cut_y1 > y1
+            or cut_z1 > z1
+        ):
+            raise ValueError("The cutout box must be contained in the outer box.")
+
+        h = y1 - y0
+        l = x1 - x0
+        b = z1 - z0
+
+        # Mesh size
+        lcar = self.mesh_size * min(h, l, b)
+
+        # create gmsh model instance
+        gmsh_model = gmsh.model
+
+        # initialize gmsh
+        gmsh.initialize(sys.argv)
+
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMin", lcar)
+        gmsh.option.setNumber("Mesh.CharacteristicLengthMax", lcar)
+
+        if self.gmsh_options:
+            for command, value in self.gmsh_options.items():
+                if type(value).__name__ == "str":
+                    gmsh.option.setString(command, value)
+                else:
+                    gmsh.option.setNumber(command, value)
+
+        # gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1);
+
+        gmsh_model.add("Lshape")
+
+        gmsh_model.occ.addBox(x0, y0, z0, l, h, b, tag=1)
+        gmsh_model.occ.addBox(
+            cut_x0,
+            cut_y0,
+            cut_z0,
+            cut_x1 - cut_x0,
+            cut_y1 - cut_y0,
+            cut_z1 - cut_z0,
+            tag=2,
+        )
+        gmsh_model.occ.cut([(3, 1)], [(3, 2)], tag=3)
+        gmsh_model.occ.synchronize()
+
+        # generate mesh
+        gmsh_model.mesh.generate(3)
+
+        if visualize_mesh:
+            if "-nopopup" not in sys.argv:
+                gmsh.fltk.run()
 
         return gmsh_model
 
@@ -3335,5 +3539,375 @@ class APIGeometry(object):
         if visualize_mesh:
             if "-nopopup" not in sys.argv:
                 gmsh.fltk.run()
+
+        return gmsh_model
+
+
+class _GmshMeshWithCompactVolumeNodes:
+    """Proxy a Gmsh mesh while exposing compact volume-node tags."""
+
+    def __init__(self, gmsh_mesh):
+        """Initialize the proxy for a Gmsh mesh object."""
+        self._gmsh_mesh = gmsh_mesh
+        self._volume_node_maps = {}
+
+    def __getattr__(self, name):
+        """Delegate attributes not implemented by the proxy to the wrapped mesh."""
+        return getattr(self._gmsh_mesh, name)
+
+    def getNodes(
+        self, dim=-1, tag=-1, includeBoundary=False, returnParametricCoord=True
+    ):
+        """Return Gmsh nodes, compacting tags for an unfiltered 3D volume query."""
+        node_tags, node_coords, parametric_coords = self._gmsh_mesh.getNodes(
+            dim, tag, includeBoundary, returnParametricCoord
+        )
+
+        if dim != 3 or tag != -1:
+            return node_tags, node_coords, parametric_coords
+
+        map_key = (dim, tag)
+        if includeBoundary or map_key not in self._volume_node_maps:
+            compact_tags = np.arange(
+                1, len(node_tags) + 1, dtype=np.asarray(node_tags).dtype
+            )
+            self._volume_node_maps[map_key] = {
+                int(original): compact
+                for original, compact in zip(node_tags, compact_tags)
+            }
+            return compact_tags, node_coords, parametric_coords
+
+        node_map = self._volume_node_maps[map_key]
+        compact_tags = np.array(
+            [
+                node_map[int(original)]
+                for original in node_tags
+                if int(original) in node_map
+            ],
+            dtype=np.asarray(node_tags).dtype,
+        )
+        return compact_tags, node_coords, parametric_coords
+
+
+class _GmshModelWithDiscreteNormals:
+    """Proxy a Gmsh model and supply stored normals for discrete surfaces."""
+
+    def __init__(self, gmsh_model, normals_by_surface):
+        """Initialize the proxy with a model and surface-normal lookup."""
+        self._gmsh_model = gmsh_model
+        self._normals_by_surface = normals_by_surface
+        self.mesh = _GmshMeshWithCompactVolumeNodes(gmsh_model.mesh)
+        self.geo = gmsh_model.geo
+        self.occ = gmsh_model.occ
+
+    def __getattr__(self, name):
+        """Delegate attributes not implemented by the proxy to the wrapped model."""
+        return getattr(self._gmsh_model, name)
+
+    def getNormal(self, tag, parametricCoord):
+        """Return native Gmsh normals or stored normals for a discrete surface."""
+        try:
+            normals = self._gmsh_model.getNormal(tag, parametricCoord)
+        except Exception:
+            normals = []
+        normals = np.asarray(normals, dtype=float)
+        if normals.size > 0:
+            return normals
+
+        discrete_normals = self._normals_by_surface.get(int(tag))
+        if discrete_normals is None:
+            return normals
+
+        return discrete_normals.reshape(-1)
+
+
+class APDLGeometry(object):
+    """Build a Gmsh discrete model from an APDL reader result."""
+
+    def __init__(self, context, scale_geometry=1.0):
+        """
+        Initialize a linear Ansys mesh from parsed APDL data.
+
+        Parameters
+        ----------
+        context : Mapping
+            APDL reader result containing nodes, node numbers, and elements.
+        scale_geometry : float
+            Factor applied to the parsed node coordinates.
+        """
+        if not isinstance(context, Mapping):
+            raise TypeError("context must be an APDL reader result mapping.")
+
+        required_fields = {"nodes", "node_numbers", "elements"}
+        missing_fields = required_fields.difference(context)
+        if missing_fields:
+            fields = ", ".join(sorted(missing_fields))
+            raise ValueError(
+                f"APDL reader result is missing required fields: {fields}."
+            )
+        if not isinstance(context["elements"], Mapping):
+            raise TypeError("context['elements'] must be a mapping.")
+
+        required_element_fields = {"element_number", "connectivity"}
+        missing_element_fields = required_element_fields.difference(context["elements"])
+        if missing_element_fields:
+            fields = ", ".join(sorted(missing_element_fields))
+            raise ValueError(f"Element data is missing required fields: {fields}.")
+
+        self.dimension = None
+        self.scale_geometry = scale_geometry
+        self.context = context
+
+    def _coords3(self, coords):
+        """Promote one- or two-dimensional coordinates to Gmsh's 3D layout."""
+        if coords.shape[1] == 1:
+            return np.column_stack(
+                [coords, np.zeros(len(coords)), np.zeros(len(coords))]
+            )
+        if coords.shape[1] == 2:
+            return np.column_stack([coords, np.zeros(len(coords))])
+        if coords.shape[1] == 3:
+            return coords
+
+        raise ValueError("Gmsh requires 1D, 2D, or 3D node coordinates.")
+
+    def _infer_dimension(self, coords, nodes_per_element):
+        """Infer the element dimension from coordinates and connectivity width."""
+        if nodes_per_element == 2:
+            return 1
+        if nodes_per_element == 3:
+            return 2
+        if nodes_per_element in (5, 6, 8):
+            return 3
+        if nodes_per_element == 4:
+            centered = coords - np.mean(coords, axis=0)
+            scale = np.max(np.ptp(coords, axis=0))
+            if np.isclose(scale, 0.0):
+                return 2
+            if np.linalg.matrix_rank(centered, tol=scale * 1e-12) >= 3:
+                return 3
+            return 2
+
+        raise ValueError(
+            "Only linear elements are supported: line2, tri3, quad4, "
+            f"tet4, pyramid5, prism6, and hex8. Got {nodes_per_element} nodes."
+        )
+
+    def _gmsh_element_type(self, gmsh_model, dimension, nodes_per_element):
+        """Find the linear Gmsh element type matching an APDL element layout."""
+        linear_element_types = (15, 1, 2, 3, 4, 5, 6, 7)
+        for element_type in linear_element_types:
+            _, element_dim, _, num_nodes, _, num_primary_nodes = (
+                gmsh_model.mesh.getElementProperties(element_type)
+            )
+            if (
+                element_dim == dimension
+                and num_nodes == nodes_per_element
+                and num_primary_nodes == nodes_per_element
+            ):
+                return element_type
+
+        raise ValueError(
+            "Unsupported linear element layout "
+            f"(dimension={dimension}, nodes per element={nodes_per_element})."
+        )
+
+    def _surface_node_normals(self, gmsh_model, node_tags, coords):
+        """Compute outward nodal normals for every discrete surface."""
+        coords3 = self._coords3(coords)
+        coords_by_tag = {
+            int(tag): coord
+            for tag, coord in zip(np.asarray(node_tags, dtype=int), coords3)
+        }
+        domain_centroid = coords3.mean(axis=0)
+        normals_by_surface = {}
+
+        for _, surface_tag in gmsh_model.getEntities(2):
+            surface_node_tags = gmsh_model.mesh.getNodes(
+                dim=2, tag=surface_tag, includeBoundary=True
+            )[0]
+            if len(surface_node_tags) == 0:
+                continue
+
+            node_normals = {int(tag): [] for tag in surface_node_tags}
+            surface_normal_fallback = None
+            element_types, _, element_node_tags = gmsh_model.mesh.getElements(
+                2, surface_tag
+            )
+
+            for element_type, flat_node_tags in zip(element_types, element_node_tags):
+                _, _, _, nodes_per_element, _, _ = gmsh_model.mesh.getElementProperties(
+                    int(element_type)
+                )
+                if nodes_per_element < 3:
+                    continue
+
+                flat_node_tags = np.asarray(flat_node_tags, dtype=int)
+                for face_node_tags in flat_node_tags.reshape(-1, nodes_per_element):
+                    face_coords = np.array(
+                        [
+                            self._node_coord(gmsh_model, coords_by_tag, tag)
+                            for tag in face_node_tags
+                        ]
+                    )
+                    normal = self._face_normal(face_coords, domain_centroid)
+                    if normal is None:
+                        continue
+
+                    surface_normal_fallback = normal
+                    for tag in face_node_tags:
+                        tag = int(tag)
+                        if tag in node_normals:
+                            node_normals[tag].append(normal)
+
+            if surface_normal_fallback is None:
+                surface_coords = np.array(
+                    [
+                        self._node_coord(gmsh_model, coords_by_tag, tag)
+                        for tag in surface_node_tags
+                    ]
+                )
+                surface_normal_fallback = self._face_normal(
+                    surface_coords, domain_centroid
+                )
+
+            if surface_normal_fallback is None:
+                continue
+
+            normals_by_surface[int(surface_tag)] = np.array(
+                [
+                    self._normalize_vector(np.mean(node_normals[int(tag)], axis=0))
+                    if node_normals[int(tag)]
+                    else surface_normal_fallback
+                    for tag in surface_node_tags
+                ]
+            )
+
+        return normals_by_surface
+
+    def _node_coord(self, gmsh_model, coords_by_tag, node_tag):
+        """Return a node coordinate from the local lookup or Gmsh model."""
+        node_tag = int(node_tag)
+        if node_tag in coords_by_tag:
+            return coords_by_tag[node_tag]
+
+        return np.asarray(gmsh_model.mesh.getNode(node_tag)[0][:3], dtype=float)
+
+    def _face_normal(self, face_coords, domain_centroid):
+        """Compute an outward unit normal for one surface face."""
+        if face_coords.shape[0] < 3:
+            return None
+
+        normal = np.cross(
+            face_coords[1] - face_coords[0], face_coords[2] - face_coords[0]
+        )
+        normal = self._normalize_vector(normal)
+        if np.isclose(np.linalg.norm(normal), 0.0):
+            return None
+
+        face_centroid = face_coords.mean(axis=0)
+        if np.dot(normal, face_centroid - domain_centroid) < 0.0:
+            normal = -normal
+
+        return normal
+
+    def _normalize_vector(self, vector):
+        """Normalize a vector while preserving a zero-length vector."""
+        norm = np.linalg.norm(vector)
+        if np.isclose(norm, 0.0):
+            return vector
+
+        return vector / norm
+
+    def generateGmshModel(self, visualize_mesh=False):
+        """
+        Generates a Gmsh discrete model from parsed linear mesh data.
+
+        Parameters
+        ----------
+        visualize_mesh : boolean
+            A boolean value to show the mesh using Gmsh or not.
+        Returns
+        -------
+        gmsh_model: Object
+            Gmsh model.
+        """
+        if not gmsh.isInitialized():
+            gmsh.initialize(sys.argv)
+
+        gmsh_model = gmsh.model
+        gmsh_model.add("APDLGeometry")
+
+        coords = np.asarray(self.context["nodes"], dtype=float) * self.scale_geometry
+        if coords.ndim == 1:
+            coords = coords.reshape(-1, 1)
+        apdl_node_tags = np.asarray(self.context["node_numbers"], dtype=np.uint64)
+        elem_tags = np.atleast_1d(
+            np.asarray(self.context["elements"]["element_number"], dtype=np.uint64)
+        )
+        apdl_connectivity = np.asarray(
+            self.context["elements"]["connectivity"], dtype=np.uint64
+        )
+        if apdl_connectivity.ndim == 1:
+            apdl_connectivity = apdl_connectivity.reshape(1, -1)
+
+        if coords.shape[0] != apdl_node_tags.shape[0]:
+            raise ValueError("Node coordinate and node tag counts do not match.")
+        if elem_tags.shape[0] != apdl_connectivity.shape[0]:
+            raise ValueError("Element tag and connectivity counts do not match.")
+
+        gmsh_node_tags = np.arange(1, coords.shape[0] + 1, dtype=np.uint64)
+        node_tag_map = {
+            int(apdl_tag): int(gmsh_tag)
+            for apdl_tag, gmsh_tag in zip(apdl_node_tags, gmsh_node_tags)
+        }
+        gmsh_connectivity = np.array(
+            [
+                [node_tag_map[int(node_tag)] for node_tag in element_nodes]
+                for element_nodes in apdl_connectivity
+            ],
+            dtype=np.uint64,
+        )
+
+        nodes_per_element = apdl_connectivity.shape[1]
+        self.dimension = self._infer_dimension(coords, nodes_per_element)
+        element_type = self._gmsh_element_type(
+            gmsh_model, self.dimension, nodes_per_element
+        )
+        self.domain_tag = gmsh_model.addDiscreteEntity(self.dimension)
+
+        gmsh_model.mesh.addNodes(
+            self.dimension,
+            self.domain_tag,
+            gmsh_node_tags.tolist(),
+            self._coords3(coords).reshape(-1).tolist(),
+        )
+        gmsh_model.mesh.addElements(
+            self.dimension,
+            self.domain_tag,
+            [element_type],
+            [elem_tags.tolist()],
+            [gmsh_connectivity.reshape(-1).tolist()],
+        )
+
+        gmsh_model.mesh.createTopology(True, True)
+        if self.dimension == 3:
+            gmsh_model.mesh.classifySurfaces(np.pi / 4, True, True, np.pi)
+            gmsh_model.mesh.createGeometry()
+        elif self.dimension == 2:
+            gmsh_model.mesh.createGeometry()
+
+        normals_by_surface = {}
+        if self.dimension == 3:
+            normals_by_surface = self._surface_node_normals(
+                gmsh_model, gmsh_node_tags, coords
+            )
+
+        if visualize_mesh:
+            if "-nopopup" not in sys.argv:
+                gmsh.fltk.run()
+
+        if self.dimension == 3:
+            return _GmshModelWithDiscreteNormals(gmsh_model, normals_by_surface)
 
         return gmsh_model
